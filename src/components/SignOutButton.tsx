@@ -15,6 +15,8 @@ export default function SignOutButton({ className = "" }: { className?: string }
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ event: "SIGNED_OUT" })
         });
+        // Extra server hard-clear of cookies
+        await fetch("/api/auth/signout", { method: "POST" });
         router.replace("/login");
         router.refresh();
       }}

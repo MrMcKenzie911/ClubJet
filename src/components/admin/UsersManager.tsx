@@ -1,15 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import dynamic from "next/dynamic";
+const UserDrawer = dynamic(() => import('./UserDrawer'), { ssr: false });
 
 export default function UsersManager() {
   const supabase = createClientComponentClient();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<any | null>(null);
+  const [drawerUser, setDrawerUser] = useState<string | null>(null);
   const [balanceEditing, setBalanceEditing] = useState<{ account_id: string; balance: number } | null>(null);
+
+  // Search/sort/filters
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("name");
 
   const fetchRows = async () => {
     setLoading(true);
@@ -25,7 +33,6 @@ export default function UsersManager() {
   useEffect(() => { fetchRows(); }, []);
 
   const [editing, setEditing] = useState<any | null>(null);
-  const isAdmin = useMemo(() => rows.some(Boolean), [rows]);
 
   async function saveUser() {
     if (!editing) return;
@@ -68,15 +75,54 @@ export default function UsersManager() {
     <div id="users" className="rounded-xl border border-gray-800 bg-gray-900 p-4">
       <div className="flex items-center justify-between">
         <h2 className="text-white font-semibold">Manage Users</h2>
-        <button onClick={addUser} className="rounded bg-amber-500 hover:bg-amber-400 text-black px-3 py-1">ADD</button>
+        <div className="flex gap-2">
+          <button onClick={addUser} className="rounded bg-amber-500 hover:bg-amber-400 text-black px-3 py-1">ADD</button>
+          <button onClick={() => setEditing({ id: '', first_name: '', last_name: '', email: '', role: 'user' })} className="rounded bg-emerald-500 hover:bg-emerald-400 text-black px-3 py-1">Create Verified</button>
+        </div>
       </div>
 
       {error && <div className="mt-3 text-sm text-red-400">{error}</div>}
 
+      {/* Filters/Search */}
+      <div className="mt-4 flex flex-wrap gap-2 items-center text-sm">
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name/email" className="rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" />
+        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="rounded bg-black/40 border border-gray-700 px-2 py-2 text-white">
+          <option value="all">Role: All</option>
+          <option value="pending">Pending</option>
+          <option value="user">Verified</option>
+          <option value="admin">Admin</option>
+        </select>
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="rounded bg-black/40 border border-gray-700 px-2 py-2 text-white">
+          <option value="all">Account: All</option>
+          <option value="LENDER">Lender</option>
+          <option value="NETWORK">Network</option>
+        </select>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded bg-black/40 border border-gray-700 px-2 py-2 text-white">
+          <option value="name">Sort: Name</option>
+          <option value="email">Email</option>
+          <option value="role">Role</option>
+        </select>
+      </div>
+
       {/* CRM-style User Cards with quick preview */}
       <div className="mt-4 grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         {loading && <div className="text-sm text-gray-400">Loading...</div>}
-        {!loading && rows.map((u) => (
+        {!loading && rows
+          .filter(u => {
+            const q = query.trim().toLowerCase();
+            const matchesQ = !q || `${u.first_name} ${u.last_name}`.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+            const matchesRole = roleFilter === 'all' || u.role === (roleFilter === 'user' ? 'user' : roleFilter)
+            const matchesType = typeFilter === 'all' || (u.accounts ?? []).some((a:any) => a.account_type === typeFilter)
+            return matchesQ && matchesRole && matchesType
+          })
+          .sort((a,b) => {
+            if (sortBy === 'email') return a.email.localeCompare(b.email)
+            if (sortBy === 'role') return String(a.role).localeCompare(String(b.role))
+            const an = `${a.first_name} ${a.last_name}`.trim()
+            const bn = `${b.first_name} ${b.last_name}`.trim()
+            return an.localeCompare(bn)
+          })
+          .map((u) => (
           <div key={u.id} className="rounded-xl border border-gray-800 bg-[#0E141C] hover:border-amber-600 transition p-4">
             <div className="flex items-start justify-between">
               <div>
@@ -91,8 +137,9 @@ export default function UsersManager() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button title="Edit" onClick={() => setEditing(u)} className="rounded bg-gray-800 hover:bg-gray-700 text-gray-200 px-2 py-1">✏️</button>
-                <button title="Delete" onClick={() => removeUser(u.id)} className="rounded bg-red-600 hover:bg-red-500 text-white px-2 py-1">🗑️</button>
+                <button title="Open" onClick={() => setDrawerUser(u.id)} className="rounded bg-gray-800 hover:bg-gray-700 text-gray-200 px-2 py-1" aria-label="Open user drawer">📂</button>
+                <button title="Edit" onClick={() => setEditing(u)} className="rounded bg-gray-800 hover:bg-gray-700 text-gray-200 px-2 py-1" aria-label="Edit user">✏️</button>
+                <button title="Delete" onClick={() => removeUser(u.id)} className="rounded bg-red-600 hover:bg-red-500 text-white px-2 py-1" aria-label="Delete user">🗑️</button>
               </div>
             </div>
 
@@ -145,6 +192,11 @@ export default function UsersManager() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Drawer */}
+      {drawerUser && (
+        <UserDrawer userId={drawerUser} onClose={() => setDrawerUser(null)} />
       )}
 
       {/* Set Balance modal */}

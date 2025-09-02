@@ -105,12 +105,9 @@ export default async function AdminPage() {
           </ul>
         </div>
       </section>
-      {/* Management sections from screenshots */}
+      {/* Management sections */}
       {/* Users Manager */}
       <UsersManagerSection />
-
-      {/* Stream Management - Investment Tiers */}
-      <TiersManagerSection />
     </div>
   )
 }
@@ -118,7 +115,6 @@ export default async function AdminPage() {
 // Small server wrappers that render client components (keeps admin auth guard on server)
 import SignOutButton from '@/components/SignOutButton'
 import UsersManager from '@/components/admin/UsersManager'
-import TiersManager from '@/components/admin/TiersManager'
 
 function SignOutInline() {
   return <SignOutButton />
@@ -132,13 +128,6 @@ function UsersManagerSection() {
   )
 }
 
-function TiersManagerSection() {
-  return (
-    <div className="mt-8">
-      <TiersManager />
-    </div>
-  )
-}
 
 export async function approveUser(formData: FormData) {
   'use server'
