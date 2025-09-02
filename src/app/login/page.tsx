@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,6 +16,19 @@ export default function LoginPage() {
   const [capsOn, setCapsOn] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const supabase = createClientComponentClient();
+
+  // Sync auth to server cookies so middleware/server can see the session
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      await fetch('/auth/callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event, session }),
+      })
+    })
+    return () => subscription.unsubscribe()
+  }, [supabase])
 
   // Auto-redirect if already authenticated
   useEffect(() => {
@@ -30,6 +43,8 @@ export default function LoginPage() {
         .eq("id", user.id)
         .maybeSingle();
       if (!cancelled) {
+        await supabase.auth.getSession();
+        router.refresh();
         router.replace(profile?.role === "admin" ? "/admin" : "/dashboard");
       }
     })();
@@ -61,6 +76,8 @@ export default function LoginPage() {
       setError("Failed to fetch user profile.");
       return;
     }
+    await supabase.auth.getSession();
+    router.refresh();
     if (profile?.role === "admin") router.push("/admin");
     else router.push("/dashboard");
   };
