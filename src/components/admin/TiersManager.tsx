@@ -9,6 +9,7 @@ export default function TiersManager() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [missingTable, setMissingTable] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
 
   async function fetchRows() {
@@ -17,7 +18,12 @@ export default function TiersManager() {
       .from("investment_tiers")
       .select("id, name, description, min_amount, max_amount, created_at")
       .order("created_at", { ascending: true });
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+      if (String(error.message).toLowerCase().includes("could not find the table") || (error as any)?.code === '42P01') {
+        setMissingTable(true);
+      }
+    }
     setRows(data ?? []);
     setLoading(false);
   }
@@ -54,10 +60,19 @@ export default function TiersManager() {
   }
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900 p-4">
+    <div id="tiers" className="rounded-xl border border-gray-800 bg-gray-900 p-4">
       <div className="flex items-center justify-between">
         <h2 className="text-white font-semibold">Investment Tiers</h2>
-        <button onClick={openAdd} className="rounded bg-amber-500 hover:bg-amber-400 text-black px-3 py-1">ADD</button>
+        <div className="flex gap-2">
+          {missingTable && (
+            <button onClick={async () => {
+              await fetch('/api/admin/init', { method: 'POST' });
+              setMissingTable(false);
+              await fetchRows();
+            }} className="rounded bg-amber-600 hover:bg-amber-500 text-black px-3 py-1">Create Table</button>
+          )}
+          <button onClick={openAdd} className="rounded bg-amber-500 hover:bg-amber-400 text-black px-3 py-1">ADD</button>
+        </div>
       </div>
       {error && <div className="mt-3 text-sm text-red-400">{error}</div>}
       <div className="mt-4 overflow-x-auto">
