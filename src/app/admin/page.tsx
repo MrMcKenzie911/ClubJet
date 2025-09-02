@@ -25,7 +25,11 @@ export default async function AdminPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <h1 className="text-2xl font-semibold text-white">Admin Dashboard</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-white">Admin Dashboard</h1>
+        {/* quick sign out */}
+        <SignOutInline />
+      </div>
 
       <section className="mt-6 grid gap-6 sm:grid-cols-2">
         <div className="rounded-xl border border-gray-800 bg-gray-900 p-4">
@@ -101,6 +105,37 @@ export default async function AdminPage() {
           </ul>
         </div>
       </section>
+      {/* Management sections from screenshots */}
+      {/* Users Manager */}
+      <UsersManagerSection />
+
+      {/* Stream Management - Investment Tiers */}
+      <TiersManagerSection />
+    </div>
+  )
+}
+
+// Small server wrappers that render client components (keeps admin auth guard on server)
+import SignOutButton from '@/components/SignOutButton'
+import UsersManager from '@/components/admin/UsersManager'
+import TiersManager from '@/components/admin/TiersManager'
+
+function SignOutInline() {
+  return <SignOutButton />
+}
+
+function UsersManagerSection() {
+  return (
+    <div className="mt-8">
+      <UsersManager />
+    </div>
+  )
+}
+
+function TiersManagerSection() {
+  return (
+    <div className="mt-8">
+      <TiersManager />
     </div>
   )
 }
