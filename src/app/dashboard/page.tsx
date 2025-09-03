@@ -178,8 +178,9 @@ export default async function DashboardPage() {
         </div>
       </div>
     </div>
-      </>
-
+    </>
+  )
+}
 
 function WithdrawalRequest({ accountId }: { accountId?: string }) {
   return <form action={submitWithdrawal} className="rounded-xl border border-gray-800 bg-gray-900 p-4">
@@ -247,8 +248,9 @@ async function submitPayment(formData: FormData) {
     await supabaseAdmin.from('transactions').insert({ account_id, type: 'DEPOSIT', amount, status: 'pending', metadata: { reference } })
   } catch (e) {
     console.error('submitPayment failed', e)
+    redirect('/dashboard?toast=error')
   }
-}
   redirect('/dashboard?toast=deposit_submitted')
+}
 
 
