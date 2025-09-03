@@ -23,9 +23,10 @@ export async function GET(req: Request) {
       .select('id, user_id, type, balance')
     if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 })
 
-    const byUser: Record<string, any[]> = {}
-    for (const a of accounts ?? []) {
-      const uid = (a as any).user_id as string
+    type AccountRow = { id: string; user_id: string; type: string; balance: number }
+    const byUser: Record<string, AccountRow[]> = {}
+    for (const a of (accounts ?? []) as AccountRow[]) {
+      const uid = a.user_id
       if (!byUser[uid]) byUser[uid] = []
       byUser[uid].push(a)
     }
