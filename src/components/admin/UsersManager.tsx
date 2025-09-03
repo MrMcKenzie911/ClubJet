@@ -31,22 +31,17 @@ export default function UsersManager() {
 
   const fetchRows = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, first_name, last_name, email, role")
-      .order("created_at", { ascending: false });
-    if (error) setError(error.message);
-    const withAccounts = await attachAccounts(data ?? []);
-    setRows(withAccounts);
-    setLoading(false);
-  };
-  // load accounts separately, attach by user_id
-  const attachAccounts = async (profiles: any[]) => {
-    if (!profiles?.length) return profiles;
-    const { data: accounts } = await supabase.from('accounts').select('id, user_id, type, balance');
-    const byUser: Record<string, any[]> = {};
-    (accounts ?? []).forEach(a => { byUser[a.user_id] = byUser[a.user_id] || []; byUser[a.user_id].push(a); });
-    return profiles.map(p => ({ ...p, accounts: byUser[p.id] ?? [] }));
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/users/list', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to load users');
+      const j = await res.json();
+      setRows(j.users || []);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load users');
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -57,11 +52,18 @@ export default function UsersManager() {
   async function saveUser() {
     if (!editing) return;
     const { id, first_name, last_name, email, role } = editing;
-    const { error } = await supabase
-      .from("profiles")
-      .update({ first_name, last_name, email, role, updated_at: new Date().toISOString() })
-      .eq("id", id);
-    if (error) setError(error.message);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, first_name, last_name, email, role })
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(()=>({}));
+        setError(j.error ?? 'Failed to save user');
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Failed to save user');
+    }
     setEditing(null);
     await fetchRows();
   }
