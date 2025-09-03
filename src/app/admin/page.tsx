@@ -323,7 +323,6 @@ export async function approveUser(formData: FormData) {
   const decision = String(formData.get('decision'))
   try {
     if (decision === 'approve') {
-      // Use service client to avoid RLS/permissions blocking server action
       const { error: upErr } = await supabaseAdmin.from('profiles').update({ role: 'user' }).eq('id', userId)
       if (upErr) throw upErr
       const { data: acct } = await supabaseAdmin.from('accounts').select('id').eq('user_id', userId).order('created_at', { ascending: true }).limit(1).maybeSingle()
@@ -331,14 +330,15 @@ export async function approveUser(formData: FormData) {
         const { error: vErr } = await supabaseAdmin.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', acct.id)
         if (vErr) throw vErr
       }
+      redirect('/admin?toast=user_approved')
     } else if (decision === 'reject') {
       const { error: delErr } = await supabaseAdmin.from('profiles').delete().eq('id', userId)
       if (delErr) throw delErr
+      redirect('/admin?toast=user_rejected')
     }
   } catch (e) {
     console.error('approveUser failed', e)
-  } finally {
-    revalidatePath('/admin')
+    redirect('/admin?toast=error')
   }
 }
 
@@ -359,13 +359,14 @@ export async function approveDeposit(formData: FormData) {
           await supabaseAdmin.from('accounts').update({ balance: newBal }).eq('id', acct.id)
         }
       }
+      redirect('/admin?toast=deposit_approved')
     } else if (decision === 'deny') {
       await supabaseAdmin.from('transactions').update({ status: 'denied' }).eq('id', txId)
+      redirect('/admin?toast=deposit_denied')
     }
   } catch (e) {
     console.error('approveDeposit failed', e)
-  } finally {
-    revalidatePath('/admin')
+    redirect('/admin?toast=error')
   }
 }
 
@@ -375,10 +376,10 @@ export async function verifyAccount(formData: FormData) {
   if (!accountId) return
   try {
     await supabaseAdmin.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', accountId)
+    redirect('/admin?toast=account_verified')
   } catch (e) {
     console.error('verifyAccount failed', e)
-  } finally {
-    revalidatePath('/admin')
+    redirect('/admin?toast=error')
   }
 }
 
@@ -399,13 +400,14 @@ export async function decideWithdrawal(formData: FormData) {
     if (decision === 'approve') {
       const schedule = nextReleaseDate(new Date())
       await supabaseAdmin.from('withdrawal_requests').update({ status: 'approved', scheduled_release_at: schedule }).eq('id', wrId)
+      redirect('/admin?toast=withdrawal_approved')
     } else if (decision === 'deny') {
       await supabaseAdmin.from('withdrawal_requests').update({ status: 'denied' }).eq('id', wrId)
+      redirect('/admin?toast=withdrawal_denied')
     }
   } catch (e) {
     console.error('decideWithdrawal failed', e)
-  } finally {
-    revalidatePath('/admin')
+    redirect('/admin?toast=error')
   }
 }
 
@@ -415,10 +417,10 @@ export async function setRate(formData: FormData) {
   const fixed_rate_monthly = Number(formData.get('fixed_rate_monthly')) || null
   try {
     await supabaseAdmin.from('earnings_rates').insert({ account_type, fixed_rate_monthly, effective_from: new Date().toISOString().slice(0, 10) })
+    redirect('/admin?toast=rate_set')
   } catch (e) {
     console.error('setRate failed', e)
-  } finally {
-    revalidatePath('/admin')
+    redirect('/admin?toast=error')
   }
 }
 
@@ -438,10 +440,10 @@ export async function updateAccount(formData: FormData) {
   if (!accountId) return
   try {
     await supabaseAdmin.from('accounts').update(patch).eq('id', accountId)
+    redirect('/admin?toast=account_updated')
   } catch (e) {
     console.error('updateAccount failed', e)
-  } finally {
-    revalidatePath('/admin')
+    redirect('/admin?toast=error')
   }
 }
 
@@ -451,9 +453,9 @@ export async function deleteAccount(formData: FormData) {
   if (!accountId) return
   try {
     await supabaseAdmin.from('accounts').delete().eq('id', accountId)
+    redirect('/admin?toast=account_deleted')
   } catch (e) {
     console.error('deleteAccount failed', e)
-  } finally {
-    revalidatePath('/admin')
+    redirect('/admin?toast=error')
   }
 }

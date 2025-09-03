@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import ToastFromQueryDashboard from '@/components/ToastFromQueryDashboard'
+
 
 type QuickButtonProps = { label: string; href?: string; external?: boolean; onClickHint?: string }
 function QuickButton({ label, href, external, onClickHint }: QuickButtonProps) {
@@ -96,8 +98,10 @@ export default async function DashboardPage() {
   const startISO = first?.start_date ? new Date(first.start_date).toISOString() : ''
 
   return (
+    <>
+      <ToastFromQueryDashboard />
     <div className="mx-auto max-w-7xl px-6 py-8">
-      {/* Hero banner */}
+      {/* Single large container: hero + stats + chart + quick actions + forms */}
       <div className="rounded-3xl bg-gradient-to-b from-[#0E1116] to-[#0B0F14] border border-gray-800 p-8 shadow-xl">
         <div className="flex items-center justify-between">
           <div>
@@ -106,46 +110,44 @@ export default async function DashboardPage() {
           </div>
           <SignOutButton />
         </div>
+
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <BigStatCard label="Current Portfolio" value={`$${totalBalance.toLocaleString()}`} />
           <BigStatCard label="Pending Loan" value={`$${pendingDeposits.toLocaleString()}`} />
           <BigStatCard label="Projected Monthly Income" value={`$${projectedMonthlyIncome.toLocaleString(undefined,{maximumFractionDigits:0})}+`} />
         </div>
-      </div>
 
-      {/* Performance + Quick actions */}
-      <div className="mt-8 grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          {first && (
+        {first && (
+          <div className="mt-6 rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
+            <h2 className="mb-3 text-white font-semibold">Performance Overview</h2>
+            <BalanceChart initialBalance={Number(first.balance) || 0} startDateISO={startISO} monthlyTargetPct={1.5} transactions={transactions as any} />
+          </div>
+        )}
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            {/* Calculator modal (placeholder mount) */}
+            <CalculatorModal open={false} onClose={() => { /* noop for now */ }} />
+          </div>
+          <div>
             <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
-              <h2 className="mb-3 text-white font-semibold">Performance Overview</h2>
-              <BalanceChart initialBalance={Number(first.balance) || 0} startDateISO={startISO} monthlyTargetPct={1.5} transactions={transactions as any} />
-            </div>
-          )}
-
-          {/* Calculator modal mount (simple event toggle via data-action) */}
-          <CalculatorModal open={false} onClose={() => { /* noop for now */ }} />
-
-        </div>
-        <div>
-          <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
-            <h2 className="mb-3 text-white font-semibold">Quick Actions</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <QuickButton label="Request Withdrawal" href="#withdraw" />
-              <QuickButton label="Make a Deposit" href="#deposit" />
-              <QuickButton label="View History" href="#history" />
-              {/* Swap to a client-side toggle button */}
-              <CalculatorToggle />
-              <QuickButton label="Support" href="/support" external />
+              <h2 className="mb-3 text-white font-semibold">Quick Actions</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <QuickButton label="Request Withdrawal" href="#withdraw" />
+                <QuickButton label="Make a Deposit" href="#deposit" />
+                <QuickButton label="View History" href="#history" />
+                <CalculatorToggle />
+                <QuickButton label="Support" href="/support" external />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Forms */}
-      <div className="mt-8 grid gap-6 md:grid-cols-2" id="actions">
-        <div id="withdraw"><WithdrawalRequest accountId={first?.id} /></div>
-        <div id="deposit"><PaymentForm accountId={first?.id} /></div>
+        {/* Forms inside the same container */}
+        <div className="mt-8 grid gap-6 md:grid-cols-2" id="actions">
+          <div id="withdraw"><WithdrawalRequest accountId={first?.id} /></div>
+          <div id="deposit"><PaymentForm accountId={first?.id} /></div>
+        </div>
       </div>
 
       {/* History */}
@@ -205,8 +207,10 @@ async function submitWithdrawal(formData: FormData) {
   if (!account_id || !amount || amount <= 0) return
   try {
     await supabaseAdmin.from('withdrawal_requests').insert({ account_id, amount, method, status: 'pending' })
+    redirect('/dashboard?toast=withdraw_submitted')
   } catch (e) {
     console.error('submitWithdrawal failed', e)
+    redirect('/dashboard?toast=error')
   }
 }
 
@@ -244,4 +248,6 @@ async function submitPayment(formData: FormData) {
     console.error('submitPayment failed', e)
   }
 }
+  redirect('/dashboard?toast=deposit_submitted')
+
 
