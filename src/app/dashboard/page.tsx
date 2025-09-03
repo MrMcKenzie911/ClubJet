@@ -77,14 +77,14 @@ export default async function DashboardPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {first && (
-            <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
+            <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg">
               <h2 className="mb-3 text-white font-semibold">Performance Overview</h2>
               <BalanceChart initialBalance={Number(first.balance) || 0} startDateISO={startISO} monthlyTargetPct={1.5} />
             </div>
           )}
         </div>
         <div>
-          <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
+          <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg">
             <h2 className="mb-3 text-white font-semibold">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-3">
               <QuickButton label="Withdraw" href="#withdraw" />

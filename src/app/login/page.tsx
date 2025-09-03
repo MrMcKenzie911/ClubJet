@@ -106,7 +106,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[url('/images/ClubA_Background_login.png')] bg-cover bg-center">
+    <div className="relative min-h-[100svh] w-full bg-[url('/images/ClubA_Background_login.png')] bg-cover bg-center bg-no-repeat md:bg-fixed">
       <div className="absolute inset-0 bg-black/60" />
       <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
         <form onSubmit={handleLogin} className="w-full max-w-sm space-y-3 rounded-xl border border-white/10 bg-black/70 backdrop-blur-sm p-6 shadow-2xl">

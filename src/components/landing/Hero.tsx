@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export default function Hero({ onOpenSignup }: { onOpenSignup: () => void }) {
   return (
-    <section className="relative overflow-hidden">
+    <section className="relative overflow-hidden min-h-[100svh] pt-16 flex items-center">
       {/* Background video */}
       <video
         className="absolute inset-0 h-full w-full object-cover object-center"

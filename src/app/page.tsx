@@ -6,6 +6,7 @@ import Navbar from "@/components/landing/Navbar";
 import Hero from "@/components/landing/Hero";
 import InvestmentOptions from "@/components/landing/InvestmentOptions";
 import FeaturesRow from "@/components/landing/FeaturesRow";
+import WhyChoose from "@/components/landing/WhyChoose";
 import NoticeRelease from "@/components/landing/NoticeRelease";
 import About from "@/components/landing/About";
 import Contact from "@/components/landing/Contact";
@@ -19,6 +20,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-950 to-black">
       <Navbar onOpenSignup={() => setOpen(true)} />
       <Hero onOpenSignup={() => setOpen(true)} />
+      <WhyChoose />
       <InvestmentOptions onOpenSignup={() => setOpen(true)} />
       <FeaturesRow />
       <NoticeRelease />
