@@ -9,7 +9,6 @@ import FeaturesRow from "@/components/landing/FeaturesRow";
 import WhyChoose from "@/components/landing/WhyChoose";
 import NoticeRelease from "@/components/landing/NoticeRelease";
 import About from "@/components/landing/About";
-import Contact from "@/components/landing/Contact";
 import ContactAlt from "@/components/landing/ContactAlt";
 import Footer from "@/components/landing/Footer";
 
@@ -21,8 +20,8 @@ export default function HomePage() {
       <Navbar onOpenSignup={() => setOpen(true)} />
       <Hero onOpenSignup={() => setOpen(true)} />
       <WhyChoose />
-      <InvestmentOptions onOpenSignup={() => setOpen(true)} />
       <FeaturesRow />
+      <InvestmentOptions onOpenSignup={() => setOpen(true)} />
       <NoticeRelease />
       <About />
       <ContactAlt onOpenSignup={() => setOpen(true)} />

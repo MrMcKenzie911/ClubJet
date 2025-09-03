@@ -1,6 +1,6 @@
 "use client";
 
-import { Line, LineChart, CartesianGrid, Tooltip, XAxis, YAxis, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { Line, LineChart, CartesianGrid, Tooltip, XAxis, YAxis, ResponsiveContainer, Area } from "recharts";
 
 type Txn = { created_at: string; type: string; amount: number; status?: string };
 type Props = { initialBalance: number; startDateISO: string; monthlyTargetPct?: number; transactions?: Txn[] };

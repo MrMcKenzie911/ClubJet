@@ -12,11 +12,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
         <nav className="p-3 space-y-1 text-sm">
           <Section label="Dashboard" href="/admin" />
-          <Divider label="User Management" />
-          <Item label="Registered Users" href="#users" />
-          <Divider label="Accounts" />
-          <Item label="Lender (Fixed)" href="#lender-bands" />
-          <Item label="Network (Variable)" href="#users" />
+          <Divider label="Queues" />
+          <Item label="Pending Users" href="/admin?tab=pending-users" />
+          <Item label="Pending Deposits" href="/admin?tab=pending-deposits" />
+          <Item label="Pending Withdrawals" href="/admin?tab=pending-withdrawals" />
+          <Item label="Pending Accounts" href="/admin?tab=pending-accounts" />
+          <Divider label="Settings" />
+          <Item label="Set Earnings Rate" href="/admin?tab=earnings-rate" />
         </nav>
         <div className="mt-auto p-3">
           <SignOutButton className="w-full" />
@@ -52,9 +54,9 @@ function Section({ label, href }: { label: string; href: string }) {
 }
 function Item({ label, href }: { label: string; href: string }) {
   return (
-    <a href={href} className="block rounded px-3 py-2 text-gray-300 hover:text-white hover:bg-white/5">
+    <Link href={href} className="block rounded px-3 py-2 text-gray-300 hover:text-white hover:bg-white/5 data-[active=true]:text-white data-[active=true]:bg-white/10" data-active={typeof window !== 'undefined' && window.location.search.includes(href.split('tab=')[1] ?? '') ? true : undefined}>
       {label}
-    </a>
+    </Link>
   );
 }
 

@@ -42,7 +42,7 @@ export default function UsersManager() {
   };
 
 
-  useEffect(() => { fetchRows(); }, []);
+  useEffect(() => { fetchRows(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   const [editing, setEditing] = useState<any | null>(null);
 
@@ -58,12 +58,6 @@ export default function UsersManager() {
     await fetchRows();
   }
 
-  async function removeUser(id: string) {
-    if (!confirm("Delete this user?")) return;
-    const { error } = await supabase.from("profiles").delete().eq("id", id);
-    if (error) setError(error.message);
-    await fetchRows();
-  }
 
   async function addUser() {
     setEditing({ id: "", first_name: "", last_name: "", email: "", role: "user" });
@@ -138,7 +132,7 @@ export default function UsersManager() {
             const totalBalance = (u.accounts ?? []).reduce((s:number,a:any)=>s+Number(a.balance??0),0)
             const matchesBalMin = !minBal || totalBalance >= Number(minBal)
             const matchesBalMax = !maxBal || totalBalance <= Number(maxBal)
-            const matchesType = typeFilter === 'all' || (u.accounts ?? []).some((a:any) => a.account_type === typeFilter)
+            const matchesType = typeFilter === 'all' || (u.accounts ?? []).some((a:any) => a.type === typeFilter)
             return matchesQ && matchesRole && matchesType && matchesBalMin && matchesBalMax
           })
           .sort((a,b) => {

@@ -1,14 +1,5 @@
 import { redirect } from 'next/navigation'
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type StatCardProps = { label: string; value: string; subtle?: boolean; accent?: boolean; positive?: boolean }
-function StatCard({ label, value, subtle, accent, positive }: StatCardProps) {
-  return (
-    <div className={`rounded-xl border ${accent? 'border-amber-500/60' : 'border-gray-800'} bg-[#0B0F14] p-4`}>
-      <div className={`text-[11px] uppercase tracking-wide ${subtle? 'text-gray-400' : 'text-gray-300'}`}>{label}</div>
-      <div className={`mt-1 text-lg font-semibold ${positive? 'text-emerald-400' : 'text-white'}`}>{value}</div>
-    </div>
-  )
-}
 
 type QuickButtonProps = { label: string; href?: string; external?: boolean; onClickHint?: string }
 function QuickButton({ label, href, external, onClickHint }: QuickButtonProps) {
@@ -69,7 +60,6 @@ function BigStatCard({ label, value }: { label: string; value: string }) {
 
 
 import { getSupabaseServer } from '@/lib/supabaseServer'
-import ProgressTarget from '@/components/dashboard/ProgressTarget'
 import BalanceChart from '@/components/dashboard/BalanceChart'
 import SignOutButton from '@/components/auth/SignOutButton'
 import CalculatorToggle from '@/components/dashboard/CalculatorToggle'
@@ -213,7 +203,11 @@ async function submitWithdrawal(formData: FormData) {
   const amount = parseFloat(String(formData.get('amount')))
   const method = String(formData.get('method'))
   if (!account_id || !amount || amount <= 0) return
-  await supabase.from('withdrawal_requests').insert({ account_id, amount, method })
+  try {
+    await supabaseAdmin.from('withdrawal_requests').insert({ account_id, amount, method, status: 'pending' })
+  } catch (e) {
+    console.error('submitWithdrawal failed', e)
+  }
 }
 
 function PaymentForm({ accountId }: { accountId?: string }) {
@@ -244,6 +238,10 @@ async function submitPayment(formData: FormData) {
   const amount = parseFloat(String(formData.get('amount')))
   const reference = String(formData.get('reference') || '')
   if (!account_id || !amount || amount <= 0) return
-  await supabase.from('transactions').insert({ account_id, type: 'DEPOSIT', amount, status: 'pending', metadata: { reference } })
+  try {
+    await supabaseAdmin.from('transactions').insert({ account_id, type: 'DEPOSIT', amount, status: 'pending', metadata: { reference } })
+  } catch (e) {
+    console.error('submitPayment failed', e)
+  }
 }
 

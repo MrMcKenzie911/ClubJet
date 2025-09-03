@@ -37,9 +37,11 @@ async function getAdminData() {
 
   return { pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [] }
 }
-export default async function AdminPage() {
+export default async function AdminPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
   const res = await getAdminData()
   if ('redirect' in res) redirect('/login')
+  const tabParam = searchParams?.tab
+  const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
 
   const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts } = res
 
@@ -51,13 +53,13 @@ export default async function AdminPage() {
         <SignOutInline />
       </div>
 
-      <section className="mt-6 grid gap-6 lg:grid-cols-3 bg-[#0B0F14] p-6 rounded-2xl shadow-inner">
-          {/* Verified Users moved to top */}
+      {/* Tabbed view: default dashboard shows all; specific tabs show focused lists */}
+      {!tab && (
+        <section className="mt-6 grid gap-6 lg:grid-cols-3 bg-[#0B0F14] p-6 rounded-2xl shadow-inner">
           <div className="lg:col-span-2">
             <UsersManagerSection />
           </div>
           <div className="space-y-2">
-            {/* Deposits */}
             {pendingDeposits.map((t: any) => (
               <form key={`dep-${t.id}`} action={approveDeposit} className="rounded-lg border border-gray-700 bg-[#1e1e1e] p-4 shadow transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg">
                 <input type="hidden" name="tx_id" defaultValue={t.id} />
@@ -66,7 +68,6 @@ export default async function AdminPage() {
                     <div className="text-white font-medium">{t.account?.user?.first_name} {t.account?.user?.last_name}</div>
                     <div className="text-xs text-gray-400">{t.account?.user?.email} • {t.account?.user?.phone ?? 'n/a'}</div>
                     <div className="mt-1 text-sm text-gray-300">Deposit • ${Number(t.amount).toLocaleString()} • {new Date(t.created_at).toLocaleString()}</div>
-                    {t.metadata?.reference && <div className="text-xs text-gray-500">Ref: {t.metadata.reference}</div>}
                   </div>
                   <div className="flex gap-2">
                     <button name="decision" value="approve" className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Approve</button>
@@ -100,10 +101,6 @@ export default async function AdminPage() {
             )}
           </div>
 
-        {/* Client Requests (Unified) */}
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 lg:col-span-1">
-          <h2 className="mb-3 text-white font-semibold">Client Requests</h2>
-        </div>
         <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 lg:col-span-1 shadow transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg">
           <h2 className="mb-3 text-white font-semibold">Pending Users</h2>
           <div className="space-y-2">
@@ -121,6 +118,7 @@ export default async function AdminPage() {
           </div>
         </div>
 
+        {/*
         <div className="hidden">
           <h2 className="mb-3 text-white font-semibold">Pending Deposits (Wires)</h2>
           <div className="space-y-2">
@@ -128,7 +126,6 @@ export default async function AdminPage() {
               <form key={t.id} action={approveDeposit} className="flex items-center justify-between rounded border border-gray-800 bg-gray-950 p-2">
                 <input type="hidden" name="tx_id" defaultValue={t.id} />
                 <div className="text-sm text-gray-300">Acct {t.account_id} • ${Number(t.amount).toFixed(2)} • {new Date(t.created_at).toLocaleString()}</div>
-        {/* Pending Accounts (from pending users) */}
         <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg">
           <h2 className="mb-3 text-white font-semibold">Pending Accounts</h2>
           <div className="space-y-2">
@@ -175,41 +172,179 @@ export default async function AdminPage() {
           </div>
         </div>
 
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === 'pending-users' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
+            <h2 className="mb-3 text-white font-semibold">Pending Users</h2>
+            <div className="space-y-2">
+              {pendingUsers.map((u: any) => (
+                <form key={u.id} action={approveUser} className="flex items-center justify-between rounded border border-gray-800 bg-gray-950 p-2">
+                  <input type="hidden" name="user_id" defaultValue={u.id} />
+                  <div className="text-sm text-gray-300">{u.email} • {u.first_name} {u.last_name}</div>
+                  <div className="flex gap-2">
+                    <button name="decision" value="approve" className="rounded bg-emerald-600 px-3 py-1 text-white">Approve</button>
+                    <button name="decision" value="reject" className="rounded bg-red-600 px-3 py-1 text-white">Reject</button>
+                  </div>
+                </form>
+              ))}
+              {pendingUsers.length === 0 && <div className="text-sm text-gray-400">No pending users.</div>}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {tab === 'pending-deposits' && (
+        <section className="mt-6 space-y-2">
+          {pendingDeposits.map((t: any) => (
+            <form key={`dep-${t.id}`} action={approveDeposit} className="rounded-lg border border-gray-700 bg-[#1e1e1e] p-4 shadow">
+              <input type="hidden" name="tx_id" defaultValue={t.id} />
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-white font-medium">{t.account?.user?.first_name} {t.account?.user?.last_name}</div>
+                  <div className="text-xs text-gray-400">{t.account?.user?.email} • {t.account?.user?.phone ?? 'n/a'}</div>
+                  <div className="mt-1 text-sm text-gray-300">Deposit • ${Number(t.amount).toLocaleString()} • {new Date(t.created_at).toLocaleString()}</div>
+                </div>
                 <div className="flex gap-2">
                   <button name="decision" value="approve" className="rounded bg-emerald-600 px-3 py-1 text-white">Approve</button>
                   <button name="decision" value="deny" className="rounded bg-red-600 px-3 py-1 text-white">Deny</button>
                 </div>
-              </form>
-            ))}
-            {pendingDeposits.length === 0 && <div className="text-sm text-gray-400">No pending deposits.</div>}
-          </div>
-        </div>
-      </section>
+              </div>
+            </form>
+          ))}
+          {pendingDeposits.length === 0 && <div className="text-sm text-gray-400">No pending deposits.</div>}
+        </section>
+      )}
 
-      <section className="mt-6 grid gap-6 sm:grid-cols-2">
-        {/* Set Earnings Rate only (Lender Bands removed per request) */}
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 sm:col-span-2">
-          <h2 className="mb-3 text-white font-semibold">Set Earnings Rate</h2>
-          <form action={setRate} className="flex flex-wrap gap-2 items-end">
-            <label className="text-xs text-gray-400">Account Type
-              <select name="account_type" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
-                <option value="LENDER">LENDER</option>
-                <option value="NETWORK">NETWORK</option>
-              </select>
-            </label>
-            <label className="text-xs text-gray-400">Monthly %
-              <input name="fixed_rate_monthly" type="number" step="0.001" placeholder="e.g., 1.25" className="mt-1 w-48 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
-            </label>
-            <button className="rounded bg-emerald-600 px-3 py-1 text-white">Set</button>
-          </form>
-          <div className="mt-3 text-sm text-gray-300">Recent:</div>
-          <ul className="text-sm text-gray-400">
-            {rates.map((r: any) => (
-              <li key={r.id}>{r.account_type} • {r.fixed_rate_monthly ?? 'n/a'}% • from {r.effective_from}</li>
-            ))}
-          </ul>
-        </div>
-      </section>
+      {tab === 'pending-withdrawals' && (
+        <section className="mt-6 space-y-2">
+          {pendingWithdrawals.map((w: any) => (
+            <form key={`wr-${w.id}`} action={decideWithdrawal} className="rounded-lg border border-gray-700 bg-[#1e1e1e] p-4 shadow">
+              <input type="hidden" name="wr_id" defaultValue={w.id} />
+              <input type="hidden" name="account_id" defaultValue={w.account_id} />
+              <input type="hidden" name="amount" defaultValue={w.amount} />
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-white font-medium">{w.account?.user?.first_name} {w.account?.user?.last_name}</div>
+                  <div className="text-xs text-gray-400">{w.account?.user?.email} • {w.account?.user?.phone ?? 'n/a'}</div>
+                  <div className="mt-1 text-sm text-gray-300">Withdraw • ${Number(w.amount).toLocaleString()} • {w.method}</div>
+                  <div className="text-xs text-gray-500">Requested: {new Date(w.requested_at).toLocaleString()}</div>
+                </div>
+                <div className="flex gap-2">
+                  <button name="decision" value="approve" className="rounded bg-emerald-600 px-3 py-1 text-white">Approve</button>
+                  <button name="decision" value="deny" className="rounded bg-red-600 px-3 py-1 text-white">Deny</button>
+                </div>
+              </div>
+            </form>
+          ))}
+          {pendingWithdrawals.length === 0 && <div className="text-sm text-gray-400">No pending withdrawals.</div>}
+        </section>
+      )}
+
+      {tab === 'pending-accounts' && (
+        <section className="mt-6 space-y-2">
+          <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
+            <h2 className="mb-3 text-white font-semibold">Pending Accounts</h2>
+            <div className="space-y-2">
+              {pendingAccounts.map((a: any) => (
+                <form key={a.id} action={verifyAccount} className="rounded border border-gray-800 bg-[#0E141C] p-3">
+                  <input type="hidden" name="account_id" defaultValue={a.id} />
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="text-white font-medium">{a.user?.first_name} {a.user?.last_name}</div>
+                      <div className="text-xs text-gray-400">{a.user?.email} • {a.user?.phone ?? 'n/a'}</div>
+                      <div className="mt-2 text-sm text-gray-300">Type: <span className="text-amber-400">{a.type}</span> • Balance: ${Number(a.balance).toLocaleString()} • Min: ${Number(a.minimum_balance).toLocaleString()}</div>
+                      <div className="text-xs text-gray-500">Start: {a.start_date ?? '—'}</div>
+                    </div>
+                    <div className="flex gap-2 items-start">
+                      <button formAction={updateAccount} name="action" value="edit" className="rounded bg-gray-700 hover:bg-gray-600 px-3 py-1">Save</button>
+                      <button formAction={deleteAccount} name="action" value="delete" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1">Delete</button>
+                      <button name="action" value="verify" className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Verify</button>
+                    </div>
+                  </div>
+                  <div className="mt-2 grid grid-cols-5 gap-2">
+                    <label className="text-xs text-gray-400">Type
+                      <select name="type" defaultValue={a.type} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white">
+                        <option value="LENDER">LENDER</option>
+                        <option value="NETWORK">NETWORK</option>
+                      </select>
+                    </label>
+                    <label className="text-xs text-gray-400">Min Balance
+                      <input name="minimum_balance" defaultValue={a.minimum_balance} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
+                    </label>
+                    <label className="text-xs text-gray-400">Balance
+                      <input name="balance" defaultValue={a.balance} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
+                    </label>
+                    <label className="text-xs text-gray-400">Start Date
+                      <input name="start_date" type="date" defaultValue={a.start_date ?? ''} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
+                    </label>
+                    <label className="text-xs text-gray-400">Lockup End
+                      <input name="lockup_end_date" type="date" defaultValue={a.lockup_end_date ?? ''} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
+                    </label>
+                  </div>
+                </form>
+              ))}
+              {pendingAccounts.length === 0 && <div className="text-sm text-gray-400">No pending accounts.</div>}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {tab === 'earnings-rate' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4">
+            <h2 className="mb-3 text-white font-semibold">Set Earnings Rate</h2>
+            <form action={setRate} className="flex flex-wrap gap-2 items-end">
+              <label className="text-xs text-gray-400">Account Type
+                <select name="account_type" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
+                  <option value="LENDER">LENDER</option>
+                  <option value="NETWORK">NETWORK</option>
+                </select>
+              </label>
+              <label className="text-xs text-gray-400">Monthly %
+                <input name="fixed_rate_monthly" type="number" step="0.001" placeholder="e.g., 1.25" className="mt-1 w-48 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
+              </label>
+              <button className="rounded bg-emerald-600 px-3 py-1 text-white">Set</button>
+            </form>
+            <div className="mt-3 text-sm text-gray-300">Recent:</div>
+            <ul className="text-sm text-gray-400">
+              {rates.map((r: any) => (
+                <li key={r.id}>{r.account_type} • {r.fixed_rate_monthly ?? 'n/a'}% • from {r.effective_from}</li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      {!tab && (
+        <section className="mt-6 grid gap-6 sm:grid-cols-2">
+          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 sm:col-span-2">
+            <h2 className="mb-3 text-white font-semibold">Set Earnings Rate</h2>
+            <form action={setRate} className="flex flex-wrap gap-2 items-end">
+              <label className="text-xs text-gray-400">Account Type
+                <select name="account_type" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
+                  <option value="LENDER">LENDER</option>
+                  <option value="NETWORK">NETWORK</option>
+                </select>
+              </label>
+              <label className="text-xs text-gray-400">Monthly %
+                <input name="fixed_rate_monthly" type="number" step="0.001" placeholder="e.g., 1.25" className="mt-1 w-48 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
+              </label>
+              <button className="rounded bg-emerald-600 px-3 py-1 text-white">Set</button>
+            </form>
+            <div className="mt-3 text-sm text-gray-300">Recent:</div>
+            <ul className="text-sm text-gray-400">
+              {rates.map((r: any) => (
+                <li key={r.id}>{r.account_type} • {r.fixed_rate_monthly ?? 'n/a'}% • from {r.effective_from}</li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
     </div>
   )
 }
@@ -217,7 +352,6 @@ export default async function AdminPage() {
 // Small server wrappers that render client components (keeps admin auth guard on server)
 import SignOutButton from '@/components/SignOutButton'
 import UsersManager from '@/components/admin/UsersManager'
-import LenderBandsEditor from '@/components/admin/LenderBandsEditor'
 
 function SignOutInline() {
   return <SignOutButton />
@@ -259,32 +393,42 @@ export async function approveUser(formData: FormData) {
 
 export async function approveDeposit(formData: FormData) {
   'use server'
-  const supabase = getSupabaseServer()
   const txId = String(formData.get('tx_id'))
   const decision = String(formData.get('decision'))
-  if (decision === 'approve') {
-    const { data: tx } = await supabase.from('transactions').select('*').eq('id', txId).single()
-    if (tx) {
-      // set posted
-      await supabase.from('transactions').update({ status: 'posted' }).eq('id', txId)
-      // increment account balance
-      const { data: acct } = await supabase.from('accounts').select('*').eq('id', tx.account_id).single()
-      if (acct) {
-        const newBal = Number(acct.balance) + Number(tx.amount)
-        await supabase.from('accounts').update({ balance: newBal }).eq('id', acct.id)
+  try {
+    if (decision === 'approve') {
+      const { data: tx, error: txErr } = await supabaseAdmin.from('transactions').select('*').eq('id', txId).maybeSingle()
+      if (txErr) throw txErr
+      if (tx) {
+        await supabaseAdmin.from('transactions').update({ status: 'posted' }).eq('id', txId)
+        const { data: acct, error: acctErr } = await supabaseAdmin.from('accounts').select('*').eq('id', tx.account_id).maybeSingle()
+        if (acctErr) throw acctErr
+        if (acct) {
+          const newBal = Number(acct.balance) + Number(tx.amount)
+          await supabaseAdmin.from('accounts').update({ balance: newBal }).eq('id', acct.id)
+        }
       }
+    } else if (decision === 'deny') {
+      await supabaseAdmin.from('transactions').update({ status: 'denied' }).eq('id', txId)
     }
-  } else if (decision === 'deny') {
-    await supabase.from('transactions').update({ status: 'denied' }).eq('id', txId)
+  } catch (e) {
+    console.error('approveDeposit failed', e)
+  } finally {
+    revalidatePath('/admin')
   }
 }
 
 export async function verifyAccount(formData: FormData) {
   'use server'
-  const supabase = getSupabaseServer()
   const accountId = String(formData.get('account_id'))
   if (!accountId) return
-  await supabase.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', accountId)
+  try {
+    await supabaseAdmin.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', accountId)
+  } catch (e) {
+    console.error('verifyAccount failed', e)
+  } finally {
+    revalidatePath('/admin')
+  }
 }
 
 function nextReleaseDate(requestedAt: Date): string {
@@ -298,32 +442,39 @@ function nextReleaseDate(requestedAt: Date): string {
 
 export async function decideWithdrawal(formData: FormData) {
   'use server'
-  const supabase = getSupabaseServer()
   const wrId = String(formData.get('wr_id'))
-  const accountId = String(formData.get('account_id'))
-  const amount = Number(formData.get('amount'))
   const decision = String(formData.get('decision'))
-  if (decision === 'approve') {
-    const schedule = nextReleaseDate(new Date())
-    await supabase.from('withdrawal_requests').update({ status: 'approved', scheduled_release_at: schedule }).eq('id', wrId)
-  } else if (decision === 'deny') {
-    await supabase.from('withdrawal_requests').update({ status: 'denied' }).eq('id', wrId)
+  try {
+    if (decision === 'approve') {
+      const schedule = nextReleaseDate(new Date())
+      await supabaseAdmin.from('withdrawal_requests').update({ status: 'approved', scheduled_release_at: schedule }).eq('id', wrId)
+    } else if (decision === 'deny') {
+      await supabaseAdmin.from('withdrawal_requests').update({ status: 'denied' }).eq('id', wrId)
+    }
+  } catch (e) {
+    console.error('decideWithdrawal failed', e)
+  } finally {
+    revalidatePath('/admin')
   }
 }
 
 export async function setRate(formData: FormData) {
   'use server'
-  const supabase = getSupabaseServer()
   const account_type = String(formData.get('account_type'))
   const fixed_rate_monthly = Number(formData.get('fixed_rate_monthly')) || null
-  await supabase.from('earnings_rates').insert({ account_type, fixed_rate_monthly, effective_from: new Date().toISOString().slice(0, 10) })
+  try {
+    await supabaseAdmin.from('earnings_rates').insert({ account_type, fixed_rate_monthly, effective_from: new Date().toISOString().slice(0, 10) })
+  } catch (e) {
+    console.error('setRate failed', e)
+  } finally {
+    revalidatePath('/admin')
+  }
 }
 
 
 
 export async function updateAccount(formData: FormData) {
   'use server'
-  const supabase = getSupabaseServer()
   const accountId = String(formData.get('account_id'))
   const type = String(formData.get('type'))
   const minimum_balance = Number(formData.get('minimum_balance'))
@@ -334,15 +485,24 @@ export async function updateAccount(formData: FormData) {
   if (start_date_raw) patch.start_date = start_date_raw
   if (lockup_end_raw) patch.lockup_end_date = lockup_end_raw
   if (!accountId) return
-  await supabase.from('accounts').update(patch).eq('id', accountId)
-  revalidatePath('/admin')
+  try {
+    await supabaseAdmin.from('accounts').update(patch).eq('id', accountId)
+  } catch (e) {
+    console.error('updateAccount failed', e)
+  } finally {
+    revalidatePath('/admin')
+  }
 }
 
 export async function deleteAccount(formData: FormData) {
   'use server'
-  const supabase = getSupabaseServer()
   const accountId = String(formData.get('account_id'))
   if (!accountId) return
-  await supabase.from('accounts').delete().eq('id', accountId)
-  revalidatePath('/admin')
+  try {
+    await supabaseAdmin.from('accounts').delete().eq('id', accountId)
+  } catch (e) {
+    console.error('deleteAccount failed', e)
+  } finally {
+    revalidatePath('/admin')
+  }
 }
