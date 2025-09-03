@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { getSupabaseServer } from '@/lib/supabaseServer'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
+import ToastFromQuery from '@/components/ToastFromQuery'
+
 import { revalidatePath } from 'next/cache'
 
 async function getAdminData() {
@@ -47,6 +49,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
+      <ToastFromQuery />
+
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-white">Admin Dashboard</h1>
         {/* quick sign out */}
@@ -55,127 +59,74 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
 
       {/* Tabbed view: default dashboard shows all; specific tabs show focused lists */}
       {!tab && (
-        <section className="mt-6 grid gap-6 lg:grid-cols-3 bg-[#0B0F14] p-6 rounded-2xl shadow-inner">
-          <div className="lg:col-span-2">
-            <UsersManagerSection />
-          </div>
-          <div className="space-y-2">
-            {pendingDeposits.map((t: any) => (
-              <form key={`dep-${t.id}`} action={approveDeposit} className="rounded-lg border border-gray-700 bg-[#1e1e1e] p-4 shadow transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg">
-                <input type="hidden" name="tx_id" defaultValue={t.id} />
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-white font-medium">{t.account?.user?.first_name} {t.account?.user?.last_name}</div>
-                    <div className="text-xs text-gray-400">{t.account?.user?.email} • {t.account?.user?.phone ?? 'n/a'}</div>
-                    <div className="mt-1 text-sm text-gray-300">Deposit • ${Number(t.amount).toLocaleString()} • {new Date(t.created_at).toLocaleString()}</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button name="decision" value="approve" className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Approve</button>
-                    <button name="decision" value="deny" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1 text-white">Deny</button>
-                  </div>
+        <section className="mt-6">
+          <div className="rounded-3xl border border-gray-800 bg-[#0B0F14] p-6 shadow-inner">
+            {/* Combined container: Verified Users + Client Requests + Pending Users */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <UsersManagerSection />
+              </div>
+              <div className="space-y-2">
+                <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
+                  <h2 className="mb-3 text-white font-semibold">Client Requests</h2>
+                  {pendingDeposits.map((t: any) => (
+                    <form key={`dep-${t.id}`} action={approveDeposit} className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
+                      <input type="hidden" name="tx_id" defaultValue={t.id} />
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-white font-medium">{t.account?.user?.first_name} {t.account?.user?.last_name}</div>
+                          <div className="text-xs text-gray-400">{t.account?.user?.email} • {t.account?.user?.phone ?? 'n/a'}</div>
+                          <div className="mt-1 text-sm text-gray-300">Deposit • ${Number(t.amount).toLocaleString()} • {new Date(t.created_at).toLocaleString()}</div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button name="decision" value="approve" className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Approve</button>
+                          <button name="decision" value="deny" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1 text-white">Deny</button>
+                        </div>
+                      </div>
+                    </form>
+                  ))}
+                  {pendingWithdrawals.map((w: any) => (
+                    <form key={`wr-${w.id}`} action={decideWithdrawal} className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
+                      <input type="hidden" name="wr_id" defaultValue={w.id} />
+                      <input type="hidden" name="account_id" defaultValue={w.account_id} />
+                      <input type="hidden" name="amount" defaultValue={w.amount} />
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-white font-medium">{w.account?.user?.first_name} {w.account?.user?.last_name}</div>
+                          <div className="text-xs text-gray-400">{w.account?.user?.email} • {w.account?.user?.phone ?? 'n/a'}</div>
+                          <div className="mt-1 text-sm text-gray-300">Withdraw • ${Number(w.amount).toLocaleString()} • {w.method}</div>
+                          <div className="text-xs text-gray-500">Requested: {new Date(w.requested_at).toLocaleString()}</div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button name="decision" value="approve" className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Approve</button>
+                          <button name="decision" value="deny" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1 text-white">Deny</button>
+                        </div>
+                      </div>
+                    </form>
+                  ))}
+                  {pendingDeposits.length + pendingWithdrawals.length === 0 && (
+                    <div className="text-sm text-gray-400">No client requests.</div>
+                  )}
                 </div>
-              </form>
-            ))}
-            {/* Withdrawals */}
-            {pendingWithdrawals.map((w: any) => (
-              <form key={`wr-${w.id}`} action={decideWithdrawal} className="rounded-lg border border-gray-700 bg-[#1e1e1e] p-4 shadow transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg">
-                <input type="hidden" name="wr_id" defaultValue={w.id} />
-                <input type="hidden" name="account_id" defaultValue={w.account_id} />
-                <input type="hidden" name="amount" defaultValue={w.amount} />
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-white font-medium">{w.account?.user?.first_name} {w.account?.user?.last_name}</div>
-                    <div className="text-xs text-gray-400">{w.account?.user?.email} • {w.account?.user?.phone ?? 'n/a'}</div>
-                    <div className="mt-1 text-sm text-gray-300">Withdraw • ${Number(w.amount).toLocaleString()} • {w.method}</div>
-                    <div className="text-xs text-gray-500">Requested: {new Date(w.requested_at).toLocaleString()}</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button name="decision" value="approve" className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Approve</button>
-                    <button name="decision" value="deny" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1 text-white">Deny</button>
-                  </div>
-                </div>
-              </form>
-            ))}
-            {pendingDeposits.length + pendingWithdrawals.length === 0 && (
-              <div className="text-sm text-gray-400">No client requests.</div>
-            )}
-          </div>
 
-        <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 lg:col-span-1 shadow transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg">
-          <h2 className="mb-3 text-white font-semibold">Pending Users</h2>
-          <div className="space-y-2">
-            {pendingUsers.map((u: any) => (
-              <form key={u.id} action={approveUser} className="flex items-center justify-between rounded border border-gray-800 bg-gray-950 p-2">
-                <input type="hidden" name="user_id" defaultValue={u.id} />
-                <div className="text-sm text-gray-300">{u.email} • {u.first_name} {u.last_name}</div>
-                <div className="flex gap-2">
-                  <button name="decision" value="approve" className="rounded bg-emerald-600 px-3 py-1 text-white">Approve</button>
-                  <button name="decision" value="reject" className="rounded bg-red-600 px-3 py-1 text-white">Reject</button>
-                </div>
-              </form>
-            ))}
-            {pendingUsers.length === 0 && <div className="text-sm text-gray-400">No pending users.</div>}
-          </div>
-        </div>
-
-        {/*
-        <div className="hidden">
-          <h2 className="mb-3 text-white font-semibold">Pending Deposits (Wires)</h2>
-          <div className="space-y-2">
-            {pendingDeposits.map((t: any) => (
-              <form key={t.id} action={approveDeposit} className="flex items-center justify-between rounded border border-gray-800 bg-gray-950 p-2">
-                <input type="hidden" name="tx_id" defaultValue={t.id} />
-                <div className="text-sm text-gray-300">Acct {t.account_id} • ${Number(t.amount).toFixed(2)} • {new Date(t.created_at).toLocaleString()}</div>
-        <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg">
-          <h2 className="mb-3 text-white font-semibold">Pending Accounts</h2>
-          <div className="space-y-2">
-            {pendingAccounts.map((a: any) => (
-              <form key={a.id} action={verifyAccount} className="rounded border border-gray-800 bg-[#0E141C] p-3">
-                <input type="hidden" name="account_id" defaultValue={a.id} />
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="text-white font-medium">{a.user?.first_name} {a.user?.last_name}</div>
-                    <div className="text-xs text-gray-400">{a.user?.email} • {a.user?.phone ?? 'n/a'}</div>
-                    <div className="mt-2 text-sm text-gray-300">Type: <span className="text-amber-400">{a.type}</span> • Balance: ${Number(a.balance).toLocaleString()} • Min: ${Number(a.minimum_balance).toLocaleString()}</div>
-                    <div className="text-xs text-gray-500">Start: {a.start_date ?? '—'}</div>
-                  </div>
-                  <div className="flex gap-2 items-start">
-                    <button formAction={updateAccount} name="action" value="edit" className="rounded bg-gray-700 hover:bg-gray-600 px-3 py-1">Save</button>
-                    <button formAction={deleteAccount} name="action" value="delete" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1">Delete</button>
-                    <button name="action" value="verify" className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Verify</button>
+                <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
+                  <h2 className="mb-3 text-white font-semibold">Pending Users</h2>
+                  <div className="space-y-2">
+                    {pendingUsers.map((u: any) => (
+                      <form key={u.id} action={approveUser} className="flex items-center justify-between rounded border border-gray-800 bg-gray-950 p-2">
+                        <input type="hidden" name="user_id" defaultValue={u.id} />
+                        <div className="text-sm text-gray-300">{u.email} • {u.first_name} {u.last_name}</div>
+                        <div className="flex gap-2">
+                          <button name="decision" value="approve" className="rounded bg-emerald-600 px-3 py-1 text-white">Approve</button>
+                          <button name="decision" value="reject" className="rounded bg-red-600 px-3 py-1 text-white">Reject</button>
+                        </div>
+                      </form>
+                    ))}
+                    {pendingUsers.length === 0 && <div className="text-sm text-gray-400">No pending users.</div>}
                   </div>
                 </div>
-                <div className="mt-2 grid grid-cols-5 gap-2">
-                  <label className="text-xs text-gray-400">Type
-                    <select name="type" defaultValue={a.type} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white">
-                      <option value="LENDER">LENDER</option>
-                      <option value="NETWORK">NETWORK</option>
-                    </select>
-                  </label>
-                  <label className="text-xs text-gray-400">Min Balance
-                    <input name="minimum_balance" defaultValue={a.minimum_balance} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
-                  </label>
-                  <label className="text-xs text-gray-400">Balance
-                    <input name="balance" defaultValue={a.balance} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
-                  </label>
-                  <label className="text-xs text-gray-400">Start Date
-                    <input name="start_date" type="date" defaultValue={a.start_date ?? ''} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
-                  </label>
-                  <label className="text-xs text-gray-400">Lockup End
-                    <input name="lockup_end_date" type="date" defaultValue={a.lockup_end_date ?? ''} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
-                  </label>
-                </div>
-              </form>
+              </div>
 
-            ))}
-            {pendingAccounts.length === 0 && <div className="text-sm text-gray-400">No pending accounts.</div>}
-          </div>
-        </div>
-
-            ))}
-          </div>
-        </div>
-      )}
 
       {tab === 'pending-users' && (
         <section className="mt-6">
