@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import ToastFromQueryDashboard from '@/components/ToastFromQueryDashboard'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 
 type QuickButtonProps = { label: string; href?: string; external?: boolean; onClickHint?: string }
@@ -177,8 +178,8 @@ export default async function DashboardPage() {
         </div>
       </div>
     </div>
-  )
-}
+      </>
+
 
 function WithdrawalRequest({ accountId }: { accountId?: string }) {
   return <form action={submitWithdrawal} className="rounded-xl border border-gray-800 bg-gray-900 p-4">

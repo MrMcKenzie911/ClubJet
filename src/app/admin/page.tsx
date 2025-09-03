@@ -126,6 +126,11 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                   </div>
                 </div>
               </div>
+                </div>
+              </div>
+            </section>
+          )}
+
 
 
       {tab === 'pending-users' && (
