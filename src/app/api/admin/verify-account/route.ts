@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { cookies } from 'next/headers'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   try {
-    const guard = await fetch(new URL('/api/admin/guard', req.url), { cache: 'no-store' })
-    if (!guard.ok) return NextResponse.redirect(new URL('/login', req.url))
+    const supa = createRouteHandlerClient({ cookies })
+    const { data: { user } } = await supa.auth.getUser()
+    if (!user) return NextResponse.redirect(new URL('/login', req.url))
+    const { data: me } = await supa.from('profiles').select('role').eq('id', user.id).single()
+    if (me?.role !== 'admin') return NextResponse.redirect(new URL('/login', req.url))
 
     const form = await req.formData()
     const accountId = String(form.get('account_id') || '')
