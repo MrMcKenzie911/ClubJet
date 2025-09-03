@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     const balance = Number(form.get('balance')||0)
     const start_date_raw = String(form.get('start_date')||'')
     const lockup_end_raw = String(form.get('lockup_end_date')||'')
-    const patch: any = { type, minimum_balance, balance }
+    const patch: Record<string, unknown> = { type, minimum_balance, balance }
     if (start_date_raw) patch.start_date = start_date_raw
     if (lockup_end_raw) patch.lockup_end_date = lockup_end_raw
 
