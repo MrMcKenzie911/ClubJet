@@ -6,7 +6,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[#0B0F15] text-white flex">
       {/* Sidebar */}
-      <aside className="w-64 hidden md:flex flex-col border-r border-gray-800 bg-black/40 animate-[fadeIn_0.3s_ease]">
+      <aside className="w-64 hidden md:flex flex-col bg-[#1a1a1a] border-r border-gray-800 rounded-r-2xl shadow-lg animate-[fadeIn_0.3s_ease]">
         <div className="h-16 flex items-center px-4 border-b border-gray-800 text-amber-400 font-semibold tracking-wide">
           <span className="text-lg">Club Aureus Portal</span>
         </div>

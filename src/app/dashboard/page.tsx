@@ -54,7 +54,7 @@ export default async function DashboardPage() {
   const startISO = first ? new Date(first.start_date).toISOString() : new Date().toISOString()
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
+    <div className="mx-auto max-w-7xl px-6 py-8 main-container rounded-2xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-white">Portfolio Manager</h1>
@@ -77,14 +77,14 @@ export default async function DashboardPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {first && (
-            <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-4">
+            <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
               <h2 className="mb-3 text-white font-semibold">Performance Overview</h2>
               <BalanceChart initialBalance={Number(first.balance) || 0} startDateISO={startISO} monthlyTargetPct={1.5} />
             </div>
           )}
         </div>
         <div>
-          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-4">
+          <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
             <h2 className="mb-3 text-white font-semibold">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-3">
               <QuickButton label="Withdraw" href="#withdraw" />

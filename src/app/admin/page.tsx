@@ -49,11 +49,11 @@ export default async function AdminPage() {
         <SignOutInline />
       </div>
 
-      <section className="mt-6 grid gap-6 lg:grid-cols-3">
+      <section className="mt-6 grid gap-6 lg:grid-cols-3 bg-[#1a1a1a] p-6 rounded-2xl shadow-inner">
           <div className="space-y-2">
             {/* Deposits */}
             {pendingDeposits.map((t: any) => (
-              <form key={`dep-${t.id}`} action={approveDeposit} className="rounded border border-gray-800 bg-[#0E141C] p-3">
+              <form key={`dep-${t.id}`} action={approveDeposit} className="rounded-lg border border-gray-700 bg-[#1e1e1e] p-4 shadow">
                 <input type="hidden" name="tx_id" defaultValue={t.id} />
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -71,7 +71,7 @@ export default async function AdminPage() {
             ))}
             {/* Withdrawals */}
             {pendingWithdrawals.map((w: any) => (
-              <form key={`wr-${w.id}`} action={decideWithdrawal} className="rounded border border-gray-800 bg-[#0E141C] p-3">
+              <form key={`wr-${w.id}`} action={decideWithdrawal} className="rounded-lg border border-gray-700 bg-[#1e1e1e] p-4 shadow">
                 <input type="hidden" name="wr_id" defaultValue={w.id} />
                 <input type="hidden" name="account_id" defaultValue={w.account_id} />
                 <input type="hidden" name="amount" defaultValue={w.amount} />
@@ -98,7 +98,7 @@ export default async function AdminPage() {
         <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 lg:col-span-1">
           <h2 className="mb-3 text-white font-semibold">Client Requests</h2>
         </div>
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 lg:col-span-1">
+        <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 lg:col-span-1 shadow">
           <h2 className="mb-3 text-white font-semibold">Pending Users</h2>
           <div className="space-y-2">
             {pendingUsers.map((u: any) => (
@@ -123,7 +123,7 @@ export default async function AdminPage() {
                 <input type="hidden" name="tx_id" defaultValue={t.id} />
                 <div className="text-sm text-gray-300">Acct {t.account_id} • ${Number(t.amount).toFixed(2)} • {new Date(t.created_at).toLocaleString()}</div>
         {/* Pending Accounts (from pending users) */}
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-4">
+        <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
           <h2 className="mb-3 text-white font-semibold">Pending Accounts</h2>
           <div className="space-y-2">
             {pendingAccounts.map((a: any) => (
