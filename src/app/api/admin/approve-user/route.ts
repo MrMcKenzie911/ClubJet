@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
+export const runtime = 'nodejs'
+
 export async function POST(req: Request) {
   try {
+  // Ensure admin guard
+  const guard = await fetch(new URL('/api/admin/guard', req.url), { cache: 'no-store' })
+  if (!guard.ok) return NextResponse.redirect(new URL('/login', req.url))
+
     const form = await req.formData()
     const userId = String(form.get('user_id') || '')
     const decision = String(form.get('decision') || '')
