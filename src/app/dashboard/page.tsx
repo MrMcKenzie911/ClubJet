@@ -17,7 +17,7 @@ function QuickButton({ label, href, external, onClickHint }: QuickButtonProps) {
   return <button className={base} data-action={onClickHint}>{label}</button>
 }
 
-// Lightweight popup calculator
+// Deprecated inline modal (replaced by CalculatorToggle)
 function CalculatorModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null
   return (
@@ -72,6 +72,8 @@ import { getSupabaseServer } from '@/lib/supabaseServer'
 import ProgressTarget from '@/components/dashboard/ProgressTarget'
 import BalanceChart from '@/components/dashboard/BalanceChart'
 import SignOutButton from '@/components/auth/SignOutButton'
+import CalculatorToggle from '@/components/dashboard/CalculatorToggle'
+
 
 async function getData() {
   const supabase = getSupabaseServer()
@@ -127,7 +129,7 @@ export default async function DashboardPage() {
           {first && (
             <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
               <h2 className="mb-3 text-white font-semibold">Performance Overview</h2>
-              <BalanceChart initialBalance={Number(first.balance) || 0} startDateISO={startISO} monthlyTargetPct={1.5} />
+              <BalanceChart initialBalance={Number(first.balance) || 0} startDateISO={startISO} monthlyTargetPct={1.5} transactions={transactions as any} />
             </div>
           )}
 
@@ -142,7 +144,8 @@ export default async function DashboardPage() {
               <QuickButton label="Request Withdrawal" href="#withdraw" />
               <QuickButton label="Make a Deposit" href="#deposit" />
               <QuickButton label="View History" href="#history" />
-              <QuickButton label="Growth Calculator" onClickHint="open-calculator" />
+              {/* Swap to a client-side toggle button */}
+              <CalculatorToggle />
               <QuickButton label="Support" href="/support" external />
             </div>
           </div>
