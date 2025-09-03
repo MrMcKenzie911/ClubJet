@@ -23,6 +23,10 @@ export async function middleware(req: NextRequest) {
   const isProtected = protectedPaths.some((p) => url.pathname.startsWith(p))
 
   if (isProtected && !user) {
+    // Return 401 for API routes so fetch() sees JSON and not a cross-origin 307
+    if (url.pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const loginUrl = new URL('/login', req.url)
     return NextResponse.redirect(loginUrl)
   }

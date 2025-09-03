@@ -9,9 +9,9 @@ export async function GET(req: Request) {
   try {
     const supa = createRouteHandlerClient({ cookies })
     const { data: { user } } = await supa.auth.getUser()
-    if (!user) return NextResponse.redirect(new URL('/login', req.url))
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { data: me } = await supa.from('profiles').select('role').eq('id', user.id).single()
-    if (me?.role !== 'admin') return NextResponse.redirect(new URL('/login', req.url))
+    if (me?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { data: profiles, error: pErr } = await supabaseAdmin
       .from('profiles')

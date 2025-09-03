@@ -61,6 +61,8 @@ export async function DELETE(req: Request) {
   const url = new URL(req.url);
   const id = url.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+  // Delete user's accounts first to satisfy FK constraints (if any)
+  await supabaseAdmin.from('accounts').delete().eq('user_id', id);
   const { error: delErr } = await supabaseAdmin.from('profiles').delete().eq('id', id);
   if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
   return NextResponse.json({ ok: true });
