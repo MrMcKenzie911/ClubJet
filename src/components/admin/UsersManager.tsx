@@ -5,6 +5,14 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import dynamic from "next/dynamic";
 const UserDrawer = dynamic(() => import('./UserDrawer'), { ssr: false });
 
+function IconButton({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button title={title} onClick={onClick} className="inline-flex items-center justify-center rounded-md border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-200 w-8 h-8">
+      {children}
+    </button>
+  )
+}
+
 export default function UsersManager() {
   const supabase = createClientComponentClient();
   const [rows, setRows] = useState<any[]>([]);
@@ -148,11 +156,28 @@ export default function UsersManager() {
             return an.localeCompare(bn)
           })
           .map((u) => (
-            <div key={u.id} className="grid grid-cols-4 items-center px-4 py-4 hover:bg-[#0F141B]">
+            <div key={u.id} className="grid grid-cols-5 items-center px-4 py-4 hover:bg-[#0F141B] gap-2">
               <div className="text-gray-200">{u.first_name || '—'}</div>
               <div className="text-gray-200">{u.last_name || '—'}</div>
               <div className="text-gray-400">{u.email}</div>
               <div className="text-gray-300">{(u.accounts?.map((a:any)=> a.type === 'LENDER' ? 'Lender' : 'Network').join(', ')) || '—'}</div>
+              <div className="flex justify-end gap-2">
+                <IconButton title="Edit" onClick={() => setEditing({ ...u })}>
+                  <span className="material-icons" style={{ fontSize: 16 }}>edit</span>
+                </IconButton>
+                <IconButton title="Delete" onClick={async () => {
+                  if (!confirm('Delete this user?')) return
+                  const res = await fetch(`/api/admin/users?id=${u.id}`, { method: 'DELETE' })
+                  if (res.ok) {
+                    await fetchRows()
+                  } else {
+                    const j = await res.json().catch(()=>({}))
+                    setError(j.error ?? 'Failed to delete user')
+                  }
+                }}>
+                  <span className="material-icons" style={{ fontSize: 16 }}>delete</span>
+                </IconButton>
+              </div>
             </div>
         ))}
       </div>
