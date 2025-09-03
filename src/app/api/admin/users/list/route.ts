@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { cookies } from 'next/headers'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 
 export const runtime = 'nodejs'
 
-async function ensureAdmin(req: Request) {
-  const res = await fetch(new URL('/api/admin/guard', req.url), { cache: 'no-store' })
-  return res.ok
-}
-
 export async function GET(req: Request) {
   try {
-    if (!(await ensureAdmin(req))) return NextResponse.redirect(new URL('/login', req.url))
+    const supa = createRouteHandlerClient({ cookies })
+    const { data: { user } } = await supa.auth.getUser()
+    if (!user) return NextResponse.redirect(new URL('/login', req.url))
+    const { data: me } = await supa.from('profiles').select('role').eq('id', user.id).single()
+    if (me?.role !== 'admin') return NextResponse.redirect(new URL('/login', req.url))
 
     const { data: profiles, error: pErr } = await supabaseAdmin
       .from('profiles')
