@@ -36,8 +36,8 @@ export async function POST() {
 
   // Create accounts for verified user: LENDER and NETWORK with sample balances
   const { error: ea } = await supabase.from('accounts').insert([
-    { id: crypto.randomUUID(), user_id: verifiedId, account_type: 'LENDER', balance: 25000, created_at: new Date().toISOString() },
-    { id: crypto.randomUUID(), user_id: verifiedId, account_type: 'NETWORK', balance: 5400, created_at: new Date().toISOString() },
+    { id: crypto.randomUUID(), user_id: verifiedId, type: 'LENDER', balance: 25000, created_at: new Date().toISOString() },
+    { id: crypto.randomUUID(), user_id: verifiedId, type: 'NETWORK', balance: 5400, created_at: new Date().toISOString() },
   ]);
   if (ea) return NextResponse.json({ error: ea.message }, { status: 500 });
 

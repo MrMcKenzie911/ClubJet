@@ -17,6 +17,12 @@ export default function SignOutButton({ className = "" }: { className?: string }
         });
         // Extra server hard-clear of cookies
         await fetch("/api/auth/signout", { method: "POST" });
+        // Defensive: clear any sb-* localStorage vestiges
+        try {
+          for (const key in localStorage) {
+            if (key && key.startsWith('sb-')) localStorage.removeItem(key);
+          }
+        } catch {}
         router.replace("/login");
         router.refresh();
       }}

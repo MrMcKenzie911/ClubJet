@@ -6,7 +6,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[#0B0F15] text-white flex">
       {/* Sidebar */}
-      <aside className="w-64 hidden md:flex flex-col border-r border-gray-800 bg-black/40">
+      <aside className="w-64 hidden md:flex flex-col border-r border-gray-800 bg-black/40 animate-[fadeIn_0.3s_ease]">
         <div className="h-16 flex items-center px-4 border-b border-gray-800 text-amber-400 font-semibold tracking-wide">
           <span className="text-lg">ClubJet Portal</span>
         </div>
@@ -14,8 +14,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <Section label="Dashboard" href="/admin" />
           <Divider label="User Management" />
           <Item label="Registered Users" href="#users" />
-          <Divider label="Stream Management" />
-          <Item label="Fixed Stream • Investment Tiers" href="#tiers" />
+          <Divider label="Accounts" />
+          <Item label="Lender (Fixed)" href="#lender-bands" />
+          <Item label="Network (Variable)" href="#users" />
         </nav>
         <div className="mt-auto p-3">
           <SignOutButton className="w-full" />

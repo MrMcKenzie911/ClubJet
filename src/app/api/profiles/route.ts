@@ -6,7 +6,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { id, email, first_name, last_name, phone, referral_code } = body || {}
+    const { id, email, first_name, last_name, phone, referral_code, account_type } = body || {}
     if (!id || !email) return NextResponse.json({ error: 'Missing id or email' }, { status: 400 })
 
     const { error } = await supabaseAdmin.from('profiles').upsert({
@@ -20,6 +20,19 @@ export async function POST(req: Request) {
       updated_at: new Date().toISOString(),
     })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Ensure an initial account exists so it appears as "Pending" on the admin side
+    const acctType = (account_type === 'NETWORK' || account_type === 'LENDER') ? account_type : 'LENDER'
+    const { data: acctRows } = await supabaseAdmin
+      .from('accounts')
+      .select('id')
+      .eq('user_id', id)
+      .limit(1);
+    const hasAcct = Array.isArray(acctRows) && acctRows.length > 0;
+    if (!hasAcct) {
+      const minBal = acctType === 'NETWORK' ? 500 : 5000
+      await supabaseAdmin.from('accounts').insert({ user_id: id, type: acctType, balance: 0, minimum_balance: minBal })
+    }
 
     return NextResponse.json({ ok: true })
   } catch (e: any) {

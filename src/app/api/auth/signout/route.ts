@@ -6,15 +6,15 @@ export async function POST() {
   // Create response first so we can mutate cookies on it
   const res = NextResponse.json({ ok: true });
   const supabase = createRouteHandlerClient({ cookies });
-  // Sign out on server (clears sb cookies tied to session)
+  // Global sign-out invalidates refresh tokens server-side
   await supabase.auth.signOut();
 
-  // Hard clear any lingering sb-* cookies (defensive for edge cases)
-  const store = await cookies();
-  const all = store.getAll();
+  // Hard clear any lingering Supabase cookies (defensive)
+  const all = (await cookies()).getAll();
   for (const c of all) {
-    if (c.name.startsWith("sb-")) {
-      res.cookies.set({ name: c.name, value: "", path: "/", expires: new Date(0) });
+    const n = c.name;
+    if (n.startsWith('sb-') || n.includes('supabase')) {
+      res.cookies.set({ name: n, value: '', path: '/', expires: new Date(0) });
     }
   }
   return res;

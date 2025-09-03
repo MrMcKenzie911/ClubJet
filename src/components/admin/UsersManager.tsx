@@ -18,17 +18,28 @@ export default function UsersManager() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("name");
+  const [minBal, setMinBal] = useState<string>("");
+  const [maxBal, setMaxBal] = useState<string>("");
 
   const fetchRows = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, first_name, last_name, email, role, accounts(id, account_type, balance)")
+      .select("id, first_name, last_name, email, role")
       .order("created_at", { ascending: false });
     if (error) setError(error.message);
     setRows(data ?? []);
     setLoading(false);
   };
+  // load accounts separately, attach by user_id
+  const attachAccounts = async (profiles: any[]) => {
+    if (!profiles?.length) return profiles;
+    const { data: accounts } = await supabase.from('accounts').select('id, user_id, type, balance');
+    const byUser: Record<string, any[]> = {};
+    (accounts ?? []).forEach(a => { byUser[a.user_id] = byUser[a.user_id] || []; byUser[a.user_id].push(a); });
+    return profiles.map(p => ({ ...p, accounts: byUser[p.id] ?? [] }));
+  };
+
 
   useEffect(() => { fetchRows(); }, []);
 
@@ -60,13 +71,15 @@ export default function UsersManager() {
   async function createUser() {
     if (!editing) return;
     const { first_name, last_name, email, role } = editing;
-    const { error } = await supabase.from("profiles").insert({
-      id: crypto.randomUUID(),
-      first_name, last_name, email, role,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
-    if (error) setError(error.message);
+    const res = await fetch('/api/admin/users', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ first_name, last_name, email, role })
+    })
+    if (!res.ok) {
+      const j = await res.json().catch(()=>({}));
+      setError(j.error ?? 'Failed to create user')
+      return
+    }
     setEditing(null);
     await fetchRows();
   }
@@ -101,43 +114,62 @@ export default function UsersManager() {
           <option value="name">Sort: Name</option>
           <option value="email">Email</option>
           <option value="role">Role</option>
+          <option value="balance">Total Balance</option>
         </select>
+        <input value={minBal} onChange={(e)=>setMinBal(e.target.value)} placeholder="Min Balance" className="w-32 rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" />
+        <input value={maxBal} onChange={(e)=>setMaxBal(e.target.value)} placeholder="Max Balance" className="w-32 rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" />
       </div>
 
       {/* CRM-style User Cards with quick preview */}
-      <div className="mt-4 grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4 grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 motion-safe:transition-all motion-safe:duration-300">
         {loading && <div className="text-sm text-gray-400">Loading...</div>}
         {!loading && rows
           .filter(u => {
             const q = query.trim().toLowerCase();
             const matchesQ = !q || `${u.first_name} ${u.last_name}`.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
             const matchesRole = roleFilter === 'all' || u.role === (roleFilter === 'user' ? 'user' : roleFilter)
+            const totalBalance = (u.accounts ?? []).reduce((s:number,a:any)=>s+Number(a.balance??0),0)
+            const matchesBalMin = !minBal || totalBalance >= Number(minBal)
+            const matchesBalMax = !maxBal || totalBalance <= Number(maxBal)
             const matchesType = typeFilter === 'all' || (u.accounts ?? []).some((a:any) => a.account_type === typeFilter)
-            return matchesQ && matchesRole && matchesType
+            return matchesQ && matchesRole && matchesType && matchesBalMin && matchesBalMax
           })
           .sort((a,b) => {
             if (sortBy === 'email') return a.email.localeCompare(b.email)
             if (sortBy === 'role') return String(a.role).localeCompare(String(b.role))
+            if (sortBy === 'balance') {
+              const ab = (a.accounts ?? []).reduce((s:number,x:any)=>s+Number(x.balance??0),0)
+              const bb = (b.accounts ?? []).reduce((s:number,x:any)=>s+Number(x.balance??0),0)
+              return bb - ab
+            }
             const an = `${a.first_name} ${a.last_name}`.trim()
             const bn = `${b.first_name} ${b.last_name}`.trim()
             return an.localeCompare(bn)
           })
           .map((u) => (
-          <div key={u.id} className="rounded-xl border border-gray-800 bg-[#0E141C] hover:border-amber-600 transition p-4">
+          <div
+            key={u.id}
+            className="rounded-xl border border-gray-800 bg-[#0E141C] hover:border-amber-600 transition p-4 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            tabIndex={0}
+            onKeyDown={(e)=>{
+              if(e.key==='Enter') setDrawerUser(u.id)
+              if(e.key==='Delete') removeUser(u.id)
+            }}
+          >
             <div className="flex items-start justify-between">
               <div>
                 <div className="font-medium text-white">{u.first_name} {u.last_name}</div>
                 <div className="text-xs text-gray-400">{u.email}</div>
                 <div className="mt-2 flex gap-2">
                   {u.accounts?.map((a: any) => (
-                    <span key={a.id} className={`text-[11px] px-2 py-0.5 rounded-full border ${a.account_type === 'LENDER' ? 'border-amber-500 text-amber-400' : 'border-emerald-500 text-emerald-400'}`}>
-                      {a.account_type === 'LENDER' ? 'Lender • Fixed' : 'Network • Variable'}
+                    <span key={a.id} className={`text-[11px] px-2 py-0.5 rounded-full border ${a.type === 'LENDER' ? 'border-amber-500 text-amber-400' : 'border-emerald-500 text-emerald-400'}`}>
+                      {a.type === 'LENDER' ? 'Lender • Fixed' : 'Network • Variable'}
                     </span>
                   ))}
                 </div>
               </div>
               <div className="flex gap-2">
-                <button title="Open" onClick={() => setDrawerUser(u.id)} className="rounded bg-gray-800 hover:bg-gray-700 text-gray-200 px-2 py-1" aria-label="Open user drawer">📂</button>
+                <button title="Open" onClick={() => setDrawerUser(u.id)} className="rounded bg-gray-800 hover:bg-gray-700 text-gray-200 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Open user drawer">📂</button>
                 <button title="Edit" onClick={() => setEditing(u)} className="rounded bg-gray-800 hover:bg-gray-700 text-gray-200 px-2 py-1" aria-label="Edit user">✏️</button>
                 <button title="Delete" onClick={() => removeUser(u.id)} className="rounded bg-red-600 hover:bg-red-500 text-white px-2 py-1" aria-label="Delete user">🗑️</button>
               </div>

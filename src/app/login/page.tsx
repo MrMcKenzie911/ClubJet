@@ -26,30 +26,37 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ event, session }),
       })
+      // If signed_out, also call server signout to clear cookies
+      if (event === 'SIGNED_OUT') {
+        await fetch('/api/auth/signout', { method: 'POST' })
+        try {
+          for (const key in localStorage) {
+            if (key && key.startsWith('sb-')) localStorage.removeItem(key);
+          }
+        } catch {}
+      }
     })
     return () => subscription.unsubscribe()
   }, [supabase])
 
-  // Auto-redirect if already authenticated
+  // Auto-redirect if already authenticated (guarded)
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const user = session.user;
       const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
         .maybeSingle();
       if (!cancelled) {
-        await supabase.auth.getSession();
-        router.refresh();
-        router.replace(profile?.role === "admin" ? "/admin" : "/dashboard");
+        router.replace(profile?.role === 'admin' ? '/admin' : '/dashboard');
       }
     })();
     return () => { cancelled = true };
-  }, [router]);
+  }, [router, supabase]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
