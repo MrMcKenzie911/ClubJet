@@ -1,0 +1,38 @@
+import { NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
+
+export const runtime = 'nodejs'
+
+function nextReleaseDate(requestedAt: Date): string {
+  const d = new Date(requestedAt)
+  const y = d.getUTCFullYear(); const m = d.getUTCMonth(); const day = d.getUTCDate()
+  if (day <= 1) return new Date(Date.UTC(y, m, 10)).toISOString().slice(0,10)
+  return new Date(Date.UTC(y, m+1, 10)).toISOString().slice(0,10)
+}
+
+export async function POST(req: Request) {
+  try {
+    const guard = await fetch(new URL('/api/admin/guard', req.url), { cache: 'no-store' })
+    if (!guard.ok) return NextResponse.redirect(new URL('/login', req.url))
+
+    const form = await req.formData()
+    const wrId = String(form.get('wr_id') || '')
+    const decision = String(form.get('decision') || '')
+    if (!wrId || !decision) return NextResponse.redirect(new URL('/admin?toast=error', req.url))
+
+    if (decision === 'approve') {
+      const schedule = nextReleaseDate(new Date())
+      await supabaseAdmin.from('withdrawal_requests').update({ status: 'approved', scheduled_release_at: schedule }).eq('id', wrId)
+      return NextResponse.redirect(new URL('/admin?toast=withdrawal_approved', req.url))
+    } else if (decision === 'deny') {
+      await supabaseAdmin.from('withdrawal_requests').update({ status: 'denied' }).eq('id', wrId)
+      return NextResponse.redirect(new URL('/admin?toast=withdrawal_denied', req.url))
+    }
+
+    return NextResponse.redirect(new URL('/admin?toast=error', req.url))
+  } catch (e) {
+    console.error('api decide-withdrawal failed', e)
+    return NextResponse.redirect(new URL('/admin?toast=error', req.url))
+  }
+}
+

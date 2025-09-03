@@ -70,7 +70,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                 <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
                   <h2 className="mb-3 text-white font-semibold">Client Requests</h2>
                   {pendingDeposits.map((t: any) => (
-                    <form key={`dep-${t.id}`} action={approveDeposit} method="post" className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
+                    <form key={`dep-${t.id}`} action="/api/admin/approve-deposit" method="post" className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
                       <input type="hidden" name="tx_id" defaultValue={t.id} />
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -86,7 +86,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                     </form>
                   ))}
                   {pendingWithdrawals.map((w: any) => (
-                    <form key={`wr-${w.id}`} action={decideWithdrawal} className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
+                    <form key={`wr-${w.id}`} action="/api/admin/decide-withdrawal" method="post" className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
                       <input type="hidden" name="wr_id" defaultValue={w.id} />
                       <input type="hidden" name="account_id" defaultValue={w.account_id} />
                       <input type="hidden" name="amount" defaultValue={w.amount} />
@@ -207,7 +207,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
             <h2 className="mb-3 text-white font-semibold">Pending Accounts</h2>
             <div className="space-y-2">
               {pendingAccounts.map((a: any) => (
-                <form key={a.id} action={verifyAccount} className="rounded border border-gray-800 bg-[#0E141C] p-3">
+                <form key={a.id} action="/api/admin/verify-account" method="post" className="rounded border border-gray-800 bg-[#0E141C] p-3">
                   <input type="hidden" name="account_id" defaultValue={a.id} />
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
@@ -217,9 +217,9 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                       <div className="text-xs text-gray-500">Start: {a.start_date ?? '—'}</div>
                     </div>
                     <div className="flex gap-2 items-start">
-                      <button formAction={updateAccount} name="action" value="edit" className="rounded bg-gray-700 hover:bg-gray-600 px-3 py-1">Save</button>
-                      <button formAction={deleteAccount} name="action" value="delete" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1">Delete</button>
-                      <button name="action" value="verify" className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Verify</button>
+                      <button formaction="/api/admin/update-account" formmethod="post" name="action" value="edit" className="rounded bg-gray-700 hover:bg-gray-600 px-3 py-1">Save</button>
+                      <button formaction="/api/admin/delete-account" formmethod="post" name="action" value="delete" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1">Delete</button>
+                      <button className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Verify</button>
                     </div>
                   </div>
                   <div className="mt-2 grid grid-cols-5 gap-2">

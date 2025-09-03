@@ -183,7 +183,7 @@ export default async function DashboardPage() {
 }
 
 function WithdrawalRequest({ accountId }: { accountId?: string }) {
-  return <form action={submitWithdrawal} className="rounded-xl border border-gray-800 bg-gray-900 p-4">
+  return <form action="/api/user/withdrawal" method="post" className="rounded-xl border border-gray-800 bg-gray-900 p-4">
     <h3 className="mb-2 font-semibold text-white">Withdrawal Request</h3>
     <input type="hidden" name="account_id" defaultValue={accountId} />
     <label className="block text-sm text-gray-300">Amount</label>
@@ -217,7 +217,7 @@ async function submitWithdrawal(formData: FormData) {
 }
 
 function PaymentForm({ accountId }: { accountId?: string }) {
-  return <form action={submitPayment} className="rounded-xl border border-gray-800 bg-gray-900 p-4">
+  return <form action="/api/user/deposit" method="post" className="rounded-xl border border-gray-800 bg-gray-900 p-4">
     <h3 className="mb-2 font-semibold text-white">Payment / Deposit</h3>
     <input type="hidden" name="account_id" defaultValue={accountId} />
     <label className="block text-sm text-gray-300">Amount</label>
