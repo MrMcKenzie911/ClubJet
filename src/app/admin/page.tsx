@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { redirect } from 'next/navigation'
 import { getSupabaseServer } from '@/lib/supabaseServer'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
+
 import { revalidatePath } from 'next/cache'
 
 async function getAdminData() {
@@ -49,7 +51,11 @@ export default async function AdminPage() {
         <SignOutInline />
       </div>
 
-      <section className="mt-6 grid gap-6 lg:grid-cols-3 bg-[#1a1a1a] p-6 rounded-2xl shadow-inner">
+      <section className="mt-6 grid gap-6 lg:grid-cols-3 bg-[#0B0F14] p-6 rounded-2xl shadow-inner">
+          {/* Verified Users moved to top */}
+          <div className="lg:col-span-2">
+            <UsersManagerSection />
+          </div>
           <div className="space-y-2">
             {/* Deposits */}
             {pendingDeposits.map((t: any) => (
@@ -181,51 +187,29 @@ export default async function AdminPage() {
       </section>
 
       <section className="mt-6 grid gap-6 sm:grid-cols-2">
-        <div className="hidden">
-          <h2 className="mb-3 text-white font-semibold">Withdrawal Requests</h2>
-          <div className="space-y-2">
-            {pendingWithdrawals.map((w: any) => (
-              <form key={w.id} action={decideWithdrawal} className="flex items-center justify-between rounded border border-gray-800 bg-gray-950 p-2">
-                <input type="hidden" name="wr_id" defaultValue={w.id} />
-                <input type="hidden" name="account_id" defaultValue={w.account_id} />
-                <input type="hidden" name="amount" defaultValue={w.amount} />
-                <div className="text-sm text-gray-300">Acct {w.account_id} • ${Number(w.amount).toFixed(2)} • {w.method}</div>
-                <div className="flex gap-2">
-                  <button name="decision" value="approve" className="rounded bg-emerald-600 px-3 py-1 text-white">Approve</button>
-                  <button name="decision" value="deny" className="rounded bg-red-600 px-3 py-1 text-white">Deny</button>
-                </div>
-              </form>
-            ))}
-            {pendingWithdrawals.length === 0 && <div className="text-sm text-gray-400">No pending withdrawals.</div>}
-          </div>
-        </div>
-
-        <div id="lender-bands" className="rounded-xl border border-gray-800 bg-gray-900 p-4">
-          <h2 className="mb-3 text-white font-semibold">LENDER Fixed Bands</h2>
-          <LenderBandsEditor />
-          <div className="mt-6">
-            <h3 className="mb-2 text-white font-semibold">Earnings Rates (legacy)</h3>
-            <form action={setRate} className="flex gap-2">
-              <select name="account_type" className="rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
+        {/* Set Earnings Rate only (Lender Bands removed per request) */}
+        <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 sm:col-span-2">
+          <h2 className="mb-3 text-white font-semibold">Set Earnings Rate</h2>
+          <form action={setRate} className="flex flex-wrap gap-2 items-end">
+            <label className="text-xs text-gray-400">Account Type
+              <select name="account_type" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
                 <option value="LENDER">LENDER</option>
                 <option value="NETWORK">NETWORK</option>
               </select>
-              <input name="fixed_rate_monthly" type="number" step="0.001" placeholder="Monthly % (e.g., 1.25)" className="w-48 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
-              <button className="rounded bg-emerald-600 px-3 py-1 text-white">Set</button>
-            </form>
-            <div className="mt-3 text-sm text-gray-300">Recent:</div>
-            <ul className="text-sm text-gray-400">
-              {rates.map((r: any) => (
-                <li key={r.id}>{r.account_type} • {r.fixed_rate_monthly ?? 'n/a'}% • from {r.effective_from}</li>
-
-              ))}
-            </ul>
-          </div>
+            </label>
+            <label className="text-xs text-gray-400">Monthly %
+              <input name="fixed_rate_monthly" type="number" step="0.001" placeholder="e.g., 1.25" className="mt-1 w-48 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
+            </label>
+            <button className="rounded bg-emerald-600 px-3 py-1 text-white">Set</button>
+          </form>
+          <div className="mt-3 text-sm text-gray-300">Recent:</div>
+          <ul className="text-sm text-gray-400">
+            {rates.map((r: any) => (
+              <li key={r.id}>{r.account_type} • {r.fixed_rate_monthly ?? 'n/a'}% • from {r.effective_from}</li>
+            ))}
+          </ul>
         </div>
       </section>
-      {/* Management sections */}
-      {/* Users Manager */}
-      <UsersManagerSection />
     </div>
   )
 }
@@ -250,25 +234,25 @@ function UsersManagerSection() {
 
 export async function approveUser(formData: FormData) {
   'use server'
-  const supabase = getSupabaseServer()
   const userId = String(formData.get('user_id'))
   const decision = String(formData.get('decision'))
   try {
     if (decision === 'approve') {
-      const { error: upErr } = await supabase.from('profiles').update({ role: 'user' }).eq('id', userId)
+      // Use service client to avoid RLS/permissions blocking server action
+      const { error: upErr } = await supabaseAdmin.from('profiles').update({ role: 'user' }).eq('id', userId)
       if (upErr) throw upErr
-      // Also mark first account (if any) as verified
-      const { data: acct } = await supabase.from('accounts').select('id').eq('user_id', userId).order('created_at', { ascending: true }).limit(1).single()
-      if (acct) {
-        const { error: vErr } = await supabase.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', acct.id)
+      const { data: acct } = await supabaseAdmin.from('accounts').select('id').eq('user_id', userId).order('created_at', { ascending: true }).limit(1).maybeSingle()
+      if (acct?.id) {
+        const { error: vErr } = await supabaseAdmin.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', acct.id)
         if (vErr) throw vErr
       }
     } else if (decision === 'reject') {
-      const { error: delErr } = await supabase.from('profiles').delete().eq('id', userId)
+      const { error: delErr } = await supabaseAdmin.from('profiles').delete().eq('id', userId)
       if (delErr) throw delErr
     }
+  } catch (e) {
+    console.error('approveUser failed', e)
   } finally {
-    // Always refresh the page data so UI doesn’t get stuck
     revalidatePath('/admin')
   }
 }

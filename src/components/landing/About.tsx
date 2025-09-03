@@ -3,7 +3,7 @@ export default function About() {
     <section id="about" className="mx-auto max-w-6xl px-6 py-16">
       <div className="grid gap-8 md:grid-cols-2">
         <div>
-          <h2 className="text-3xl font-bold text-white">About Club Jet</h2>
+          <h2 className="text-3xl font-bold text-white">About Club Aureus</h2>
           <p className="mt-3 text-gray-300">
             Club Jet is a private investment platform focused on premium aviation assets. We combine professional
             management, transparent workflows, and institutional‑grade security to deliver a refined investor experience.

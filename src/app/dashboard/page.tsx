@@ -103,7 +103,7 @@ export default async function DashboardPage() {
   const pendingDeposits = transactions.filter((t: any) => t.type === 'DEPOSIT' && t.status === 'pending').reduce((s: number, t: any) => s + Number(t.amount || 0), 0)
   const totalProfit = transactions.filter((t: any) => (t.type === 'INTEREST' || t.type === 'COMMISSION') && (t.status === 'posted' || t.status === 'completed' || !t.status)).reduce((s: number, t: any) => s + Number(t.amount || 0), 0)
   const projectedMonthlyIncome = totalBalance * 0.015 // 1.5% monthly target
-  const startISO = first ? new Date(first.start_date).toISOString() : new Date().toISOString()
+  const startISO = first?.start_date ? new Date(first.start_date).toISOString() : ''
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">

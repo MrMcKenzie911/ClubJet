@@ -34,7 +34,7 @@ export default function BalanceChart({ initialBalance, startDateISO, monthlyTarg
 
 function buildDataFromTransactions(initialBalance: number, startDateISO: string, monthlyTargetPct: number, transactions: Txn[]) {
   const now = new Date();
-  const startDate = new Date(startDateISO);
+  const startDate = startDateISO ? new Date(startDateISO) : new Date(now.getTime() - 30*86_400_000);
   const msPerDay = 86_400_000;
   const daysSinceStart = Math.max(0, Math.floor((now.getTime() - startDate.getTime()) / msPerDay));
 

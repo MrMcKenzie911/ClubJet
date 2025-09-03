@@ -13,7 +13,7 @@ export default function FeaturesRow() {
   return (
     <section className="bg-gradient-to-b from-transparent to-black/20">
       <div className="mx-auto max-w-6xl px-6 py-16 text-center">
-        <h2 className="text-3xl sm:text-4xl font-bold text-white">Why Choose Club Jet</h2>
+        <h2 className="text-3xl sm:text-4xl font-bold text-white">Why Choose Club Aureus</h2>
         <p className="mt-2 text-gray-400">Professional asset management with institutional‑grade security and transparency.</p>
         <div className="mt-10 grid gap-6 sm:grid-cols-2 md:grid-cols-4">
           {items.map(({ icon: Icon, title, body }) => (
