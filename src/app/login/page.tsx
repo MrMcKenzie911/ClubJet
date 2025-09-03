@@ -106,7 +106,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[url('/login-bg.png')] bg-cover bg-center">
+    <div className="relative min-h-screen bg-[url('/images/ClubA_Background_login.png')] bg-cover bg-center">
       <div className="absolute inset-0 bg-black/60" />
       <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
         <form onSubmit={handleLogin} className="w-full max-w-sm space-y-3 rounded-xl border border-white/10 bg-black/70 backdrop-blur-sm p-6 shadow-2xl">
@@ -114,7 +114,7 @@ export default function LoginPage() {
             <ArrowLeft size={16} />
             Back Home
           </Link>
-          <h1 className="text-xl font-semibold text-white">Login</h1>
+          <h1 className="text-xl font-semibold text-white">Club Aureus Login</h1>
           {error && <div className="rounded-md border border-red-500/30 bg-red-500/10 text-red-300 px-3 py-2 text-sm">{error}</div>}
           {resetSent && <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 px-3 py-2 text-sm">{resetSent}</div>}
           <input

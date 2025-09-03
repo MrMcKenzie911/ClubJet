@@ -8,7 +8,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <aside className="w-64 hidden md:flex flex-col border-r border-gray-800 bg-black/40 animate-[fadeIn_0.3s_ease]">
         <div className="h-16 flex items-center px-4 border-b border-gray-800 text-amber-400 font-semibold tracking-wide">
-          <span className="text-lg">ClubJet Portal</span>
+          <span className="text-lg">Club Aureus Portal</span>
         </div>
         <nav className="p-3 space-y-1 text-sm">
           <Section label="Dashboard" href="/admin" />
@@ -27,7 +27,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <main className="flex-1">
         <div className="h-16 flex items-center justify-between px-4 md:px-8 border-b border-gray-800 bg-black/20">
           <div className="flex items-center gap-3">
-            <span className="md:hidden text-amber-400 font-semibold">ClubJet</span>
+            <span className="md:hidden text-amber-400 font-semibold">Club Aureus</span>
             <span className="text-sm text-gray-400">Admin Dashboard</span>
           </div>
           <SignOutButton />

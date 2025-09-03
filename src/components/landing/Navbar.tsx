@@ -8,8 +8,8 @@ export default function Navbar({ onOpenSignup }: { onOpenSignup: () => void }) {
     <nav className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-black/30 bg-black/40 border-b border-white/10">
       <div className="mx-auto max-w-6xl px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Image src="/brand/logo.png" alt="Club Jet" width={126} height={28} priority className="h-[2.3rem] w-auto object-contain" />
-          <span className="sr-only">Club Jet</span>
+          <Image src="/brand/new-logo.jpg" alt="Club Aureus" width={126} height={28} priority className="h-[2.3rem] w-auto object-contain" />
+          <span className="sr-only">Club Aureus</span>
           <span className="hidden sm:inline-block ml-2 text-xs text-gray-400">Exclusive Asset Growth</span>
         </div>
         <div className="hidden sm:flex items-center gap-8 text-sm sm:-ml-10">

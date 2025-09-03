@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ClubJet Portal",
+  title: "Club Aureus Portal",
   description: "Secure investor portal with admin CRM",
 };
 

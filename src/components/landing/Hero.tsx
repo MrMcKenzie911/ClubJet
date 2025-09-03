@@ -22,7 +22,7 @@ export default function Hero({ onOpenSignup }: { onOpenSignup: () => void }) {
         <div className="flex flex-col items-center text-center">
           <div className="mb-6">
             <div className="mx-auto h-20 w-20 rounded-full bg-[#0b0f14]/80 border border-amber-400/60 flex items-center justify-center shadow-[0_0_40px_rgba(252,187,0,0.25)]">
-              <Image src="/brand/icon.png" alt="ClubJet" width={40} height={40} />
+              <Image src="/brand/new-logo.jpg" alt="Club Aureus" width={40} height={40} />
             </div>
           </div>
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="w-full">

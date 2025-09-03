@@ -6,8 +6,8 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl px-6 py-4">
         <div className="flex items-center justify-between gap-6 whitespace-nowrap overflow-x-auto">
           <div className="flex items-center gap-3">
-            <Image src="/brand/icon.png" alt="ClubJet" width={20} height={20} />
-            <span className="text-sm text-white">Club Jet</span>
+            <Image src="/brand/new-logo.jpg" alt="Club Aureus" width={20} height={20} />
+            <span className="text-sm text-white">Club Aureus</span>
             <span className="ml-2 text-xs text-gray-400">Exclusive Asset Growth</span>
           </div>
 
@@ -18,7 +18,7 @@ export default function Footer() {
           </nav>
 
           <p className="text-xs text-gray-500">
-            © {new Date().getFullYear()} Club Jet. All rights reserved. Investment products are not FDIC insured and involve risk of loss.
+            © {new Date().getFullYear()} Club Aureus. All rights reserved. Investment products are not FDIC insured and involve risk of loss.
           </p>
         </div>
       </div>
