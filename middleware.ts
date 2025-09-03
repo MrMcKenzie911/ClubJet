@@ -5,30 +5,15 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
   const url = req.nextUrl
 
-  // On /login, clear sb-* cookies and return early (avoid any auto re-hydration)
-  if (url.pathname === '/login') {
-    const cookiesIn = req.cookies.getAll()
-    for (const c of cookiesIn) {
-      if (c.name.startsWith('sb-')) {
-        res.cookies.set({ name: c.name, value: '', path: '/', expires: new Date(0) })
-      }
-    }
-    return res
-  }
 
   const supabase = createMiddlewareClient({ req, res })
   const { data: { user } } = await supabase.auth.getUser()
 
-  const protectedPaths = ['/dashboard', '/admin']
-  const isProtected = protectedPaths.some((p) => url.pathname.startsWith(p))
+  const isProtected = url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/admin')
 
   if (isProtected && !user) {
-    // Return 401 for API routes so fetch() sees JSON and not a cross-origin 307
-    if (url.pathname.startsWith('/api/')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const loginUrl = new URL('/login', req.url)
-    return NextResponse.redirect(loginUrl)
+    // Only redirect for page requests; for API (should not match here), just pass through
+    return NextResponse.redirect(new URL('/login', req.url))
   }
 
   return res
