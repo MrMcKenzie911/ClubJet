@@ -17,6 +17,56 @@ function QuickButton({ label, href, external, onClickHint }: QuickButtonProps) {
   return <button className={base} data-action={onClickHint}>{label}</button>
 }
 
+// Lightweight popup calculator
+function CalculatorModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="w-full max-w-sm rounded-2xl border border-gray-800 bg-[#0B0F14] p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-white font-semibold">Calculator</h3>
+          <button onClick={onClose} className="rounded bg-gray-800 px-2 py-1 text-gray-200">Close</button>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <label className="text-sm text-gray-300">Amount<input id="calc-amount" className="mt-1 w-full rounded bg-gray-900 border border-gray-700 px-2 py-1 text-white" /></label>
+          <label className="text-sm text-gray-300">Rate % / mo<input id="calc-rate" className="mt-1 w-full rounded bg-gray-900 border border-gray-700 px-2 py-1 text-white" defaultValue="1.5"/></label>
+          <label className="text-sm text-gray-300">Months<input id="calc-months" className="mt-1 w-full rounded bg-gray-900 border border-gray-700 px-2 py-1 text-white" defaultValue="12"/></label>
+          <div className="flex items-end">
+            <button id="calc-go" className="w-full rounded bg-amber-500 px-3 py-2 text-black font-semibold">Calculate</button>
+          </div>
+        </div>
+        <div id="calc-out" className="mt-3 text-sm text-amber-400"></div>
+        <script dangerouslySetInnerHTML={{__html:`
+          (function(){
+            const el = document.getElementById('calc-go'); if(!el) return;
+  const calcOpen = false;
+
+            el.onclick = () => {
+              const A = parseFloat((document.getElementById('calc-amount')||{}).value||'0');
+              const r = (parseFloat((document.getElementById('calc-rate')||{}).value||'0')/100);
+              const m = parseInt((document.getElementById('calc-months')||{}).value||'0',10);
+              const fv = A * Math.pow(1 + r, m);
+              const out = document.getElementById('calc-out'); if(out) out.textContent = 'Projected Value: $'+(fv.toFixed(2));
+            };
+          })();
+        `}} />
+      </div>
+    </div>
+  )
+}
+
+
+
+// Large stat card used for the hero row
+function BigStatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
+      <div className="text-sm text-gray-400">{label}</div>
+      <div className="mt-2 text-3xl md:text-4xl font-extrabold text-amber-400">{value}</div>
+    </div>
+  )
+}
+
 
 import { getSupabaseServer } from '@/lib/supabaseServer'
 import ProgressTarget from '@/components/dashboard/ProgressTarget'
@@ -54,44 +104,45 @@ export default async function DashboardPage() {
   const startISO = first ? new Date(first.start_date).toISOString() : new Date().toISOString()
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8 main-container rounded-2xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Portfolio Manager</h1>
-          <p className="text-xs text-gray-400">Account Holder Dashboard</p>
+    <div className="mx-auto max-w-7xl px-6 py-8">
+      {/* Hero banner */}
+      <div className="rounded-3xl bg-gradient-to-b from-[#0E1116] to-[#0B0F14] border border-gray-800 p-8 shadow-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-extrabold text-amber-400">Club Aureus</h1>
+            <p className="mt-1 text-sm text-gray-400">Account Holder Dashboard</p>
+          </div>
+          <SignOutButton />
         </div>
-        <SignOutButton />
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <BigStatCard label="Current Portfolio" value={`$${totalBalance.toLocaleString()}`} />
+          <BigStatCard label="Pending Loan" value={`$${pendingDeposits.toLocaleString()}`} />
+          <BigStatCard label="Projected Monthly Income" value={`$${projectedMonthlyIncome.toLocaleString(undefined,{maximumFractionDigits:0})}+`} />
+        </div>
       </div>
 
-      {/* Stat cards row */}
-      <div className="mt-6 grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <StatCard label="Current Portfolio" value={`$${totalBalance.toLocaleString()}`} />
-        <StatCard label="Pending Deposits" value={`$${pendingDeposits.toLocaleString()}`} subtle />
-        <StatCard label="Timeframe Projection" value={`30 Days`} />
-        <StatCard label="Projected Monthly Income" value={`$${projectedMonthlyIncome.toLocaleString(undefined,{maximumFractionDigits:0})}+`} accent />
-        <StatCard label="Total Profit" value={`$${totalProfit.toLocaleString()}`} positive />
-        {first && <StatCard label="Primary Account" value={first.type} />}
-      </div>
-
-      {/* Chart + Quick Actions */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      {/* Performance + Quick actions */}
+      <div className="mt-8 grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {first && (
-            <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg">
+            <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
               <h2 className="mb-3 text-white font-semibold">Performance Overview</h2>
               <BalanceChart initialBalance={Number(first.balance) || 0} startDateISO={startISO} monthlyTargetPct={1.5} />
             </div>
           )}
+
+          {/* Calculator modal mount (simple event toggle via data-action) */}
+          <CalculatorModal open={false} onClose={() => { /* noop for now */ }} />
+
         </div>
         <div>
-          <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg">
+          <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
             <h2 className="mb-3 text-white font-semibold">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-3">
-              <QuickButton label="Withdraw" href="#withdraw" />
-              <QuickButton label="Deposit" href="#deposit" />
-              <QuickButton label="History" href="#history" />
-              <QuickButton label="Calculator" onClickHint="open-calculator" />
-              <QuickButton label="Strategy" onClickHint="open-strategy" />
+              <QuickButton label="Request Withdrawal" href="#withdraw" />
+              <QuickButton label="Make a Deposit" href="#deposit" />
+              <QuickButton label="View History" href="#history" />
+              <QuickButton label="Growth Calculator" onClickHint="open-calculator" />
               <QuickButton label="Support" href="/support" external />
             </div>
           </div>

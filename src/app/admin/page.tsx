@@ -200,7 +200,7 @@ export default async function AdminPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-4">
+        <div id="lender-bands" className="rounded-xl border border-gray-800 bg-gray-900 p-4">
           <h2 className="mb-3 text-white font-semibold">LENDER Fixed Bands</h2>
           <LenderBandsEditor />
           <div className="mt-6">
@@ -253,13 +253,23 @@ export async function approveUser(formData: FormData) {
   const supabase = getSupabaseServer()
   const userId = String(formData.get('user_id'))
   const decision = String(formData.get('decision'))
-  if (decision === 'approve') {
-    await supabase.from('profiles').update({ role: 'user' }).eq('id', userId)
-    // Also mark first account (if any) as verified
-    const { data: acct } = await supabase.from('accounts').select('id').eq('user_id', userId).order('created_at', { ascending: true }).limit(1).single()
-    if (acct) await supabase.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', acct.id)
-  } else if (decision === 'reject') {
-    await supabase.from('profiles').delete().eq('id', userId)
+  try {
+    if (decision === 'approve') {
+      const { error: upErr } = await supabase.from('profiles').update({ role: 'user' }).eq('id', userId)
+      if (upErr) throw upErr
+      // Also mark first account (if any) as verified
+      const { data: acct } = await supabase.from('accounts').select('id').eq('user_id', userId).order('created_at', { ascending: true }).limit(1).single()
+      if (acct) {
+        const { error: vErr } = await supabase.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', acct.id)
+        if (vErr) throw vErr
+      }
+    } else if (decision === 'reject') {
+      const { error: delErr } = await supabase.from('profiles').delete().eq('id', userId)
+      if (delErr) throw delErr
+    }
+  } finally {
+    // Always refresh the page data so UI doesn’t get stuck
+    revalidatePath('/admin')
   }
 }
 

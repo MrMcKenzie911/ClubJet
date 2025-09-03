@@ -3,13 +3,14 @@
 
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 
 type Props = { open: boolean; onClose: () => void };
 
 export default function SignupModal({ open, onClose }: Props) {
+  const supabase = createClientComponentClient();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     first_name: "",
@@ -59,15 +60,23 @@ export default function SignupModal({ open, onClose }: Props) {
       }
 
       // forward to n8n webhook for Vapi follow-up
-      await fetch("/api/send-to-n8n", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          event: "signup",
-          payload: form,
-          user_id: userId,
-        }),
-      });
+      try {
+        const res = await fetch("/api/send-to-n8n", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "signup",
+            payload: form,
+            user_id: userId,
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(()=>({}));
+          console.warn('Webhook forwarding failed', body);
+        }
+      } catch (werr) {
+        console.warn('Webhook forwarding error', werr);
+      }
 
       toast.success("Signup submitted. Look out for approval call.");
       onClose();

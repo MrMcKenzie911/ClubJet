@@ -28,7 +28,8 @@ export default function UsersManager() {
       .select("id, first_name, last_name, email, role")
       .order("created_at", { ascending: false });
     if (error) setError(error.message);
-    setRows(data ?? []);
+    const withAccounts = await attachAccounts(data ?? []);
+    setRows(withAccounts);
     setLoading(false);
   };
   // load accounts separately, attach by user_id
@@ -87,10 +88,9 @@ export default function UsersManager() {
   return (
     <div id="users" className="rounded-xl border border-gray-800 bg-gray-900 p-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-white font-semibold">Manage Users</h2>
+        <h2 className="text-white font-semibold">Verified Users</h2>
         <div className="flex gap-2">
-          <button onClick={addUser} className="rounded bg-amber-500 hover:bg-amber-400 text-black px-3 py-1">ADD</button>
-          <button onClick={() => setEditing({ id: '', first_name: '', last_name: '', email: '', role: 'user' })} className="rounded bg-emerald-500 hover:bg-emerald-400 text-black px-3 py-1">Create Verified</button>
+          <button onClick={addUser} className="rounded-full bg-amber-500 hover:bg-amber-400 text-black px-4 py-1 font-semibold">+ ADD</button>
         </div>
       </div>
 
@@ -120,10 +120,17 @@ export default function UsersManager() {
         <input value={maxBal} onChange={(e)=>setMaxBal(e.target.value)} placeholder="Max Balance" className="w-32 rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" />
       </div>
 
-      {/* CRM-style User Cards with quick preview */}
-      <div className="mt-4 grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 motion-safe:transition-all motion-safe:duration-300">
-        {loading && <div className="text-sm text-gray-400">Loading...</div>}
-        {!loading && rows
+      {/* Verified Users Table */}
+      <div className="mt-4 rounded-2xl border border-gray-800 overflow-hidden">
+        <div className="bg-[#121821] px-4 py-3 text-gray-300 font-medium grid grid-cols-4">
+          <div>First Name</div>
+          <div>Last Name</div>
+          <div>Email</div>
+          <div>Account Type</div>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {loading && <div className="p-4 text-sm text-gray-400">Loading...</div>}
+          {!loading && rows
           .filter(u => {
             const q = query.trim().toLowerCase();
             const matchesQ = !q || `${u.first_name} ${u.last_name}`.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
@@ -147,56 +154,16 @@ export default function UsersManager() {
             return an.localeCompare(bn)
           })
           .map((u) => (
-          <div
-            key={u.id}
-            className="rounded-xl border border-gray-800 bg-[#0E141C] hover:border-amber-600 transition p-4 focus:outline-none focus:ring-2 focus:ring-amber-500"
-            tabIndex={0}
-            onKeyDown={(e)=>{
-              if(e.key==='Enter') setDrawerUser(u.id)
-              if(e.key==='Delete') removeUser(u.id)
-            }}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="font-medium text-white">{u.first_name} {u.last_name}</div>
-                <div className="text-xs text-gray-400">{u.email}</div>
-                <div className="mt-2 flex gap-2">
-                  {u.accounts?.map((a: any) => (
-                    <span key={a.id} className={`text-[11px] px-2 py-0.5 rounded-full border ${a.type === 'LENDER' ? 'border-amber-500 text-amber-400' : 'border-emerald-500 text-emerald-400'}`}>
-                      {a.type === 'LENDER' ? 'Lender • Fixed' : 'Network • Variable'}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button title="Open" onClick={() => setDrawerUser(u.id)} className="rounded bg-gray-800 hover:bg-gray-700 text-gray-200 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Open user drawer">📂</button>
-                <button title="Edit" onClick={() => setEditing(u)} className="rounded bg-gray-800 hover:bg-gray-700 text-gray-200 px-2 py-1" aria-label="Edit user">✏️</button>
-                <button title="Delete" onClick={() => removeUser(u.id)} className="rounded bg-red-600 hover:bg-red-500 text-white px-2 py-1" aria-label="Delete user">🗑️</button>
-              </div>
+            <div key={u.id} className="grid grid-cols-4 items-center px-4 py-4 hover:bg-[#0F141B]">
+              <div className="text-gray-200">{u.first_name || '—'}</div>
+              <div className="text-gray-200">{u.last_name || '—'}</div>
+              <div className="text-gray-400">{u.email}</div>
+              <div className="text-gray-300">{(u.accounts?.map((a:any)=> a.type === 'LENDER' ? 'Lender' : 'Network').join(', ')) || '—'}</div>
             </div>
-
-            {/* Quick preview */}
-            {u.accounts?.length > 0 && (
-              <div className="mt-3 text-sm text-gray-300 space-y-1">
-                {u.accounts.map((a: any) => (
-                  <div key={a.id} className="flex items-center justify-between rounded border border-gray-800 bg-black/20 px-3 py-2">
-                    <div>
-                      <div className="text-xs text-gray-400">Account</div>
-                      <div className="font-medium">{a.account_type}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-400">Balance</div>
-                      <div className="font-semibold">${Number(a.balance ?? 0).toLocaleString()}</div>
-                    </div>
-                    <button onClick={() => setBalanceEditing({ account_id: a.id, balance: Number(a.balance ?? 0) })}
-                      className="rounded bg-amber-500 hover:bg-amber-400 text-black px-2 py-1">Set Balance</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         ))}
       </div>
+      </div>
+
 
       {editing && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">

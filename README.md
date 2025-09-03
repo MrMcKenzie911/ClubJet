@@ -14,6 +14,18 @@ pnpm dev
 bun dev
 ```
 
+## Environment Variables
+
+Copy .env.local.example to .env.local and set values.
+
+Required:
+
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_KEY (for scripts/admin)
+- NEXT_PUBLIC_SITE_URL
+- VAPI_WEBHOOK_URL (n8n Vapi verify URL) – used by signup flow; ensure it’s set in all environments.
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.

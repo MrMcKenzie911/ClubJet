@@ -1,7 +1,8 @@
 "use client";
-import { supabase } from "@/lib/supabaseClient";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export default function SignOutButton() {
+  const supabase = createClientComponentClient();
   async function signOut() {
     await supabase.auth.signOut();
     window.location.href = "/login";
@@ -12,4 +13,3 @@ export default function SignOutButton() {
     </button>
   );
 }
-

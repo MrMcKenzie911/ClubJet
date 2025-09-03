@@ -1,29 +1,30 @@
 "use client";
 
-import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { Line, LineChart, CartesianGrid, Tooltip, XAxis, YAxis, ResponsiveContainer, Area, AreaChart } from "recharts";
 
 type Props = { initialBalance: number; startDateISO: string; monthlyTargetPct?: number };
 
 export default function BalanceChart({ initialBalance, startDateISO, monthlyTargetPct = 1.5 }: Props) {
   const data = buildData(initialBalance, startDateISO, monthlyTargetPct);
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900 p-4">
-      <h3 className="mb-2 font-semibold text-white">Balance (Last 30 Days)</h3>
+    <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-4">
+      <h3 className="mb-2 font-semibold text-white">Performance Overview</h3>
       <div className="h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
+          <LineChart data={data} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
             <defs>
-              <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10b981" stopOpacity={0.8} />
-                <stop offset="100%" stopColor="#10b981" stopOpacity={0.1} />
+              <linearGradient id="gold-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#EAB308" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="#EAB308" stopOpacity={0.05} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
             <XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 12 }} />
             <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} tickFormatter={(v) => `$${v.toFixed(0)}`} />
-            <Tooltip contentStyle={{ background: '#111827', border: '1px solid #374151', color: '#e5e7eb' }} formatter={(v: number | string) => `$${Number(v).toFixed(2)}`} />
-            <Area dataKey="balance" stroke="#10b981" fill="url(#g)" />
-          </AreaChart>
+            <Tooltip contentStyle={{ background: '#0B0F14', border: '1px solid #374151', color: '#e5e7eb' }} formatter={(v: number | string) => `$${Number(v).toFixed(2)}`} />
+            <Area dataKey="balance" stroke="#EAB308" fill="url(#gold-fill)" type="monotone" />
+            <Line dataKey="balance" stroke="#FACC15" strokeWidth={3} dot={{ r: 3, stroke: '#FACC15', strokeWidth: 2, fill: '#0B0F14' }} type="monotone" />
+          </LineChart>
         </ResponsiveContainer>
       </div>
     </div>
