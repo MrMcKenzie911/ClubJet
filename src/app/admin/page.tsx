@@ -70,7 +70,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                 <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
                   <h2 className="mb-3 text-white font-semibold">Client Requests</h2>
                   {pendingDeposits.map((t: any) => (
-                    <form key={`dep-${t.id}`} action={approveDeposit} className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
+                    <form key={`dep-${t.id}`} action={approveDeposit} method="post" className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
                       <input type="hidden" name="tx_id" defaultValue={t.id} />
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -113,7 +113,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                   <h2 className="mb-3 text-white font-semibold">Pending Users</h2>
                   <div className="space-y-2">
                     {pendingUsers.map((u: any) => (
-                      <form key={u.id} action={approveUser} className="flex items-center justify-between rounded border border-gray-800 bg-gray-950 p-2">
+                      <form key={u.id} action="/api/admin/approve-user" method="post" className="flex items-center justify-between rounded border border-gray-800 bg-gray-950 p-2">
                         <input type="hidden" name="user_id" defaultValue={u.id} />
                         <div className="text-sm text-gray-300">{u.email} • {u.first_name} {u.last_name}</div>
                         <div className="flex gap-2">
