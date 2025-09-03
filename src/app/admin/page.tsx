@@ -217,8 +217,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                       <div className="text-xs text-gray-500">Start: {a.start_date ?? '—'}</div>
                     </div>
                     <div className="flex gap-2 items-start">
-                      <button formaction="/api/admin/update-account" formmethod="post" name="action" value="edit" className="rounded bg-gray-700 hover:bg-gray-600 px-3 py-1">Save</button>
-                      <button formaction="/api/admin/delete-account" formmethod="post" name="action" value="delete" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1">Delete</button>
+                      <button formAction="/api/admin/update-account" formMethod="post" name="action" value="edit" className="rounded bg-gray-700 hover:bg-gray-600 px-3 py-1">Save</button>
+                      <button formAction="/api/admin/delete-account" formMethod="post" name="action" value="delete" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1">Delete</button>
                       <button className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Verify</button>
                     </div>
                   </div>
