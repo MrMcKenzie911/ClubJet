@@ -17,7 +17,8 @@ export async function POST(req: Request) {
     const accountId = String(form.get('account_id') || '')
     if (!accountId) return NextResponse.redirect(new URL('/admin?toast=error', req.url))
 
-    await supabaseAdmin.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', accountId)
+    const { error: vErr } = await supabaseAdmin.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', accountId)
+    if (vErr) throw vErr
     return NextResponse.redirect(new URL('/admin?toast=account_verified', req.url))
   } catch (e) {
     console.error('api verify-account failed', e)
