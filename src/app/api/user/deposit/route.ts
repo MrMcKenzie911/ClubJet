@@ -26,6 +26,16 @@ export async function POST(req: Request) {
         .limit(1)
         .maybeSingle()
       if (acct?.id) account_id = acct.id
+      else {
+        // Create a default account so user actions always work
+        const { data: created, error: cErr } = await supabaseAdmin
+          .from('accounts')
+          .insert({ user_id: user.id, type: 'LENDER', balance: 0, minimum_balance: 5000, start_date: new Date().toISOString() })
+          .select('id')
+          .maybeSingle()
+        if (cErr) throw cErr
+        account_id = created?.id || ''
+      }
     }
 
     if (!account_id || !amount || amount <= 0) {

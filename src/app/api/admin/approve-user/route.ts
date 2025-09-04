@@ -24,7 +24,23 @@ export async function POST(req: Request) {
     if (decision === 'approve') {
       const { error: upErr } = await supabaseAdmin.from('profiles').update({ role: 'user' }).eq('id', userId)
       if (upErr) throw upErr
-      const { data: acct } = await supabaseAdmin.from('accounts').select('id').eq('user_id', userId).order('created_at', { ascending: true }).limit(1).maybeSingle()
+      // Ensure user has an account and verify the earliest one
+      let { data: acct } = await supabaseAdmin
+        .from('accounts')
+        .select('id')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      if (!acct?.id) {
+        const { data: created, error: cErr } = await supabaseAdmin
+          .from('accounts')
+          .insert({ user_id: userId, type: 'LENDER', balance: 0, minimum_balance: 5000, start_date: new Date().toISOString() })
+          .select('id')
+          .maybeSingle()
+        if (cErr) throw cErr
+        acct = created
+      }
       if (acct?.id) {
         const { error: vErr } = await supabaseAdmin.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', acct.id)
         if (vErr) throw vErr
