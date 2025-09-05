@@ -27,7 +27,7 @@ export async function processInitialDeposit(userId: string) {
     const { data: created, error: cErr } = await supabaseAdmin
       .from('accounts')
       .insert({ user_id: userId, type: acctType, balance: 0, minimum_balance: minBal })
-      .select('id')
+      .select('id, balance')
       .maybeSingle()
     if (cErr) throw cErr
     acct = created
