@@ -66,6 +66,7 @@ import { getSupabaseServer } from '@/lib/supabaseServer'
 import BalanceChart from '@/components/dashboard/BalanceChart'
 import SignOutButton from '@/components/auth/SignOutButton'
 import CalculatorToggle from '@/components/dashboard/CalculatorToggle'
+import { ReferralTree } from '@/components/referrals/ReferralTree'
 
 
 async function getData() {
@@ -82,6 +83,11 @@ async function getData() {
     .order('created_at', { ascending: false })
 
   return { user, profile, accounts: accounts ?? [], transactions: transactions ?? [] }
+}
+
+function ReferralTreeWrapper() {
+  // This small client wrapper will be injected; user id not present here without more changes, so hide for now
+  return null
 }
 
 export default async function DashboardPage() {
@@ -127,8 +133,9 @@ export default async function DashboardPage() {
 
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            {/* Calculator modal (placeholder mount) */}
-            <CalculatorModal open={false} onClose={() => { /* noop for now */ }} />
+            {/* Referral Tree (2 levels only for users) */}
+            {/* @ts-expect-error Client Component usage */}
+            <ReferralTreeWrapper />
           </div>
           <div>
             <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
