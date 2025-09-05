@@ -45,6 +45,15 @@ export async function POST(req: Request) {
         const { error: vErr } = await supabaseAdmin.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', acct.id)
         if (vErr) throw vErr
       }
+
+      // Process initial deposit and signup fee if any pending_deposits exist
+      try {
+        const { processInitialDeposit } = await import('@/lib/initialDeposit')
+        await processInitialDeposit(userId)
+      } catch (e) {
+        console.warn('processInitialDeposit skipped or failed', e)
+      }
+
       return NextResponse.redirect(new URL('/admin?toast=user_approved', req.url))
     } else if (decision === 'reject') {
       const { error: delErr } = await supabaseAdmin.from('profiles').delete().eq('id', userId)
