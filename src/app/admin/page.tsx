@@ -65,7 +65,6 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-6">
                 <UsersManagerSection />
-                {/* @ts-expect-error Client component in server wrapper */}
                 <ReferralsAllLevelsSection userId={user.id} />
               </div>
               <div className="space-y-2">
