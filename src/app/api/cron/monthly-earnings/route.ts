@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { calculateVariableCommission, calculateFixedCommission, getFixedRate } from '@/lib/commissions'
-import { creditSystemAccount, creditSlushFund } from '@/lib/system'
+import { supabaseAdmin } from '../../../../lib/supabaseAdmin'
+import { calculateVariableCommission, calculateFixedCommission, getFixedRate } from '../../../../lib/commissions'
+import { creditSystemAccount, creditSlushFund } from '../../../../lib/system'
 
 export const runtime = 'nodejs'
 
