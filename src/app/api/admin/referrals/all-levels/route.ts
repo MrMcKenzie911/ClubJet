@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   const maxDepth = Number(searchParams.get('maxDepth') || '10')
   if (!userId) return NextResponse.json({ levels: [] })
 
-  const levels: any[] = []
+  const levels: { level: number, users: { id: string, first_name: string|null, last_name: string|null, email: string|null, created_at: string|null }[] }[] = []
   let currentIds: string[] = [userId]
   for (let depth = 1; depth <= maxDepth && currentIds.length > 0; depth++) {
     const { data } = await supabaseAdmin

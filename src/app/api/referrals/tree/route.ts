@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const { data: level2 } = l1Ids.length > 0 ? await supabaseAdmin
     .from('profiles')
     .select('id, first_name, last_name, created_at, referrer_id')
-    .in('referrer_id', l1Ids) : { data: [] as any[] }
+    .in('referrer_id', l1Ids) : { data: [] as { id: string, first_name: string|null, last_name: string|null, created_at: string|null, referrer_id: string|null }[] }
 
   if (isAdmin) {
     // For admins, could expand beyond level 2; minimal now per requirement

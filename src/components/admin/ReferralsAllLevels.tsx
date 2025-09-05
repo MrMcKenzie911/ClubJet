@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 
 export default function ReferralsAllLevels({ userId }: { userId: string }) {
-  const [levels, setLevels] = useState<{ level: number, users: any[] }[]>([])
+  const [levels, setLevels] = useState<{ level: number, users: { id: string, first_name: string|null, last_name: string|null, email?: string|null }[] }[]>([])
   useEffect(() => {
     ;(async () => {
       const res = await fetch(`/api/admin/referrals/all-levels?userId=${userId}`)
