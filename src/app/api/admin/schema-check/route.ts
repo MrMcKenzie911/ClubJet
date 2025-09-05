@@ -16,7 +16,7 @@ export async function GET() {
 
   // Fallback without RPC: try selecting 0 rows
   async function trySelect<T extends string>(table: T, columns = '*') {
-    const { error } = await supabaseAdmin.from(table as any).select(columns).limit(0)
+    const { error } = await supabaseAdmin.from(table as unknown as string).select(columns).limit(0)
     return !error
   }
 

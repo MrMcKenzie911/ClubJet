@@ -72,7 +72,9 @@ async function creditMember(accountId: string, amount: number) {
   await supabaseAdmin.from('transactions').insert({ account_id: accountId, type: 'INTEREST', amount, status: 'completed' })
 }
 
-async function distribute(accountId: string, dist: any, chain: any) {
+type Dist = { member: number; ref1: number; ref2: number; slush: number; jared: number; ross: number; bne: number; total: number }
+
+async function distribute(accountId: string, dist: Dist, chain: { level_1_referrer_id?: string|null, level_2_referrer_id?: string|null } | null) {
   // Credit member
   await supabaseAdmin.rpc('increment_balance', { account_id: accountId, amount: dist.member })
   await supabaseAdmin.from('transactions').insert({ account_id: accountId, type: 'INTEREST', amount: dist.member, status: 'completed' })
@@ -105,7 +107,7 @@ async function creditFirstAccount(ownerId: string, amount: number) {
   await supabaseAdmin.from('transactions').insert({ account_id: acct.id, type: 'COMMISSION', amount, status: 'completed' })
 }
 
-async function recordDistribution(accountId: string, grossRate: number, dist: any, monthDate: Date) {
+async function recordDistribution(accountId: string, grossRate: number, dist: Dist, monthDate: Date) {
   await supabaseAdmin.from('commission_distributions').insert({
     account_id: accountId,
     gross_rate: grossRate,
