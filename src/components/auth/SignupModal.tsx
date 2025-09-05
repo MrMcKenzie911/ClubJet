@@ -19,6 +19,7 @@ export default function SignupModal({ open, onClose }: Props) {
     phone: "",
     password: "",
     referral_code: "",
+    referrer_email: "",
     account_type: "LENDER" as "LENDER" | "NETWORK",
   });
 
@@ -50,6 +51,7 @@ export default function SignupModal({ open, onClose }: Props) {
             last_name: form.last_name,
             phone: form.phone,
             referral_code: form.referral_code,
+            referrer_email: form.referrer_email,
             account_type: form.account_type,
           }),
         });
@@ -105,7 +107,9 @@ export default function SignupModal({ open, onClose }: Props) {
               <input type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" required />
               <input name="phone" placeholder="Phone" value={form.phone} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" required />
               <input type="password" name="password" placeholder="Password" value={form.password} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" required />
-              <input name="referral_code" placeholder="Referrer code (optional)" value={form.referral_code} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
+              <input name="referral_code" placeholder="Referrer code (or leave blank)" value={form.referral_code} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
+              <input name="referrer_email" placeholder="Referrer email (if no code)" type="email" value={form.referrer_email} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
+              <p className="text-xs text-gray-400">Provide either a referral code or a referrer email. If both provided, code takes precedence.</p>
               <select name="account_type" value={form.account_type} onChange={(e) => setForm(f => ({ ...f, account_type: e.target.value as any }))} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60">
                 <option value="LENDER">Lender (Fixed)</option>
                 <option value="NETWORK">Network (Variable)</option>

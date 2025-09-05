@@ -21,7 +21,7 @@ export async function GET() {
     const balance = Number(acct.balance || 0)
     if (balance <= 0) continue
 
-    const isVariable = String(acct.type).toUpperCase() === 'NETWORK' || String(acct.account_type).toUpperCase() === 'VARIABLE'
+    const isVariable = String(acct.type).toUpperCase() === 'NETWORK' || String(acct.account_type || '').toUpperCase() === 'VARIABLE'
     const isInLockup = acct.lockup_end_date ? new Date(acct.lockup_end_date) > today : false
 
     const { data: chain } = await supabaseAdmin
@@ -31,14 +31,24 @@ export async function GET() {
       .maybeSingle()
 
     if (isVariable) {
-      // During variable lockup, pay member 0.66% only
       if (isInLockup) {
+        // Variable lockup: 0.66% to member only
         const member = balance * 0.0066
         await creditMember(acct.id, member)
         await recordDistribution(acct.id, grossRate, { member, ref1: 0, ref2: 0, slush: 0, jared: 0, ross: 0, bne: 0, total: member }, monthDate)
       } else {
         const hasLevel2 = !!chain?.level_2_referrer_id
         const dist = calculateVariableCommission(balance, grossRate, hasLevel2)
+        // Enforce minimum 0.5% for member after lockup using slush top-up
+        const minMember = balance * 0.005
+        if (dist.member < minMember) {
+          const topup = minMember - dist.member
+          dist.member = minMember
+          dist.total = dist.total + topup
+          // Record slush payout for top-up
+          await creditMember(acct.id, topup)
+          await creditSlushFund(topup, 'min_topup_payout', acct.id)
+        }
         await distribute(acct.id, dist, chain)
         await recordDistribution(acct.id, grossRate, dist, monthDate)
       }
@@ -58,13 +68,13 @@ export async function GET() {
 }
 
 async function creditMember(accountId: string, amount: number) {
-  await supabaseAdmin.from('accounts').update({ balance: supabaseAdmin.rpc as any }).eq('id', accountId)
+  await supabaseAdmin.rpc('increment_balance', { account_id: accountId, amount })
   await supabaseAdmin.from('transactions').insert({ account_id: accountId, type: 'INTEREST', amount, status: 'completed' })
 }
 
 async function distribute(accountId: string, dist: any, chain: any) {
   // Credit member
-  await supabaseAdmin.from('accounts').update({ balance: supabaseAdmin.rpc as any }).eq('id', accountId)
+  await supabaseAdmin.rpc('increment_balance', { account_id: accountId, amount: dist.member })
   await supabaseAdmin.from('transactions').insert({ account_id: accountId, type: 'INTEREST', amount: dist.member, status: 'completed' })
 
   // Credit referrers
@@ -85,13 +95,13 @@ async function distribute(accountId: string, dist: any, chain: any) {
 async function creditFirstAccount(ownerId: string, amount: number) {
   const { data: acct } = await supabaseAdmin
     .from('accounts')
-    .select('id, balance')
+    .select('id')
     .eq('user_id', ownerId)
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()
   if (!acct?.id) return
-  await supabaseAdmin.from('accounts').update({ balance: Number(acct.balance)+amount }).eq('id', acct.id)
+  await supabaseAdmin.rpc('increment_balance', { account_id: acct.id, amount })
   await supabaseAdmin.from('transactions').insert({ account_id: acct.id, type: 'COMMISSION', amount, status: 'completed' })
 }
 

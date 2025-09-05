@@ -67,6 +67,7 @@ import BalanceChart from '@/components/dashboard/BalanceChart'
 import SignOutButton from '@/components/auth/SignOutButton'
 import CalculatorToggle from '@/components/dashboard/CalculatorToggle'
 import ReferralTreeClient from '@/components/referrals/ReferralTreeClient'
+import InvitePanel from '@/components/referrals/InvitePanel'
 
 
 async function getData() {
@@ -86,8 +87,20 @@ async function getData() {
 }
 
 function ReferralTreeWrapper({ userId }: { userId: string }) {
-  // Client wrapper renders only when we have a user id
   return <ReferralTreeClient userId={userId} />
+}
+
+function InvitePanelWrapper({ userId }: { userId: string }) {
+  // Fetch referral code server-side
+  // In future can move to dedicated server util
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fetchCode = async (): Promise<string> => {
+    const supabase = getSupabaseServer()
+    const { data } = await supabase.from('profiles').select('referral_code').eq('id', userId).maybeSingle()
+    return data?.referral_code || ''
+  }
+  // Not available in server component directly; render a placeholder, or move this to client in a future iteration.
+  return null
 }
 
 export default async function DashboardPage() {
@@ -146,6 +159,11 @@ export default async function DashboardPage() {
                 <CalculatorToggle />
                 <QuickButton label="Support" href="/support" external />
               </div>
+            </div>
+            <div className="mt-6">
+              {/* Invite Panel */}
+              {/* @ts-expect-error client component usage */}
+              <InvitePanelWrapper userId={res.user.id} />
             </div>
           </div>
         </div>
