@@ -47,7 +47,7 @@ export async function GET() {
           dist.total = dist.total + topup
           // Record slush payout for top-up
           await creditMember(acct.id, topup)
-          await creditSlushFund(topup, 'min_topup_payout', acct.id)
+          await import('@/lib/system').then(m => m.slushRecord('payout', topup, 'min_topup_payout', acct.id))
         }
         await distribute(acct.id, dist, chain)
         await recordDistribution(acct.id, grossRate, dist, monthDate)

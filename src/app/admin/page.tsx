@@ -63,8 +63,10 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
           <div className="rounded-3xl border border-gray-800 bg-[#0B0F14] p-6 shadow-inner">
             {/* Combined container: Verified Users + Client Requests + Pending Users */}
             <div className="grid gap-6 lg:grid-cols-3">
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2 space-y-6">
                 <UsersManagerSection />
+                {/* @ts-expect-error Client component in server wrapper */}
+                <ReferralsAllLevelsSection userId={user.id} />
               </div>
               <div className="space-y-2">
                 <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
@@ -308,6 +310,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
 // Small server wrappers that render client components (keeps admin auth guard on server)
 import SignOutButton from '@/components/SignOutButton'
 import UsersManager from '@/components/admin/UsersManager'
+import ReferralsAllLevels from '@/components/admin/ReferralsAllLevels'
 
 function SignOutInline() {
   return <SignOutButton />
@@ -319,6 +322,10 @@ function UsersManagerSection() {
       <UsersManager />
     </div>
   )
+}
+
+function ReferralsAllLevelsSection({ userId }: { userId: string }) {
+  return <ReferralsAllLevels userId={userId} />
 }
 
 

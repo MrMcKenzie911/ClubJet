@@ -41,8 +41,10 @@ export async function processInitialDeposit(userId: string) {
   const net = amount - fees.fee
 
   // credit net to member account and record deposit txn
-  await supabaseAdmin.from('accounts').update({ balance: (Number(acct?.balance || 0) + net) }).eq('id', acct!.id)
+  await supabaseAdmin.from('accounts').update({ balance: (Number(acct?.balance || 0) + net), initial_balance: supabaseAdmin.rpc as any }).eq('id', acct!.id)
   await supabaseAdmin.from('transactions').insert({ account_id: acct!.id, type: 'DEPOSIT', amount, status: 'completed', metadata: { fee: fees.fee, net } })
+  // Set initial_balance if not set
+  await supabaseAdmin.from('accounts').update({ initial_balance: (Number(acct?.balance || 0) + net) }).eq('id', acct!.id).is('initial_balance', null)
 
   // record signup fee breakdown
   await supabaseAdmin.from('signup_fees').insert({ user_id: userId, initial_deposit: amount, fee_amount: fees.fee, referrer1_share: fees.ref1, referrer2_share: fees.ref2, slush_fund_share: fees.slush })
