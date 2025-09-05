@@ -9,6 +9,14 @@ export async function POST(req: Request) {
     const { id, email, first_name, last_name, phone, referral_code, account_type } = body || {}
     if (!id || !email) return NextResponse.json({ error: 'Missing id or email' }, { status: 400 })
 
+    // Determine referrer (by code or email passed via referral_code or referrer_email)
+    let referrer_id: string | null = null
+    const referrer_email = body?.referrer_email as string | undefined
+    if (referral_code || referrer_email) {
+      const { findReferrerIdByCodeOrEmail } = await import('@/lib/referral')
+      referrer_id = await findReferrerIdByCodeOrEmail({ code: referral_code, email: referrer_email })
+    }
+
     const { error } = await supabaseAdmin.from('profiles').upsert({
       id,
       email,
@@ -16,10 +24,18 @@ export async function POST(req: Request) {
       last_name,
       phone,
       referral_code,
+      referrer_id: referrer_id ?? null,
       role: 'pending',
+      approval_status: 'pending',
       updated_at: new Date().toISOString(),
     })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Build referral chain row
+    try {
+      const { buildReferralChain } = await import('@/lib/referral')
+      await buildReferralChain(id, referrer_id ?? null)
+    } catch {}
 
     // Ensure an initial account exists so it appears as "Pending" on the admin side
     const acctType = (account_type === 'NETWORK' || account_type === 'LENDER') ? account_type : 'LENDER'

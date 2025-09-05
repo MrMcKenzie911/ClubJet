@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
 
     if (decision === 'approve') {
-      const { error: upErr } = await supabaseAdmin.from('profiles').update({ role: 'user' }).eq('id', userId)
+      const { error: upErr } = await supabaseAdmin.from('profiles').update({ role: 'user', approval_status: 'approved', approved_by: user.id, approved_at: new Date().toISOString() }).eq('id', userId)
       if (upErr) throw upErr
       // Ensure user has an account and verify the earliest one
       let { data: acct } = await supabaseAdmin
