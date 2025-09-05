@@ -47,8 +47,18 @@ export async function POST(req: Request) {
     const hasAcct = Array.isArray(acctRows) && acctRows.length > 0;
     if (!hasAcct) {
       const minBal = acctType === 'NETWORK' ? 500 : 5000
-      await supabaseAdmin.from('accounts').insert({ user_id: id, type: acctType, balance: 0, minimum_balance: minBal })
+      // Set lockup: NETWORK 6 months, LENDER 12 months
+      const months = acctType === 'NETWORK' ? 6 : 12
+      const end = new Date(); end.setMonth(end.getMonth() + months)
+      await supabaseAdmin.from('accounts').insert({ user_id: id, type: acctType, balance: 0, minimum_balance: minBal, lockup_end_date: end.toISOString().slice(0,10) })
     }
+
+    // Notify referrers (level 1 and 2)
+    try {
+      await fetch(process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/notify-referrers` : '/api/notify-referrers', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newUserId: id })
+      })
+    } catch {}
 
     return NextResponse.json({ ok: true })
   } catch (e: any) {
