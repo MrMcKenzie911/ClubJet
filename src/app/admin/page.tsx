@@ -37,7 +37,7 @@ async function getAdminData() {
     .is('verified_at', null)
     .in('user_id', pendingOwnerIds)
 
-  return { pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [] }
+  return { user, pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [] }
 }
 export default async function AdminPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
   const res = await getAdminData()
@@ -45,7 +45,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
   const tabParam = searchParams?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
 
-  const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts } = res
+  const { user, pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts } = res
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
