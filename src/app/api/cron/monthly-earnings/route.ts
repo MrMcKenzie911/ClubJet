@@ -47,12 +47,12 @@ export async function GET() {
           dist.total = dist.total + topup
           // Record slush payout for top-up
           await creditMember(acct.id, topup)
-          await import('@/lib/system').then(m => m.slushRecord('payout', topup, 'min_topup_payout', acct.id))
+          await import('../../../../lib/system').then(m => m.slushRecord('payout', topup, 'min_topup_payout', acct.id))
         }
         await distribute(acct.id, dist, chain)
         await recordDistribution(acct.id, grossRate, dist, monthDate)
         // Founding Member override on member interest (post-lockup only)
-        await import('@/lib/founder').then(m => m.computeFounderOverridesForAccount({ id: acct.id, user_id: acct.user_id }, dist.member, new Date(monthDate.getFullYear(), monthDate.getMonth(), 1).toISOString().slice(0,10)))
+        await import('../../../../lib/founder').then(m => m.computeFounderOverridesForAccount({ id: acct.id, user_id: acct.user_id }, dist.member, new Date(monthDate.getFullYear(), monthDate.getMonth(), 1).toISOString().slice(0,10)))
       }
     } else {
       // Fixed: pay member fixed rate first by initial_balance tier; then split remainder 6 ways

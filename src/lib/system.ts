@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { supabaseAdmin } from './supabaseAdmin'
 
 export async function creditSystemAccount(kind: 'JARED'|'ROSS'|'BNE', amount: number) {
   const ownerId = kind === 'JARED' ? process.env.SYSTEM_ACCOUNT_JARED

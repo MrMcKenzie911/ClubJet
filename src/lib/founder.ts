@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { supabaseAdmin } from './supabaseAdmin'
 
 // Override rates as decimals of member interest amount
 export const FOUNDER_OVERRIDE_RATES = {
