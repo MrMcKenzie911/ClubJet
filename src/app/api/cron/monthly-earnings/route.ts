@@ -51,6 +51,8 @@ export async function GET() {
         }
         await distribute(acct.id, dist, chain)
         await recordDistribution(acct.id, grossRate, dist, monthDate)
+        // Founding Member override on member interest (post-lockup only)
+        await import('@/lib/founder').then(m => m.computeFounderOverridesForAccount({ id: acct.id, user_id: acct.user_id }, dist.member, new Date(monthDate.getFullYear(), monthDate.getMonth(), 1).toISOString().slice(0,10)))
       }
     } else {
       // Fixed: pay member fixed rate first by initial_balance tier; then split remainder 6 ways
