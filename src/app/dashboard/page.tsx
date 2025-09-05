@@ -162,7 +162,6 @@ export default async function DashboardPage() {
             </div>
             <div className="mt-6">
               {/* Invite Panel */}
-              {/* @ts-expect-error client component usage */}
               <InvitePanelWrapper userId={res.user.id} />
             </div>
           </div>
