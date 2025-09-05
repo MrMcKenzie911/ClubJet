@@ -1,5 +1,5 @@
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { calculateSignupFee } from '@/lib/fees'
+import { supabaseAdmin } from './supabaseAdmin'
+import { calculateSignupFee } from './fees'
 
 export async function processInitialDeposit(userId: string) {
   // fetch pending deposit if any
