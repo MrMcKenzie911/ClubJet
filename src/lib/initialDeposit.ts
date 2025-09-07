@@ -66,19 +66,20 @@ export async function processInitialDeposit(userId: string) {
   // Founding member bonuses: levels 3, 4, and 5 receive $16.67 each if that ancestor is a founding member
   let founderPayoutTotal = 0
   const founderLevels: Array<{ id: string | null, level: number }> = [
-    { id: (chain as any)?.level_3_referrer_id ?? null, level: 3 },
-    { id: (chain as any)?.level_4_referrer_id ?? null, level: 4 },
-    { id: (chain as any)?.level_5_referrer_id ?? null, level: 5 },
+    { id: (chain as { level_3_referrer_id?: string|null })?.level_3_referrer_id ?? null, level: 3 },
+    { id: (chain as { level_4_referrer_id?: string|null })?.level_4_referrer_id ?? null, level: 4 },
+    { id: (chain as { level_5_referrer_id?: string|null })?.level_5_referrer_id ?? null, level: 5 },
   ]
 
   const founderIds = founderLevels.map(f => f.id).filter((v): v is string => !!v)
   if (founderIds.length > 0) {
+    type FounderRow = { id: string; is_founding_member: boolean }
     const { data: founders } = await supabaseAdmin
       .from('profiles')
       .select('id, is_founding_member')
       .in('id', founderIds)
 
-    const isFounder = (id?: string | null) => !!id && !!founders?.find(p => p.id === id && (p as any).is_founding_member)
+    const isFounder = (id?: string | null) => !!id && !!founders?.find((p: FounderRow) => p.id === id && p.is_founding_member)
 
     for (const f of founderLevels) {
       if (f.id && isFounder(f.id)) {

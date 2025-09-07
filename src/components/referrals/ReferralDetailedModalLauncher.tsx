@@ -6,9 +6,9 @@ export default function ReferralDetailedModalLauncher() {
   const [open, setOpen] = React.useState(false)
   React.useEffect(() => {
     const root = document.getElementById('dashboard-root')
-    const handler = () => setOpen(true)
-    const add = (el: EventTarget|null) => el && (el as any).addEventListener('open-referral-detailed', handler as any)
-    const remove = (el: EventTarget|null) => el && (el as any).removeEventListener('open-referral-detailed', handler as any)
+    const handler: EventListener = () => setOpen(true)
+    const add = (el: Document | HTMLElement | null) => { if (el) el.addEventListener('open-referral-detailed', handler) }
+    const remove = (el: Document | HTMLElement | null) => { if (el) el.removeEventListener('open-referral-detailed', handler) }
     add(document)
     add(root)
     return () => { remove(document); remove(root) }
