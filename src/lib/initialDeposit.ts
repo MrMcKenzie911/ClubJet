@@ -46,16 +46,16 @@ export async function processInitialDeposit(userId: string) {
   // Set initial_balance if not set
   await supabaseAdmin.from('accounts').update({ initial_balance: (Number(acct?.balance || 0) + net) }).eq('id', acct!.id).is('initial_balance', null)
 
-  // record signup fee breakdown
-  await supabaseAdmin.from('signup_fees').insert({ user_id: userId, initial_deposit: amount, fee_amount: fees.fee, referrer1_share: fees.ref1, referrer2_share: fees.ref2, slush_fund_share: fees.slush })
+  // credit referrers and founding-member signup bonuses
+  const founderBonusPerLevel = 16.67
 
-  // credit referrers
   const { data: chain } = await supabaseAdmin
     .from('referral_relationships')
-    .select('level_1_referrer_id, level_2_referrer_id')
+    .select('level_1_referrer_id, level_2_referrer_id, level_3_referrer_id, level_4_referrer_id, level_5_referrer_id')
     .eq('user_id', userId)
     .maybeSingle()
 
+  // Level 1 & 2 always use fixed $25 shares from fee schedule
   if (chain?.level_1_referrer_id && fees.ref1 > 0) {
     await creditFirstAccount(chain.level_1_referrer_id, fees.ref1, 'COMMISSION')
   }
@@ -63,8 +63,37 @@ export async function processInitialDeposit(userId: string) {
     await creditFirstAccount(chain.level_2_referrer_id, fees.ref2, 'COMMISSION')
   }
 
-  // credit slush fund as transaction record
-  await supabaseAdmin.from('slush_fund_transactions').insert({ transaction_type: 'deposit', amount: fees.slush, reference_account_id: acct!.id, description: 'signup_fee' })
+  // Founding member bonuses: levels 3, 4, and 5 receive $16.67 each if that ancestor is a founding member
+  let founderPayoutTotal = 0
+  const founderLevels: Array<{ id: string | null, level: number }> = [
+    { id: (chain as any)?.level_3_referrer_id ?? null, level: 3 },
+    { id: (chain as any)?.level_4_referrer_id ?? null, level: 4 },
+    { id: (chain as any)?.level_5_referrer_id ?? null, level: 5 },
+  ]
+
+  const founderIds = founderLevels.map(f => f.id).filter((v): v is string => !!v)
+  if (founderIds.length > 0) {
+    const { data: founders } = await supabaseAdmin
+      .from('profiles')
+      .select('id, is_founding_member')
+      .in('id', founderIds)
+
+    const isFounder = (id?: string | null) => !!id && !!founders?.find(p => p.id === id && (p as any).is_founding_member)
+
+    for (const f of founderLevels) {
+      if (f.id && isFounder(f.id)) {
+        await creditFirstAccount(f.id, founderBonusPerLevel, 'COMMISSION')
+        founderPayoutTotal += founderBonusPerLevel
+      }
+    }
+  }
+
+  // Record signup fee breakdown with net slush after founder payouts
+  const netSlush = Math.max(0, fees.slush - founderPayoutTotal)
+  await supabaseAdmin.from('signup_fees').insert({ user_id: userId, initial_deposit: amount, fee_amount: fees.fee, referrer1_share: fees.ref1, referrer2_share: fees.ref2, slush_fund_share: netSlush })
+
+  // credit slush fund with the net remainder
+  await supabaseAdmin.from('slush_fund_transactions').insert({ transaction_type: 'deposit', amount: netSlush, reference_account_id: acct!.id, description: 'signup_fee' })
 
   // cleanup pending deposit
   await supabaseAdmin.from('pending_deposits').delete().eq('id', pending.id)
