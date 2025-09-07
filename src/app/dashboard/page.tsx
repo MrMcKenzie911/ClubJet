@@ -33,8 +33,6 @@ function CalculatorModal({ open, onClose }: { open: boolean; onClose: () => void
         <script dangerouslySetInnerHTML={{__html:`
           (function(){
             const el = document.getElementById('calc-go'); if(!el) return;
-  const calcOpen = false;
-
             el.onclick = () => {
               const A = parseFloat((document.getElementById('calc-amount')||{}).value||'0');
               const r = (parseFloat((document.getElementById('calc-rate')||{}).value||'0')/100);
@@ -60,6 +58,8 @@ function BigStatCard({ label, value }: { label: string; value: string }) {
     </div>
   )
 }
+
+import ReferralDetailedModalLauncher from '@/components/referrals/ReferralDetailedModalLauncher'
 
 
 import { getSupabaseServer } from '@/lib/supabaseServer'
@@ -120,7 +120,10 @@ export default async function DashboardPage() {
   return (
     <>
       <ToastFromQueryDashboard />
-    <div className="mx-auto max-w-7xl px-6 py-8">
+      {/* Mount client modal controller */}
+      {/* @ts-expect-error Client component in server page */}
+      <ReferralDetailedModalLauncher />
+      <div className="mx-auto max-w-7xl px-6 py-8" id="dashboard-root">
       {/* Single large container: hero + stats + chart + quick actions + forms */}
       <div className="rounded-3xl bg-gradient-to-b from-[#0E1116] to-[#0B0F14] border border-gray-800 p-8 shadow-xl">
         <div className="flex items-center justify-between">
@@ -157,8 +160,22 @@ export default async function DashboardPage() {
                 <QuickButton label="Make a Deposit" href="#deposit" />
                 <QuickButton label="View History" href="#history" />
                 <CalculatorToggle />
+                <QuickButton label="View Detailed Referral Tree" onClickHint="open-referral-detailed" />
                 <QuickButton label="Support" href="/support" external />
               </div>
+              {/* Inline client script to open our modal using a data-action hook */}
+              <script dangerouslySetInnerHTML={{__html:`(function(){
+                const root=document.getElementById('dashboard-root');
+                if(!root) return;
+                root.addEventListener('click',function(e){
+                  const t=e.target; if(!t) return;
+                  const btn=t.closest('[data-action]');
+                  if(btn && btn.getAttribute('data-action')==='open-referral-detailed'){
+                    const ev=new CustomEvent('open-referral-detailed',{bubbles:true});
+                    root.dispatchEvent(ev);
+                  }
+                },{passive:true});
+              })();`}} />
             </div>
             <div className="mt-6">
               {/* Invite Panel */}
@@ -190,6 +207,7 @@ export default async function DashboardPage() {
             <tbody>
               {transactions.map((t: any) => (
                 <tr key={t.id} className="border-t border-gray-800">
+
                   <td className="p-2 text-gray-300">{new Date(t.created_at).toLocaleString()}</td>
                   <td className="p-2 text-gray-300">{t.type}</td>
                   <td className="p-2 text-gray-300">${Number(t.amount).toFixed(2)}</td>
