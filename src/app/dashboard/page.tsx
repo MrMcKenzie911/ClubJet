@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import ToastFromQueryDashboard from '@/components/ToastFromQueryDashboard'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
@@ -11,41 +10,6 @@ function QuickButton({ label, href, external, onClickHint }: QuickButtonProps) {
   return <button className={base} data-action={onClickHint}>{label}</button>
 }
 
-// Deprecated inline modal (replaced by CalculatorToggle)
-function CalculatorModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  if (!open) return null
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="w-full max-w-sm rounded-2xl border border-gray-800 bg-[#0B0F14] p-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-white font-semibold">Calculator</h3>
-          <button onClick={onClose} className="rounded bg-gray-800 px-2 py-1 text-gray-200">Close</button>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <label className="text-sm text-gray-300">Amount<input id="calc-amount" className="mt-1 w-full rounded bg-gray-900 border border-gray-700 px-2 py-1 text-white" /></label>
-          <label className="text-sm text-gray-300">Rate % / mo<input id="calc-rate" className="mt-1 w-full rounded bg-gray-900 border border-gray-700 px-2 py-1 text-white" defaultValue="1.5"/></label>
-          <label className="text-sm text-gray-300">Months<input id="calc-months" className="mt-1 w-full rounded bg-gray-900 border border-gray-700 px-2 py-1 text-white" defaultValue="12"/></label>
-          <div className="flex items-end">
-            <button id="calc-go" className="w-full rounded bg-amber-500 px-3 py-2 text-black font-semibold">Calculate</button>
-          </div>
-        </div>
-        <div id="calc-out" className="mt-3 text-sm text-amber-400"></div>
-        <script dangerouslySetInnerHTML={{__html:`
-          (function(){
-            const el = document.getElementById('calc-go'); if(!el) return;
-            el.onclick = () => {
-              const A = parseFloat((document.getElementById('calc-amount')||{}).value||'0');
-              const r = (parseFloat((document.getElementById('calc-rate')||{}).value||'0')/100);
-              const m = parseInt((document.getElementById('calc-months')||{}).value||'0',10);
-              const fv = A * Math.pow(1 + r, m);
-              const out = document.getElementById('calc-out'); if(out) out.textContent = 'Projected Value: $'+(fv.toFixed(2));
-            };
-          })();
-        `}} />
-      </div>
-    </div>
-  )
-}
 
 
 
@@ -67,7 +31,6 @@ import BalanceChart from '@/components/dashboard/BalanceChart'
 import SignOutButton from '@/components/auth/SignOutButton'
 import CalculatorToggle from '@/components/dashboard/CalculatorToggle'
 import ReferralTreeClient from '@/components/referrals/ReferralTreeClient'
-import InvitePanel from '@/components/referrals/InvitePanel'
 
 
 async function getData() {
@@ -90,16 +53,8 @@ function ReferralTreeWrapper({ userId }: { userId: string }) {
   return <ReferralTreeClient userId={userId} />
 }
 
-function InvitePanelWrapper({ userId }: { userId: string }) {
-  // Fetch referral code server-side
-  // In future can move to dedicated server util
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fetchCode = async (): Promise<string> => {
-    const supabase = getSupabaseServer()
-    const { data } = await supabase.from('profiles').select('referral_code').eq('id', userId).maybeSingle()
-    return data?.referral_code || ''
-  }
-  // Not available in server component directly; render a placeholder, or move this to client in a future iteration.
+function InvitePanelWrapper() {
+  // placeholder for future server-side invite panel integration
   return null
 }
 
@@ -111,9 +66,15 @@ export default async function DashboardPage() {
   const first = accounts[0]
 
   // Derived metrics for stat cards (black + gold theme)
-  const totalBalance = accounts.reduce((s: number, a: any) => s + Number(a.balance || 0), 0)
-  const pendingDeposits = transactions.filter((t: any) => t.type === 'DEPOSIT' && t.status === 'pending').reduce((s: number, t: any) => s + Number(t.amount || 0), 0)
-  const totalProfit = transactions.filter((t: any) => (t.type === 'INTEREST' || t.type === 'COMMISSION') && (t.status === 'posted' || t.status === 'completed' || !t.status)).reduce((s: number, t: any) => s + Number(t.amount || 0), 0)
+  type AccountRow = { balance?: number; start_date?: string; id: string }
+  type TxnRow = { id: string; created_at: string; type: string; amount: number; status?: string; account_id: string }
+  const totalBalance = accounts.reduce((s: number, a: AccountRow) => s + Number(a.balance || 0), 0)
+  const pendingDeposits = transactions
+    .filter((t: TxnRow) => t.type === 'DEPOSIT' && t.status === 'pending')
+    .reduce((s: number, t: TxnRow) => s + Number(t.amount || 0), 0)
+  const totalProfit = transactions
+    .filter((t: TxnRow) => (t.type === 'INTEREST' || t.type === 'COMMISSION') && (t.status === 'posted' || t.status === 'completed' || !t.status))
+    .reduce((s: number, t: TxnRow) => s + Number(t.amount || 0), 0)
   const projectedMonthlyIncome = totalBalance * 0.015 // 1.5% monthly target
   const startISO = first?.start_date ? new Date(first.start_date).toISOString() : ''
 
@@ -177,8 +138,8 @@ export default async function DashboardPage() {
               })();`}} />
             </div>
             <div className="mt-6">
-              {/* Invite Panel */}
-              <InvitePanelWrapper userId={res.user.id} />
+              {/* Invite Panel (coming soon) */}
+              <InvitePanelWrapper />
             </div>
           </div>
         </div>

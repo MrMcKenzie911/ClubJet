@@ -5,7 +5,6 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 import ToastFromQuery from '@/components/ToastFromQuery'
 
-import { revalidatePath } from 'next/cache'
 
 async function getAdminData() {
   const supabase = getSupabaseServer()

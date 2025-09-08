@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { toast } from 'react-hot-toast'
 
-export default function InvitePanel({ userId, userCode }: { userId: string, userCode: string }) {
+export default function InvitePanel({ userCode }: { userCode: string }) {
   const [email, setEmail] = useState('')
   const inviteUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/?ref=${encodeURIComponent(userCode)}`
 

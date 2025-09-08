@@ -5,7 +5,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 
 export const runtime = 'nodejs'
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const supa = createRouteHandlerClient({ cookies })
     const { data: { user } } = await supa.auth.getUser()

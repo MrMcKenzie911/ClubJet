@@ -45,7 +45,7 @@ export default function UsersManager() {
   };
 
 
-  useEffect(() => { fetchRows(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => { fetchRows(); }, []);
 
   const [editing, setEditing] = useState<any | null>(null);
 

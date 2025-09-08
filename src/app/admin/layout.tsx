@@ -1,5 +1,4 @@
 import { ReactNode, Suspense } from "react";
-import Link from "next/link";
 import SignOutButton from "@/components/SignOutButton";
 
 import AppSidebar from '@/components/app-sidebar'
@@ -37,23 +36,4 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   );
 }
 
-// remove legacy helpers below (Divider/Section/Item) now superseded by AppSidebar
-
-function Divider({ label }: { label: string }) {
-  return <div className="pt-4 pb-1 px-2 text-xs uppercase tracking-wider text-gray-400">{label}</div>
-}
-function Section({ label, href }: { label: string; href: string }) {
-  return (
-    <Link href={href} className="block rounded px-3 py-2 hover:bg-white/5">
-      <span className="text-amber-400">{label}</span>
-    </Link>
-  );
-}
-function Item({ label, href }: { label: string; href: string }) {
-  return (
-    <Link href={href} className="block rounded px-3 py-2 text-gray-300 hover:text-white hover:bg-white/5 data-[active=true]:text-white data-[active=true]:bg-white/10" data-active={typeof window !== 'undefined' && window.location.search.includes(href.split('tab=')[1] ?? '') ? true : undefined}>
-      {label}
-    </Link>
-  );
-}
 
