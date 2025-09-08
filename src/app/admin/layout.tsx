@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, Suspense } from "react";
 import Link from "next/link";
 import SignOutButton from "@/components/SignOutButton";
 
@@ -17,7 +17,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   ]
   return (
     <div className="min-h-screen bg-[#0B0F15] text-white flex">
-      <AppSidebar brandTitle="Club Aureus Portal" sections={sections} />
+      <Suspense fallback={<div className="w-64" />}>
+        <AppSidebar brandTitle="Club Aureus Portal" sections={sections} />
+      </Suspense>
       {/* Main */}
       <main className="flex-1">
         <div className="h-16 flex items-center justify-between px-4 md:px-8 border-b border-gray-800 bg-black/20">
