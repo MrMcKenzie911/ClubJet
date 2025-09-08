@@ -121,7 +121,6 @@ export default async function DashboardPage() {
     <>
       <ToastFromQueryDashboard />
       {/* Mount client modal controller */}
-      {/* @ts-expect-error Client component in server page */}
       <ReferralDetailedModalLauncher />
       <div className="mx-auto max-w-7xl px-6 py-8" id="dashboard-root">
       {/* Single large container: hero + stats + chart + quick actions + forms */}
