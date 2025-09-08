@@ -94,7 +94,7 @@ export default function UsersManager() {
       <div className="flex items-center justify-between">
         <h2 className="text-white font-semibold">Verified Users</h2>
         <div className="flex gap-2">
-          <button onClick={addUser} className="rounded-full bg-amber-500 hover:bg-amber-400 text-black px-4 py-1 font-semibold">+ ADD</button>
+          <button onClick={addUser} className="rounded-md border border-amber-500/40 hover:bg-amber-500/10 text-amber-300 px-3 py-1 text-sm">Add User</button>
         </div>
       </div>
 
@@ -123,6 +123,8 @@ export default function UsersManager() {
         <input value={minBal} onChange={(e)=>setMinBal(e.target.value)} placeholder="Min Balance" className="w-32 rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" />
         <input value={maxBal} onChange={(e)=>setMaxBal(e.target.value)} placeholder="Max Balance" className="w-32 rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" />
       </div>
+
+      <div className="mt-2 text-xs text-gray-500">Click edit to adjust user details, or delete to remove a user permanently.</div>
 
       {/* Verified Users Table */}
       <div className="mt-4 rounded-2xl border border-gray-800 overflow-hidden">

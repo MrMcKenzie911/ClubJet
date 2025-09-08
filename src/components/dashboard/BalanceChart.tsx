@@ -9,7 +9,6 @@ export default function BalanceChart({ initialBalance, startDateISO, monthlyTarg
   const data = buildDataFromTransactions(initialBalance, startDateISO, monthlyTargetPct, transactions);
   return (
     <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-4">
-      <h3 className="mb-2 font-semibold text-white">Performance Overview</h3>
       <div className="h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
@@ -28,7 +27,12 @@ export default function BalanceChart({ initialBalance, startDateISO, monthlyTarg
           </LineChart>
         </ResponsiveContainer>
       </div>
+    <div className="mt-2 flex items-center justify-between">
+      <div className="text-xs text-gray-400">Modeled with {monthlyTargetPct}% monthly target</div>
+      <div className="text-xs text-amber-300">Last 30 days</div>
     </div>
+    </div>
+
   );
 }
 

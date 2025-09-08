@@ -91,10 +91,12 @@ export default async function DashboardPage() {
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <BigStatCard label="Current Portfolio" value={`$${totalBalance.toLocaleString()}`} />
-          <BigStatCard label="Pending Loan" value={`$${pendingDeposits.toLocaleString()}`} />
+          <BigStatCard label="Portfolio Balance" value={`$${totalBalance.toLocaleString()}`} />
+          <BigStatCard label="Pending Deposits" value={`$${pendingDeposits.toLocaleString()}`} />
           <BigStatCard label="Projected Monthly Income" value={`$${projectedMonthlyIncome.toLocaleString(undefined,{maximumFractionDigits:0})}+`} />
         </div>
+
+        <div className="mt-2 text-xs text-gray-500">Target: 1.5% monthly • Network earnings reflect Level 1/2 and Founding Member overrides.</div>
 
         {first && (
           <div className="mt-6 rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
