@@ -77,6 +77,16 @@ export default function UserDrawer({ userId, onClose }: { userId: string; onClos
               </div>
               <div className="mt-3 flex gap-2">
                 <button onClick={async ()=>{ await supabase.from('profiles').update({ role: 'user' }).eq('id', profile.id); const { data: p2 } = await supabase.from('profiles').select('*').eq('id', userId).single(); setProfile(p2); }} className="rounded bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1 text-sm">Verify</button>
+                <button
+                  className="rounded bg-amber-500 hover:bg-amber-400 text-black px-2 py-1 text-sm"
+                  onClick={() => {
+                    const evt = new CustomEvent('open-referral-detailed', { detail: { userId } })
+                    document.dispatchEvent(evt)
+                  }}
+                >
+                  View Detailed Referral Tree
+                </button>
+
                 <button onClick={async ()=>{ const res = await fetch('/api/admin/generate-reset-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: profile.email })}); const j = await res.json(); if (j.link) { window.open(j.link, '_blank'); } }} className="rounded bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 text-sm">Reset Password</button>
               </div>
             </div>

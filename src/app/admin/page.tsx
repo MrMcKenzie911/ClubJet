@@ -320,25 +320,25 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                 </select>
               </label>
               <label className="text-xs text-gray-400">Monthly %
-
-
                 <input name="fixed_rate_monthly" type="number" step="0.001" placeholder='e.g., 1.25' className="mt-1 w-48 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
               </label>
-      {tab === 'verified-users' && (
-        <section className="mt-6">
-          <UsersManager />
-        </section>
-      )}
-
               <button className="rounded bg-emerald-600 px-3 py-1 text-white">Set</button>
             </form>
             <div className="mt-3 text-sm text-gray-300">Recent:</div>
+          {/* Verified Users Cards inline when tab is active */}
+
             <ul className="text-sm text-gray-400">
               {rates.map((r: any) => (
                 <li key={r.id}>{r.account_type} • {r.fixed_rate_monthly ?? 'n/a'}% • from {r.effective_from}</li>
               ))}
             </ul>
           </div>
+        </section>
+      )}
+
+      {tab === 'verified-users' && (
+        <section className="mt-6">
+          <VerifiedUsersCards />
         </section>
       )}
     </div>
@@ -371,6 +371,7 @@ function AdminMonthlyChart({ profiles, accounts }: { profiles: { created_at: str
 import SignOutButton from '@/components/SignOutButton'
 import UsersManager from '@/components/admin/UsersManager'
 import ReferralsAllLevels from '@/components/admin/ReferralsAllLevels'
+import VerifiedUsersCards from '@/components/admin/VerifiedUsersCards'
 
 function SignOutInline() {
   return <SignOutButton />
