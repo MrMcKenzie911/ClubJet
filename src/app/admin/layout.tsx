@@ -1,23 +1,13 @@
 import { ReactNode, Suspense } from "react";
 import SignOutButton from "@/components/SignOutButton";
 
-import AppSidebar from '@/components/app-sidebar'
+import { AppSidebar } from '@/components/app-sidebar'
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const sections = [
-    { items: [{ label: 'Admin Dashboard', href: '/admin' }] },
-    { label: 'Queues', items: [
-      { label: 'Pending Users', href: '/admin?tab=pending-users' },
-      { label: 'Pending Deposits', href: '/admin?tab=pending-deposits' },
-      { label: 'Pending Withdrawals', href: '/admin?tab=pending-withdrawals' },
-      { label: 'Pending Accounts', href: '/admin?tab=pending-accounts' },
-    ]},
-    { label: 'Settings', items: [ { label: 'Set Earnings Rate', href: '/admin?tab=earnings-rate' } ] }
-  ]
   return (
     <div className="min-h-screen bg-[#0B0F15] text-white flex">
       <Suspense fallback={<div className="w-64" />}>
-        <AppSidebar brandTitle="Club Aureus Portal" sections={sections} />
+        <AppSidebar variant="inset" />
       </Suspense>
       {/* Main */}
       <main className="flex-1">

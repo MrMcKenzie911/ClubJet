@@ -19,7 +19,8 @@ export default function HomePage() {
       <Navbar onOpenSignup={() => setOpen(true)} />
       <Hero onOpenSignup={() => setOpen(true)} />
       <FeaturesRow />
-      <InvestmentOptions onOpenSignup={() => setOpen(true)} />
+      {/* Removed Strategy section per requirements */}
+      {/* <InvestmentOptions onOpenSignup={() => setOpen(true)} /> */}
       <NoticeRelease />
       <About />
       <ContactAlt onOpenSignup={() => setOpen(true)} />

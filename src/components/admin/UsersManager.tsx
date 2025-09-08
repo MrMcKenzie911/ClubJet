@@ -160,7 +160,7 @@ export default function UsersManager() {
             return an.localeCompare(bn)
           })
           .map((u) => (
-            <div key={u.id} className="grid grid-cols-5 items-center px-4 py-4 hover:bg-[#0F141B] gap-2">
+            <div key={u.id} className="grid grid-cols-5 items-center px-4 py-4 hover:bg-[#0F141B] gap-2 cursor-pointer" onClick={() => setDrawerUser(u.id)}>
               <div className="text-gray-200">{u.first_name || '—'}</div>
               <div className="text-gray-200">{u.last_name || '—'}</div>
               <div className="text-gray-400">{u.email}</div>

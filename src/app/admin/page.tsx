@@ -318,6 +318,12 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
 
                 <input name="fixed_rate_monthly" type="number" step="0.001" placeholder='e.g., 1.25' className="mt-1 w-48 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
               </label>
+      {tab === 'verified-users' && (
+        <section className="mt-6">
+          <UsersManager />
+        </section>
+      )}
+
               <button className="rounded bg-emerald-600 px-3 py-1 text-white">Set</button>
             </form>
             <div className="mt-3 text-sm text-gray-300">Recent:</div>

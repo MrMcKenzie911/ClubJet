@@ -1,54 +1,164 @@
-"use client";
-import Link from "next/link";
-import { useSearchParams, usePathname } from "next/navigation";
-import SignOutButton from "@/components/SignOutButton";
+"use client"
 
-export type SidebarItem = { label: string; href: string };
-export type SidebarSection = { label?: string; items: SidebarItem[] };
+import * as React from "react"
+import {
+  IconCamera,
+  IconChartBar,
+  IconDashboard,
+  IconDatabase,
+  IconFileAi,
+  IconFileDescription,
+  IconFileWord,
+  IconFolder,
+  IconHelp,
+  IconInnerShadowTop,
+  IconListDetails,
+  IconReport,
+  IconSearch,
+  IconSettings,
+  IconUsers,
+} from "@tabler/icons-react"
 
-export default function AppSidebar({ brandTitle, sections }: { brandTitle: string; sections: SidebarSection[] }) {
-  const sp = useSearchParams();
-  const pathname = usePathname();
-  const activeKey = sp.get("tab");
-  const isActive = (href: string) => {
-    // Active if exact path matches or if tab key matches
-    if (href.includes("tab=")) {
-      const key = href.split("tab=")[1] || "";
-      return activeKey === key;
-    }
-    return pathname === href;
-  };
+import { NavDocuments } from "@/components/nav-documents"
+import { NavMain } from "@/components/nav-main"
+import { NavSecondary } from "@/components/nav-secondary"
+import { NavUser } from "@/components/nav-user"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar"
 
-  return (
-    <aside className="w-64 hidden md:flex flex-col bg-[#0C0F14] border-r border-gray-800 rounded-r-2xl shadow-xl">
-      <div className="h-16 flex items-center px-4 border-b border-gray-800 text-amber-400 font-semibold tracking-wide">
-        <span className="text-lg">{brandTitle}</span>
-      </div>
-      <nav className="p-3 space-y-4 text-sm">
-        {sections.map((section, idx) => (
-          <div key={idx}>
-            {section.label ? (
-              <div className="px-2 pb-1 text-[11px] uppercase tracking-wider text-gray-500">{section.label}</div>
-            ) : null}
-            <div className="space-y-1">
-              {section.items.map((it) => (
-                <Link
-                  key={it.href}
-                  href={it.href}
-                  data-active={isActive(it.href) ? true : undefined}
-                  className="block rounded px-3 py-2 text-gray-300 hover:text-white hover:bg-white/5 data-[active=true]:text-white data-[active=true]:bg-white/10"
-                >
-                  {it.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
-      </nav>
-      <div className="mt-auto p-3">
-        <SignOutButton className="w-full" />
-      </div>
-    </aside>
-  );
+const data = {
+  user: {
+    name: "shadcn",
+    email: "m@example.com",
+    avatar: "/avatars/shadcn.jpg",
+  },
+  navMain: [
+    { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
+    { title: "Admin Dashboard", url: "/admin", icon: IconListDetails },
+    { title: "Verified Users", url: "/admin?tab=verified-users", icon: IconUsers },
+    { title: "Pending Users", url: "/admin?tab=pending-users", icon: IconUsers },
+    { title: "Pending Deposits", url: "/admin?tab=pending-deposits", icon: IconDatabase },
+    { title: "Pending Withdrawals", url: "/admin?tab=pending-withdrawals", icon: IconDatabase },
+    { title: "Pending Accounts", url: "/admin?tab=pending-accounts", icon: IconFolder },
+    { title: "Set Earnings Rate", url: "/admin?tab=earnings-rate", icon: IconSettings },
+  ],
+  navClouds: [
+    {
+      title: "Capture",
+      icon: IconCamera,
+      isActive: true,
+      url: "#",
+      items: [
+        {
+          title: "Active Proposals",
+          url: "#",
+        },
+        {
+          title: "Archived",
+          url: "#",
+        },
+      ],
+    },
+    {
+      title: "Proposal",
+      icon: IconFileDescription,
+      url: "#",
+      items: [
+        {
+          title: "Active Proposals",
+          url: "#",
+        },
+        {
+          title: "Archived",
+          url: "#",
+        },
+      ],
+    },
+    {
+      title: "Prompts",
+      icon: IconFileAi,
+      url: "#",
+      items: [
+        {
+          title: "Active Proposals",
+          url: "#",
+        },
+        {
+          title: "Archived",
+          url: "#",
+        },
+      ],
+    },
+  ],
+  navSecondary: [
+    {
+      title: "Settings",
+      url: "#",
+      icon: IconSettings,
+    },
+    {
+      title: "Get Help",
+      url: "#",
+      icon: IconHelp,
+    },
+    {
+      title: "Search",
+      url: "#",
+      icon: IconSearch,
+    },
+  ],
+  documents: [
+    {
+      name: "Data Library",
+      url: "#",
+      icon: IconDatabase,
+    },
+    {
+      name: "Reports",
+      url: "#",
+      icon: IconReport,
+    },
+    {
+      name: "Word Assistant",
+      url: "#",
+      icon: IconFileWord,
+    },
+  ],
 }
 
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  return (
+    <Sidebar collapsible="offcanvas" {...props}>
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              className="data-[slot=sidebar-menu-button]:!p-1.5"
+            >
+              <a href="#">
+                <IconInnerShadowTop className="!size-5" />
+                <span className="text-base font-semibold">Acme Inc.</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        <NavMain items={data.navMain} />
+        <NavDocuments items={data.documents} />
+        <NavSecondary items={data.navSecondary} className="mt-auto" />
+      </SidebarContent>
+      <SidebarFooter>
+        <NavUser user={data.user} />
+      </SidebarFooter>
+    </Sidebar>
+  )
+}

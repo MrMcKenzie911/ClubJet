@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
+import ReferralTreeClient from "@/components/referrals/ReferralTreeClient";
 
 function suggestBand(balance: number, bands: any[]): string {
   const b = Number(balance ?? 0)
@@ -96,6 +98,51 @@ export default function UserDrawer({ userId, onClose }: { userId: string; onClos
                     ); })()}
                   </div>
                 ))}
+            <div className="rounded border border-gray-800 p-3">
+              <div className="text-sm text-gray-400 mb-2">Referrals</div>
+              <div className="space-y-3">
+                <div className="text-sm text-gray-300">Direct Referrer: {profile?.referrer_id ? profile?.referrer_id : 'None'}</div>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const form = e.currentTarget as HTMLFormElement;
+                  const code = (form.elements.namedItem('code') as HTMLInputElement)?.value || '';
+                  const email = (form.elements.namedItem('email') as HTMLInputElement)?.value || '';
+                  try {
+                    const res = await fetch('/api/admin/referrals/reassign', {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId: userId, referrerCode: code || null, referrerEmail: email || null })
+                    });
+                    if (!res.ok) {
+                      const j = await res.json().catch(() => ({}));
+                      toast.error(j.error || 'Failed to reassign referrer');
+                    } else {
+                      const j = await res.json().catch(() => ({}));
+                      toast.success('Referrer updated');
+                      // Reload profile
+                      const { data: p2 } = await supabase.from('profiles').select('*').eq('id', userId).single();
+                      setProfile(p2);
+                    }
+                  } catch (err: unknown) {
+                    const msg = err instanceof Error ? err.message : 'Request failed'
+                    toast.error(msg)
+                  }
+                }} className="rounded border border-gray-800 bg-black/20 p-3 grid grid-cols-3 gap-2">
+                  <label className="text-xs text-gray-400">Referral Code
+                    <input name="code" placeholder="e.g. A1B2C3D4" className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
+                  </label>
+                  <label className="text-xs text-gray-400">Referrer Email
+                    <input name="email" type="email" placeholder="user@example.com" className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
+                  </label>
+                  <div className="flex items-end">
+                    <button className="w-full rounded bg-amber-500 hover:bg-amber-400 text-black px-3 py-2 text-sm">Reassign Referrer</button>
+                  </div>
+                </form>
+                <div>
+                  <ReferralTreeClient userId={userId} isAdmin={true} />
+                </div>
+              </div>
+            </div>
+
                 {accounts.length === 0 && <div className="text-sm text-gray-500">No accounts.</div>}
               </div>
             </div>
