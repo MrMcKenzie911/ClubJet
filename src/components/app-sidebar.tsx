@@ -30,7 +30,7 @@ type NavItem = { title: string; url: string; icon: Icon }
 function getNavItems(role: SidebarRole): NavItem[] {
   if (role === "admin") {
     return [
-      { title: "Dashboard", url: "/admin", icon: IconDashboard },
+      { title: "Admin Dashboard", url: "/admin", icon: IconDashboard },
       { title: "Verified Users", url: "/admin?tab=verified-users", icon: IconUsers },
       { title: "Pending Users", url: "/admin?tab=pending-users", icon: IconUsers },
       { title: "Pending Deposits", url: "/admin?tab=pending-deposits", icon: IconDatabase },
