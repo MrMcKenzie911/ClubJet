@@ -56,6 +56,17 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
         <SignOutInline />
       </div>
 
+      {/* Overview stats */}
+      {!tab && (
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <OverviewCard label="Pending Users" value={String(pendingUsers.length)} />
+          <OverviewCard label="Pending Deposits" value={String(pendingDeposits.length)} />
+          <OverviewCard label="Pending Withdrawals" value={String(pendingWithdrawals.length)} />
+          <OverviewCard label="Pending Accounts" value={String(pendingAccounts.length)} />
+          <OverviewCard label="Current Earnings %" value={`${rates[0]?.fixed_rate_monthly ?? '—'}%`} />
+        </div>
+      )}
+
       {/* Tabbed view: default dashboard shows all; specific tabs show focused lists */}
       {!tab && (
         <section className="mt-6">
@@ -312,6 +323,16 @@ import ReferralsAllLevels from '@/components/admin/ReferralsAllLevels'
 
 function SignOutInline() {
   return <SignOutButton />
+}
+
+
+function OverviewCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-5 shadow-lg">
+      <div className="text-xs text-gray-400">{label}</div>
+      <div className="mt-2 text-2xl font-extrabold text-amber-400">{value}</div>
+    </div>
+  )
 }
 
 function UsersManagerSection() {
