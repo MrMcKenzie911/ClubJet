@@ -30,6 +30,7 @@ import BalanceChart from '@/components/dashboard/BalanceChart'
 import SignOutButton from '@/components/auth/SignOutButton'
 import CalculatorToggle from '@/components/dashboard/CalculatorToggle'
 import ReferralTreeClient from '@/components/referrals/ReferralTreeClient'
+import InvitePanel from '@/components/referrals/InvitePanel'
 
 
 async function getData() {
@@ -52,14 +53,28 @@ function ReferralTreeWrapper({ userId }: { userId: string }) {
   return <ReferralTreeClient userId={userId} />
 }
 
-function InvitePanelWrapper() {
-  // placeholder for future server-side invite panel integration
-  return null
-}
 
 export default async function DashboardPage() {
   const res = await getData()
   if ('redirect' in res) redirect('/login')
+
+function MonthProgress() {
+  const today = new Date()
+  const currentDay = today.getDate()
+  const pct = Math.min(100, Math.max(0, (currentDay / 30) * 100))
+  return (
+    <div className="mt-4 rounded-xl border border-gray-800 bg-[#0B0F14] p-4">
+      <div className="flex items-center justify-between text-xs text-gray-400">
+        <span>Month Progress</span>
+        <span>{currentDay}/30 days</span>
+      </div>
+      <div className="mt-2 h-2 w-full rounded bg-white/5">
+        <div className="h-2 rounded bg-amber-500" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="mt-2 text-xs text-gray-500">Monthly target: <span className="text-amber-400 font-medium">1.5%</span></div>
+    </div>
+  )
+}
 
   const { accounts, transactions } = res
   const first = accounts[0]
@@ -99,13 +114,17 @@ export default async function DashboardPage() {
         <div className="mt-2 text-xs text-gray-500">Target: 1.5% monthly • Network earnings reflect Level 1/2 and Founding Member overrides.</div>
 
         {first && (
-          <div className="mt-6 rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
-            <h2 className="mb-3 text-white font-semibold">Performance Overview</h2>
-            <BalanceChart initialBalance={Number(first.balance) || 0} startDateISO={startISO} monthlyTargetPct={1.5} transactions={transactions as { created_at: string; type: string; amount: number; status?: string }[]} />
-          </div>
+          <>
+            {/* 30-day progress bar with 1.5% target note */}
+            <MonthProgress />
+            <div className="mt-6 rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
+              <h2 className="mb-3 text-white font-semibold">Performance Overview</h2>
+              <BalanceChart initialBalance={Number(first.balance) || 0} startDateISO={startISO} monthlyTargetPct={1.5} transactions={transactions as { created_at: string; type: string; amount: number; status?: string }[]} />
+            </div>
+          </>
         )}
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
+              <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             {/* Referral Tree (2 levels only for users) */}
             <ReferralTreeWrapper userId={res.user.id} />
@@ -136,8 +155,8 @@ export default async function DashboardPage() {
               })();`}} />
             </div>
             <div className="mt-6">
-              {/* Invite Panel (coming soon) */}
-              <InvitePanelWrapper />
+              {/* Invite Panel */}
+              <InvitePanel userCode={res.profile?.referral_code || ''} />
             </div>
           </div>
         </div>
