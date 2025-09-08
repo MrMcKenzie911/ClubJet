@@ -2,29 +2,22 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import SignOutButton from "@/components/SignOutButton";
 
+import AppSidebar from '@/components/app-sidebar'
+
 export default function AdminLayout({ children }: { children: ReactNode }) {
+  const sections = [
+    { items: [{ label: 'Admin Dashboard', href: '/admin' }] },
+    { label: 'Queues', items: [
+      { label: 'Pending Users', href: '/admin?tab=pending-users' },
+      { label: 'Pending Deposits', href: '/admin?tab=pending-deposits' },
+      { label: 'Pending Withdrawals', href: '/admin?tab=pending-withdrawals' },
+      { label: 'Pending Accounts', href: '/admin?tab=pending-accounts' },
+    ]},
+    { label: 'Settings', items: [ { label: 'Set Earnings Rate', href: '/admin?tab=earnings-rate' } ] }
+  ]
   return (
     <div className="min-h-screen bg-[#0B0F15] text-white flex">
-      {/* Sidebar */}
-      <aside className="w-64 hidden md:flex flex-col bg-[#1a1a1a] border-r border-gray-800 rounded-r-2xl shadow-lg animate-[fadeIn_0.3s_ease]">
-        <div className="h-16 flex items-center px-4 border-b border-gray-800 text-amber-400 font-semibold tracking-wide">
-          <span className="text-lg">Club Aureus Portal</span>
-        </div>
-        <nav className="p-3 space-y-1 text-sm">
-          <Section label="Dashboard" href="/admin" />
-          <Divider label="Queues" />
-          <Item label="Pending Users" href="/admin?tab=pending-users" />
-          <Item label="Pending Deposits" href="/admin?tab=pending-deposits" />
-          <Item label="Pending Withdrawals" href="/admin?tab=pending-withdrawals" />
-          <Item label="Pending Accounts" href="/admin?tab=pending-accounts" />
-          <Divider label="Settings" />
-          <Item label="Set Earnings Rate" href="/admin?tab=earnings-rate" />
-        </nav>
-        <div className="mt-auto p-3">
-          <SignOutButton className="w-full" />
-        </div>
-      </aside>
-
+      <AppSidebar brandTitle="Club Aureus Portal" sections={sections} />
       {/* Main */}
       <main className="flex-1">
         <div className="h-16 flex items-center justify-between px-4 md:px-8 border-b border-gray-800 bg-black/20">
@@ -41,6 +34,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+// remove legacy helpers below (Divider/Section/Item) now superseded by AppSidebar
 
 function Divider({ label }: { label: string }) {
   return <div className="pt-4 pb-1 px-2 text-xs uppercase tracking-wider text-gray-400">{label}</div>
