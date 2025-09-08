@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import ToastFromQueryDashboard from '@/components/ToastFromQueryDashboard'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 
 type QuickButtonProps = { label: string; href?: string; external?: boolean; onClickHint?: string }
@@ -72,9 +71,6 @@ export default async function DashboardPage() {
   const pendingDeposits = transactions
     .filter((t: TxnRow) => t.type === 'DEPOSIT' && t.status === 'pending')
     .reduce((s: number, t: TxnRow) => s + Number(t.amount || 0), 0)
-  const totalProfit = transactions
-    .filter((t: TxnRow) => (t.type === 'INTEREST' || t.type === 'COMMISSION') && (t.status === 'posted' || t.status === 'completed' || !t.status))
-    .reduce((s: number, t: TxnRow) => s + Number(t.amount || 0), 0)
   const projectedMonthlyIncome = totalBalance * 0.015 // 1.5% monthly target
   const startISO = first?.start_date ? new Date(first.start_date).toISOString() : ''
 
@@ -103,7 +99,7 @@ export default async function DashboardPage() {
         {first && (
           <div className="mt-6 rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
             <h2 className="mb-3 text-white font-semibold">Performance Overview</h2>
-            <BalanceChart initialBalance={Number(first.balance) || 0} startDateISO={startISO} monthlyTargetPct={1.5} transactions={transactions as any} />
+            <BalanceChart initialBalance={Number(first.balance) || 0} startDateISO={startISO} monthlyTargetPct={1.5} transactions={transactions as { created_at: string; type: string; amount: number; status?: string }[]} />
           </div>
         )}
 
@@ -165,9 +161,8 @@ export default async function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {transactions.map((t: any) => (
+              {transactions.map((t: { id: string; created_at: string; type: string; amount: number; status?: string }) => (
                 <tr key={t.id} className="border-t border-gray-800">
-
                   <td className="p-2 text-gray-300">{new Date(t.created_at).toLocaleString()}</td>
                   <td className="p-2 text-gray-300">{t.type}</td>
                   <td className="p-2 text-gray-300">${Number(t.amount).toFixed(2)}</td>
@@ -199,23 +194,6 @@ function WithdrawalRequest({ accountId }: { accountId?: string }) {
   </form>
 }
 
-async function submitWithdrawal(formData: FormData) {
-  'use server'
-  const supabase = getSupabaseServer()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return redirect('/login')
-  const account_id = formData.get('account_id') as string
-  const amount = parseFloat(String(formData.get('amount')))
-  const method = String(formData.get('method'))
-  if (!account_id || !amount || amount <= 0) return
-  try {
-    await supabaseAdmin.from('withdrawal_requests').insert({ account_id, amount, method, status: 'pending' })
-    redirect('/dashboard?toast=withdraw_submitted')
-  } catch (e) {
-    console.error('submitWithdrawal failed', e)
-    redirect('/dashboard?toast=error')
-  }
-}
 
 function PaymentForm({ accountId }: { accountId?: string }) {
   return <form action="/api/user/deposit" method="post" className="rounded-xl border border-gray-800 bg-gray-900 p-4">
@@ -236,22 +214,5 @@ function PaymentForm({ accountId }: { accountId?: string }) {
   </form>
 }
 
-async function submitPayment(formData: FormData) {
-  'use server'
-  const supabase = getSupabaseServer()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return redirect('/login')
-  const account_id = formData.get('account_id') as string
-  const amount = parseFloat(String(formData.get('amount')))
-  const reference = String(formData.get('reference') || '')
-  if (!account_id || !amount || amount <= 0) return
-  try {
-    await supabaseAdmin.from('transactions').insert({ account_id, type: 'DEPOSIT', amount, status: 'pending', metadata: { reference } })
-  } catch (e) {
-    console.error('submitPayment failed', e)
-    redirect('/dashboard?toast=error')
-  }
-  redirect('/dashboard?toast=deposit_submitted')
-}
 
 
