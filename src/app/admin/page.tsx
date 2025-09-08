@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable tailwindcss/no-custom-classname */
 
 import { redirect } from 'next/navigation'
 import { getSupabaseServer } from '@/lib/supabaseServer'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import MultiLineChart from '@/components/charts/MultiLineChart'
+import { Button } from '@/components/ui/button'
 
 import ToastFromQuery from '@/components/ToastFromQuery'
 
@@ -100,8 +100,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                           <div className="mt-1 text-sm text-gray-300">Deposit • ${Number(t.amount).toLocaleString()} • {new Date(t.created_at).toLocaleString()}</div>
                         </div>
                         <div className="flex gap-2">
-                          <button name="decision" value="approve" className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Approve</button>
-                          <button name="decision" value="deny" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1 text-white">Deny</button>
+                          <Button name="decision" value="approve" className="bg-emerald-600 hover:bg-emerald-500 text-white">Approve</Button>
+                          <Button name="decision" value="deny" className="bg-red-600 hover:bg-red-500 text-white">Deny</Button>
                         </div>
                       </div>
                     </form>
@@ -119,8 +119,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                           <div className="text-xs text-gray-500">Requested: {new Date(w.requested_at).toLocaleString()}</div>
                         </div>
                         <div className="flex gap-2">
-                          <button name="decision" value="approve" className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Approve</button>
-                          <button name="decision" value="deny" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1 text-white">Deny</button>
+                          <Button name="decision" value="approve" className="bg-emerald-600 hover:bg-emerald-500 text-white">Approve</Button>
+                          <Button name="decision" value="deny" className="bg-red-600 hover:bg-red-500 text-white">Deny</Button>
                         </div>
                       </div>
                     </form>
@@ -143,8 +143,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                         <input type="hidden" name="user_id" defaultValue={u.id} />
                         <div className="text-sm text-gray-300">{u.email} • {u.first_name} {u.last_name}</div>
                         <div className="flex gap-2">
-                          <button name="decision" value="approve" className="rounded bg-emerald-600 px-3 py-1 text-white">Approve</button>
-                          <button name="decision" value="reject" className="rounded bg-red-600 px-3 py-1 text-white">Reject</button>
+                          <Button name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
+                          <Button name="decision" value="reject" className="bg-red-600 text-white">Reject</Button>
                         </div>
                       </form>
                     ))}
@@ -169,8 +169,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                   <input type="hidden" name="user_id" defaultValue={u.id} />
                   <div className="text-sm text-gray-300">{u.email} • {u.first_name} {u.last_name}</div>
                   <div className="flex gap-2">
-                    <button name="decision" value="approve" className="rounded bg-emerald-600 px-3 py-1 text-white">Approve</button>
-                    <button name="decision" value="reject" className="rounded bg-red-600 px-3 py-1 text-white">Reject</button>
+                    <Button name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
+                    <Button name="decision" value="reject" className="bg-red-600 text-white">Reject</Button>
                   </div>
                 </form>
               ))}
@@ -192,8 +192,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                   <div className="mt-1 text-sm text-gray-300">Deposit • ${Number(t.amount).toLocaleString()} • {new Date(t.created_at).toLocaleString()}</div>
                 </div>
                 <div className="flex gap-2">
-                  <button name="decision" value="approve" className="rounded bg-emerald-600 px-3 py-1 text-white">Approve</button>
-                  <button name="decision" value="deny" className="rounded bg-red-600 px-3 py-1 text-white">Deny</button>
+                  <Button name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
+                  <Button name="decision" value="deny" className="bg-red-600 text-white">Deny</Button>
                 </div>
               </div>
             </form>
@@ -217,8 +217,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                   <div className="text-xs text-gray-500">Requested: {new Date(w.requested_at).toLocaleString()}</div>
                 </div>
                 <div className="flex gap-2">
-                  <button name="decision" value="approve" className="rounded bg-emerald-600 px-3 py-1 text-white">Approve</button>
-                  <button name="decision" value="deny" className="rounded bg-red-600 px-3 py-1 text-white">Deny</button>
+                  <Button name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
+                  <Button name="decision" value="deny" className="bg-red-600 text-white">Deny</Button>
                 </div>
               </div>
             </form>
