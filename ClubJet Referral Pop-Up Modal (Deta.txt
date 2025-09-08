@@ -1,0 +1,646 @@
+ClubJet Referral Pop-Up Modal (Detailed View once user clicks view detailed tree)
+
+Change colors to be black and gold to match our current design!
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corrected Referral Tree Examples</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .trees-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            padding: 20px;
+        }
+        
+        .tree-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            border: 3px solid #e9ecef;
+        }
+        
+        .tree-title {
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border-radius: 10px;
+        }
+        
+        .tree {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .tree-node {
+            background: white;
+            border: 3px solid;
+            border-radius: 15px;
+            padding: 12px;
+            margin: 8px;
+            text-align: center;
+            position: relative;
+            min-width: 180px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .tree-node:hover {
+            transform: scale(1.05);
+        }
+        
+        .founding-member {
+            border-color: #f39c12;
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+        }
+        
+        .normal-member {
+            border-color: #3498db;
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        }
+        
+        .member-name {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+        
+        .member-investment {
+            color: #27ae60;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .member-status {
+            font-size: 0.8em;
+            font-style: italic;
+            margin-bottom: 8px;
+        }
+        
+        .founding-status {
+            color: #f39c12;
+        }
+        
+        .normal-status {
+            color: #3498db;
+        }
+        
+        .level {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .connector {
+            width: 2px;
+            height: 30px;
+            background: #95a5a6;
+            margin: 0 auto;
+        }
+        
+        .founding-bonus-summary {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border: 3px solid #f39c12;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .bonus-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #e67e22;
+            margin-bottom: 15px;
+        }
+        
+        .bonus-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .bonus-item {
+            background: white;
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid #f39c12;
+        }
+        
+        .bonus-level {
+            font-weight: bold;
+            color: #d35400;
+            margin-bottom: 5px;
+        }
+        
+        .bonus-calculation {
+            color: #2c3e50;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .bonus-amount {
+            font-weight: bold;
+            color: #e67e22;
+            font-size: 1.1em;
+        }
+        
+        .total-bonus {
+            background: #d4edda;
+            border: 3px solid #28a745;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        .total-label {
+            font-weight: bold;
+            color: #155724;
+            font-size: 1.2em;
+        }
+        
+        .total-amount {
+            font-weight: bold;
+            color: #155724;
+            font-size: 1.5em;
+            margin-top: 5px;
+        }
+        
+        .tree-stats {
+            background: rgba(255,255,255,0.9);
+            border: 2px solid #3498db;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .stat-item {
+            display: inline-block;
+            margin: 0 15px;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            color: #2c3e50;
+        }
+        
+        .stat-value {
+            color: #3498db;
+        }
+        
+        .summary-box {
+            background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+            border: 3px solid #27ae60;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .summary-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #1b5e20;
+            margin-bottom: 15px;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .summary-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #27ae60;
+        }
+        
+        .summary-label {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .summary-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌳 CORRECTED Referral Tree Examples</h1>
+            <p>Founding members earn bonuses for EVERY person in their downline at each level</p>
+        </div>
+        
+        <div class="trees-container">
+            <!-- TREE 1: SMALL TREE -->
+            <div class="tree-section">
+                <div class="tree-title">🌱 Tree #1: Small Network (4 Members)</div>
+                
+                <div class="tree">
+                    <!-- Level 1: Founding Member -->
+                    <div class="tree-node founding-member">
+                        <div class="member-name">Sarah Chen</div>
+                        <div class="member-investment">Investment: $8,500</div>
+                        <div class="member-status founding-status">⭐ Founding Member</div>
+                    </div>
+                    
+                    <div class="connector"></div>
+                    
+                    <!-- Level 2 -->
+                    <div class="tree-node normal-member">
+                        <div class="member-name">Mike Rodriguez</div>
+                        <div class="member-investment">Investment: $2,000</div>
+                        <div class="member-status normal-status">👤 Level 1 under Sarah</div>
+                    </div>
+                    
+                    <div class="connector"></div>
+                    
+                    <!-- Level 3 -->
+                    <div class="tree-node normal-member">
+                        <div class="member-name">Lisa Park</div>
+                        <div class="member-investment">Investment: $1,500</div>
+                        <div class="member-status normal-status">👤 Level 2 under Sarah</div>
+                    </div>
+                    
+                    <div class="connector"></div>
+                    
+                    <!-- Level 4 -->
+                    <div class="tree-node normal-member">
+                        <div class="member-name">Tom Wilson</div>
+                        <div class="member-investment">Investment: $3,200</div>
+                        <div class="member-status normal-status">👤 Level 3 under Sarah</div>
+                    </div>
+                </div>
+                
+                <div class="founding-bonus-summary">
+                    <div class="bonus-title">💰 Sarah's Founding Member Bonuses</div>
+                    
+                    <div class="bonus-breakdown">
+                        <div class="bonus-item">
+                            <div class="bonus-level">Level 1</div>
+                            <div class="bonus-calculation">1 person × $25</div>
+                            <div class="bonus-amount">$25.00</div>
+                        </div>
+                        
+                        <div class="bonus-item">
+                            <div class="bonus-level">Level 2</div>
+                            <div class="bonus-calculation">1 person × $25</div>
+                            <div class="bonus-amount">$25.00</div>
+                        </div>
+                        
+                        <div class="bonus-item">
+                            <div class="bonus-level">Level 3</div>
+                            <div class="bonus-calculation">1 person × $16.67</div>
+                            <div class="bonus-amount">$16.67</div>
+                        </div>
+                    </div>
+                    
+                    <div class="total-bonus">
+                        <div class="total-label">Sarah's Total Bonus Earnings:</div>
+                        <div class="total-amount">$66.67</div>
+                    </div>
+                </div>
+                
+                <div class="tree-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Members:</span>
+                        <span class="stat-value">4</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Investments:</span>
+                        <span class="stat-value">$15,200</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Network Depth:</span>
+                        <span class="stat-value">3 Levels</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- TREE 2: MEDIUM TREE -->
+            <div class="tree-section">
+                <div class="tree-title">🌿 Tree #2: Medium Network (7 Members)</div>
+                
+                <div class="tree">
+                    <!-- Level 1: Founding Member -->
+                    <div class="tree-node founding-member">
+                        <div class="member-name">Alex Thompson</div>
+                        <div class="member-investment">Investment: $12,000</div>
+                        <div class="member-status founding-status">⭐ Founding Member</div>
+                    </div>
+                    
+                    <div class="connector"></div>
+                    
+                    <!-- Level 2 -->
+                    <div class="level">
+                        <div class="tree-node normal-member">
+                            <div class="member-name">Emma Davis</div>
+                            <div class="member-investment">Investment: $4,500</div>
+                            <div class="member-status normal-status">👤 Level 1</div>
+                        </div>
+                        
+                        <div class="tree-node normal-member">
+                            <div class="member-name">James Lee</div>
+                            <div class="member-investment">Investment: $6,200</div>
+                            <div class="member-status normal-status">👤 Level 1</div>
+                        </div>
+                    </div>
+                    
+                    <div class="connector"></div>
+                    
+                    <!-- Level 3 -->
+                    <div class="level">
+                        <div class="tree-node normal-member">
+                            <div class="member-name">Sophia Kim</div>
+                            <div class="member-investment">Investment: $2,800</div>
+                            <div class="member-status normal-status">👤 Level 2</div>
+                        </div>
+                        
+                        <div class="tree-node normal-member">
+                            <div class="member-name">Ryan Miller</div>
+                            <div class="member-investment">Investment: $3,700</div>
+                            <div class="member-status normal-status">👤 Level 2</div>
+                        </div>
+                    </div>
+                    
+                    <div class="connector"></div>
+                    
+                    <!-- Level 4 -->
+                    <div class="level">
+                        <div class="tree-node normal-member">
+                            <div class="member-name">Maya Patel</div>
+                            <div class="member-investment">Investment: $1,900</div>
+                            <div class="member-status normal-status">👤 Level 3</div>
+                        </div>
+                        
+                        <div class="tree-node normal-member">
+                            <div class="member-name">David Chang</div>
+                            <div class="member-investment">Investment: $5,400</div>
+                            <div class="member-status normal-status">👤 Level 3</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="founding-bonus-summary">
+                    <div class="bonus-title">💰 Alex's Founding Member Bonuses</div>
+                    
+                    <div class="bonus-breakdown">
+                        <div class="bonus-item">
+                            <div class="bonus-level">Level 1</div>
+                            <div class="bonus-calculation">2 people × $25</div>
+                            <div class="bonus-amount">$50.00</div>
+                        </div>
+                        
+                        <div class="bonus-item">
+                            <div class="bonus-level">Level 2</div>
+                            <div class="bonus-calculation">2 people × $25</div>
+                            <div class="bonus-amount">$50.00</div>
+                        </div>
+                        
+                        <div class="bonus-item">
+                            <div class="bonus-level">Level 3</div>
+                            <div class="bonus-calculation">2 people × $16.67</div>
+                            <div class="bonus-amount">$33.34</div>
+                        </div>
+                    </div>
+                    
+                    <div class="total-bonus">
+                        <div class="total-label">Alex's Total Bonus Earnings:</div>
+                        <div class="total-amount">$133.34</div>
+                    </div>
+                </div>
+                
+                <div class="tree-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Members:</span>
+                        <span class="stat-value">7</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Investments:</span>
+                        <span class="stat-value">$36,500</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Network Depth:</span>
+                        <span class="stat-value">3 Levels</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- TREE 3: LARGE TREE -->
+            <div class="tree-section">
+                <div class="tree-title">🌳 Tree #3: Large Network (10 Members)</div>
+                
+                <div class="tree">
+                    <!-- Level 1: Founding Member -->
+                    <div class="tree-node founding-member">
+                        <div class="member-name">Jordan Williams</div>
+                        <div class="member-investment">Investment: $25,000</div>
+                        <div class="member-status founding-status">⭐ Founding Member</div>
+                    </div>
+                    
+                    <div class="connector"></div>
+                    
+                    <!-- Level 2 -->
+                    <div class="level">
+                        <div class="tree-node normal-member">
+                            <div class="member-name">Rachel Green</div>
+                            <div class="member-investment">Investment: $8,500</div>
+                            <div class="member-status normal-status">👤 Level 1</div>
+                        </div>
+                        
+                        <div class="tree-node normal-member">
+                            <div class="member-name">Marcus Johnson</div>
+                            <div class="member-investment">Investment: $7,200</div>
+                            <div class="member-status normal-status">👤 Level 1</div>
+                        </div>
+                        
+                        <div class="tree-node normal-member">
+                            <div class="member-name">Nina Foster</div>
+                            <div class="member-investment">Investment: $4,800</div>
+                            <div class="member-status normal-status">👤 Level 1</div>
+                        </div>
+                    </div>
+                    
+                    <div class="connector"></div>
+                    
+                    <!-- Level 3 -->
+                    <div class="level">
+                        <div class="tree-node normal-member">
+                            <div class="member-name">Kevin Zhang</div>
+                            <div class="member-investment">Investment: $3,200</div>
+                            <div class="member-status normal-status">👤 Level 2</div>
+                        </div>
+                        
+                        <div class="tree-node normal-member">
+                            <div class="member-name">Olivia Cruz</div>
+                            <div class="member-investment">Investment: $5,600</div>
+                            <div class="member-status normal-status">👤 Level 2</div>
+                        </div>
+                    </div>
+                    
+                    <div class="connector"></div>
+                    
+                    <!-- Level 4 -->
+                    <div class="level">
+                        <div class="tree-node normal-member">
+                            <div class="member-name">Tyler Brooks</div>
+                            <div class="member-investment">Investment: $2,400</div>
+                            <div class="member-status normal-status">👤 Level 3</div>
+                        </div>
+                        
+                        <div class="tree-node normal-member">
+                            <div class="member-name">Zoe Martinez</div>
+                            <div class="member-investment">Investment: $6,700</div>
+                            <div class="member-status normal-status">👤 Level 3</div>
+                        </div>
+                    </div>
+                    
+                    <div class="connector"></div>
+                    
+                    <!-- Level 5 -->
+                    <div class="level">
+                        <div class="tree-node normal-member">
+                            <div class="member-name">Ethan Scott</div>
+                            <div class="member-investment">Investment: $4,100</div>
+                            <div class="member-status normal-status">👤 Level 4</div>
+                        </div>
+                        
+                        <div class="tree-node normal-member">
+                            <div class="member-name">Ava Roberts</div>
+                            <div class="member-investment">Investment: $3,900</div>
+                            <div class="member-status normal-status">👤 Level 4</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="founding-bonus-summary">
+                    <div class="bonus-title">💰 Jordan's Founding Member Bonuses</div>
+                    
+                    <div class="bonus-breakdown">
+                        <div class="bonus-item">
+                            <div class="bonus-level">Level 1</div>
+                            <div class="bonus-calculation">3 people × $25</div>
+                            <div class="bonus-amount">$75.00</div>
+                        </div>
+                        
+                        <div class="bonus-item">
+                            <div class="bonus-level">Level 2</div>
+                            <div class="bonus-calculation">2 people × $25</div>
+                            <div class="bonus-amount">$50.00</div>
+                        </div>
+                        
+                        <div class="bonus-item">
+                            <div class="bonus-level">Level 3</div>
+                            <div class="bonus-calculation">2 people × $16.67</div>
+                            <div class="bonus-amount">$33.34</div>
+                        </div>
+                        
+                        <div class="bonus-item">
+                            <div class="bonus-level">Level 4</div>
+                            <div class="bonus-calculation">2 people × $16.67</div>
+                            <div class="bonus-amount">$33.34</div>
+                        </div>
+                    </div>
+                    
+                    <div class="total-bonus">
+                        <div class="total-label">Jordan's Total Bonus Earnings:</div>
+                        <div class="total-amount">$191.68</div>
+                    </div>
+                </div>
+                
+                <div class="tree-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Members:</span>
+                        <span class="stat-value">10</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Investments:</span>
+                        <span class="stat-value">$71,400</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Network Depth:</span>
+                        <span class="stat-value">4 Levels</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SUMMARY -->
+        <div class="summary-box">
+            <div class="summary-title">🎯 CORRECTED Three-Tree Comparison Summary</div>
+            
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-label">Small Tree (Sarah)</div>
+                    <div class="summary-value">$66.67</div>
+                    <div style="font-size: 0.8em; color: #666; margin-top: 5px;">1+1+1 people across 3 levels</div>
+                </div>
+                
+                <div class="summary-item">
+                    <div class="summary-label">Medium Tree (Alex)</div>
+                    <div class="summary-value">$133.34</div>
+                    <div style="font-size: 0.8em; color: #666; margin-top: 5px;">2+2+2 people across 3 levels</div>
+                </div>
+                
+                <div class="summary-item">
+                    <div class="summary-label">Large Tree (Jordan)</div>
+                    <div class="summary-value">$191.68</div>
+                    <div style="font-size: 0.8em; color: #666; margin-top: 5px;">3+2+2+2 people across 4 levels</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #27ae60;">
+                <strong>🔥 Key Insight:</strong> Founding members earn <span style="color: #f39c12; font-weight: bold;">$25 for EVERY Level 1 & 2 person</span> 
+                and <span style="color: #f39c12; font-weight: bold;">$16.67 for EVERY Level 3-5 person</span> in their entire downline network!
+            </div>
+        </div>
+    </div>
+</body>
+</html>

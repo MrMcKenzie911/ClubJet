@@ -1,7 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable tailwindcss/no-custom-classname */
+
 import { redirect } from 'next/navigation'
 import { getSupabaseServer } from '@/lib/supabaseServer'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import MultiLineChart from '@/components/charts/MultiLineChart'
 
 import ToastFromQuery from '@/components/ToastFromQuery'
 
@@ -36,7 +39,14 @@ async function getAdminData() {
     .is('verified_at', null)
     .in('user_id', pendingOwnerIds)
 
-  return { user, pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [] }
+  // Admin trends data sources
+  const { data: profilesAll } = await supabase.from('profiles').select('id, created_at, role').order('created_at', { ascending: true })
+  const { data: verifiedAccounts } = await supabase
+    .from('accounts')
+    .select('id, balance, verified_at')
+    .not('verified_at', 'is', null)
+
+  return { user, pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [], profilesAll: profilesAll ?? [], verifiedAccounts: verifiedAccounts ?? [] }
 }
 export default async function AdminPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
   const res = await getAdminData()
@@ -44,7 +54,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
   const tabParam = searchParams?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
 
-  const { user, pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts } = res
+  const { user, pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts } = res
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
@@ -118,6 +128,11 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                   {pendingDeposits.length + pendingWithdrawals.length === 0 && (
                     <div className="text-sm text-gray-400">No client requests.</div>
                   )}
+                <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
+                  <h2 className="mb-3 text-white font-semibold">Admin Monthly Trends</h2>
+                  <AdminMonthlyChart profiles={profilesAll} accounts={verifiedAccounts} />
+                </div>
+
                 </div>
 
                 <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
@@ -299,7 +314,9 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                 </select>
               </label>
               <label className="text-xs text-gray-400">Monthly %
-                <input name="fixed_rate_monthly" type="number" step="0.001" placeholder="e.g., 1.25" className="mt-1 w-48 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
+
+
+                <input name="fixed_rate_monthly" type="number" step="0.001" placeholder='e.g., 1.25' className="mt-1 w-48 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
               </label>
               <button className="rounded bg-emerald-600 px-3 py-1 text-white">Set</button>
             </form>
@@ -316,6 +333,28 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
   )
 }
 
+function AdminMonthlyChart({ profiles, accounts }: { profiles: { created_at: string; role?: string }[]; accounts: { balance?: number; verified_at?: string | null }[] }) {
+  const now = new Date()
+  const months: string[] = Array.from({ length: 6 }).map((_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
+  const monthLabel = (ym: string) => {
+    const [y, m] = ym.split('-').map(Number)
+    return `${new Date(y, m - 1, 1).toLocaleString(undefined, { month: 'short' })}`
+  }
+  const series = months.map((ym) => {
+    const [y, m] = ym.split('-').map(Number)
+    const newMembers = (profiles || []).filter(p => p.created_at && new Date(p.created_at).getFullYear() === y && new Date(p.created_at).getMonth() + 1 === m).length
+    const aum = (accounts || [])
+      .filter(a => a.verified_at)
+      .filter(a => new Date(a.verified_at as string).getFullYear() <= y && (new Date(a.verified_at as string).getFullYear() < y || new Date(a.verified_at as string).getMonth() + 1 <= m))
+      .reduce((s, a) => s + Number(a.balance || 0), 0)
+    return { label: monthLabel(ym), newMembers, aum }
+  })
+  return <MultiLineChart data={series as any} series={[{ key: 'newMembers', label: 'New Members' }, { key: 'aum', label: 'AUM' }]} />
+}
+
 // Small server wrappers that render client components (keeps admin auth guard on server)
 import SignOutButton from '@/components/SignOutButton'
 import UsersManager from '@/components/admin/UsersManager'
@@ -326,12 +365,18 @@ function SignOutInline() {
 }
 
 
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
 function OverviewCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-5 shadow-lg">
-      <div className="text-xs text-gray-400">{label}</div>
-      <div className="mt-2 text-2xl font-extrabold text-amber-400">{value}</div>
-    </div>
+    <Card className="bg-[#0B0F14] border-gray-800 transition hover:border-amber-600/60">
+      <CardHeader>
+        <CardTitle className="text-xs text-gray-400 font-normal">{label}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-extrabold text-[color:var(--gold-400,#FFD700)]">{value}</div>
+      </CardContent>
+    </Card>
   )
 }
 

@@ -13,12 +13,18 @@ function QuickButton({ label, href, external, onClickHint }: QuickButtonProps) {
 
 
 // Large stat card used for the hero row
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
 function BigStatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
-      <div className="text-sm text-gray-400">{label}</div>
-      <div className="mt-2 text-3xl md:text-4xl font-extrabold text-amber-400">{value}</div>
-    </div>
+    <Card className="bg-[#0B0F14] border-gray-800 transition hover:border-amber-600/60">
+      <CardHeader>
+        <CardTitle className="text-sm text-gray-400 font-normal">{label}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-3xl md:text-4xl font-extrabold text-[color:var(--gold-400,#FFD700)]">{value}</div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -31,6 +37,10 @@ import SignOutButton from '@/components/auth/SignOutButton'
 import CalculatorToggle from '@/components/dashboard/CalculatorToggle'
 import ReferralTreeClient from '@/components/referrals/ReferralTreeClient'
 import InvitePanel from '@/components/referrals/InvitePanel'
+
+
+import MultiLineChart from '@/components/charts/MultiLineChart'
+import QuickActionOpenReferral from '@/components/referrals/QuickActionOpenReferral'
 
 
 async function getData() {
@@ -75,6 +85,38 @@ function MonthProgress() {
     </div>
   )
 }
+  type TAccount = { balance?: number }
+  type TTxn = { created_at: string; type: string; amount: number; status?: string }
+  function UserMonthlyChart({ accounts, transactions }: { accounts: TAccount[]; transactions: TTxn[] }) {
+    // Group last 6 months by YYYY-MM
+    const now = new Date()
+    const months: string[] = Array.from({ length: 6 }).map((_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    })
+    const monthLabel = (ym: string) => {
+      const [y, m] = ym.split('-').map(Number)
+      return `${new Date(y, m - 1, 1).toLocaleString(undefined, { month: 'short' })}`
+    }
+
+    // Portfolio value: approximate using first account balance for now, or sum of balances if many
+    // Referral payout: sum of COMMISSION in that month (posted/completed)
+    const series = months.map((ym) => {
+      const [y, m] = ym.split('-').map(Number)
+      const monthlyRef = (transactions || [])
+        .filter(t => t.type === 'COMMISSION' && (!t.status || t.status === 'posted' || t.status === 'completed'))
+        .filter(t => new Date(t.created_at).getFullYear() === y && new Date(t.created_at).getMonth() + 1 === m)
+        .reduce((s, t) => s + Number(t.amount || 0), 0)
+
+      const portfolio = (accounts || []).reduce((s, a) => s + Number(a.balance || 0), 0)
+      return { label: monthLabel(ym), portfolio, referral: monthlyRef }
+    })
+
+    return (
+      <MultiLineChart data={series as { label: string; portfolio: number; referral: number }[]} series={[{ key: 'portfolio', label: 'Portfolio' }, { key: 'referral', label: 'Referral Payout' }]} />
+    )
+  }
+
 
   const { accounts, transactions } = res
   const first = accounts[0]
@@ -124,6 +166,12 @@ function MonthProgress() {
           </>
         )}
 
+          {/* Multi-line chart: Portfolio vs Referral Payout by month */}
+          <div className="mt-6 rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
+            <h2 className="mb-3 text-white font-semibold">Monthly Trends</h2>
+            <UserMonthlyChart accounts={accounts as AccountRow[]} transactions={transactions as TxnRow[]} />
+          </div>
+
               <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             {/* Referral Tree (2 levels only for users) */}
@@ -137,22 +185,9 @@ function MonthProgress() {
                 <QuickButton label="Make a Deposit" href="#deposit" />
                 <QuickButton label="View History" href="#history" />
                 <CalculatorToggle />
-                <QuickButton label="View Detailed Referral Tree" onClickHint="open-referral-detailed" />
+                <QuickActionOpenReferral />
                 <QuickButton label="Support" href="/support" external />
               </div>
-              {/* Inline client script to open our modal using a data-action hook */}
-              <script dangerouslySetInnerHTML={{__html:`(function(){
-                const root=document.getElementById('dashboard-root');
-                if(!root) return;
-                root.addEventListener('click',function(e){
-                  const t=e.target; if(!t) return;
-                  const btn=t.closest('[data-action]');
-                  if(btn && btn.getAttribute('data-action')==='open-referral-detailed'){
-                    const ev=new CustomEvent('open-referral-detailed',{bubbles:true});
-                    root.dispatchEvent(ev);
-                  }
-                },{passive:true});
-              })();`}} />
             </div>
             <div className="mt-6">
               {/* Invite Panel */}
