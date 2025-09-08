@@ -54,7 +54,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
   const tabParam = searchParams?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
 
-  const { user, pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts } = res
+  const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts } = res
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
@@ -84,8 +84,10 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
             {/* Combined container: Verified Users + Client Requests + Pending Users */}
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-6">
-                <UsersManagerSection />
-                <ReferralsAllLevelsSection userId={user.id} />
+                <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
+                  <h2 className="mb-3 text-white font-semibold">Admin Monthly Trends</h2>
+                  <AdminMonthlyChart profiles={profilesAll} accounts={verifiedAccounts} />
+                </div>
               </div>
               <div className="space-y-2">
                 <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
@@ -135,7 +137,9 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
 
                 </div>
 
-                <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
+                {/* Pending Users only visible via tab now */}
+                {false && (
+                  <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
                   <h2 className="mb-3 text-white font-semibold">Pending Users</h2>
                   <div className="space-y-2">
                     {pendingUsers.map((u: any) => (
@@ -151,6 +155,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                     {pendingUsers.length === 0 && <div className="text-sm text-gray-400">No pending users.</div>}
                   </div>
                 </div>
+                )}
+
               </div>
                 </div>
               </div>

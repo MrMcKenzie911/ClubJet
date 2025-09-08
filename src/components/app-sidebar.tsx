@@ -1,27 +1,17 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import {
-  IconCamera,
-  IconChartBar,
   IconDashboard,
   IconDatabase,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
   IconFolder,
-  IconHelp,
-  IconInnerShadowTop,
-  IconListDetails,
-  IconReport,
-  IconSearch,
   IconSettings,
   IconUsers,
 } from "@tabler/icons-react"
+import type { Icon } from "@tabler/icons-react"
 
-import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
@@ -33,131 +23,50 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  navMain: [
+export type SidebarRole = "user" | "admin"
+
+type NavItem = { title: string; url: string; icon: Icon }
+
+function getNavItems(role: SidebarRole): NavItem[] {
+  if (role === "admin") {
+    return [
+      { title: "Dashboard", url: "/admin", icon: IconDashboard },
+      { title: "Verified Users", url: "/admin?tab=verified-users", icon: IconUsers },
+      { title: "Pending Users", url: "/admin?tab=pending-users", icon: IconUsers },
+      { title: "Pending Deposits", url: "/admin?tab=pending-deposits", icon: IconDatabase },
+      { title: "Pending Withdrawals", url: "/admin?tab=pending-withdrawals", icon: IconDatabase },
+      { title: "Pending Accounts", url: "/admin?tab=pending-accounts", icon: IconFolder },
+      { title: "Set Earnings Rate", url: "/admin?tab=earnings-rate", icon: IconSettings },
+    ]
+  }
+  // user
+  return [
     { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
-    { title: "Admin Dashboard", url: "/admin", icon: IconListDetails },
-    { title: "Verified Users", url: "/admin?tab=verified-users", icon: IconUsers },
-    { title: "Pending Users", url: "/admin?tab=pending-users", icon: IconUsers },
-    { title: "Pending Deposits", url: "/admin?tab=pending-deposits", icon: IconDatabase },
-    { title: "Pending Withdrawals", url: "/admin?tab=pending-withdrawals", icon: IconDatabase },
-    { title: "Pending Accounts", url: "/admin?tab=pending-accounts", icon: IconFolder },
-    { title: "Set Earnings Rate", url: "/admin?tab=earnings-rate", icon: IconSettings },
-  ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: IconCamera,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: IconFileDescription,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: IconFileAi,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: IconSettings,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
-    },
-  ],
-  documents: [
-    {
-      name: "Data Library",
-      url: "#",
-      icon: IconDatabase,
-    },
-    {
-      name: "Reports",
-      url: "#",
-      icon: IconReport,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: IconFileWord,
-    },
-  ],
+    { title: "Activity", url: "/dashboard/activity", icon: IconDatabase },
+  ]
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ role = "user", ...props }: { role?: SidebarRole } & React.ComponentProps<typeof Sidebar>) {
+  const items = React.useMemo(() => getNavItems(role), [role])
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
-            >
-              <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
-              </a>
+            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
+              <Link href={role === 'admin' ? '/admin' : '/dashboard'}>
+                <img src="/brand/icon.svg" alt="Club Aureus" className="size-5" />
+                <span className="text-base font-semibold">Club Aureus</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain items={items} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser />
       </SidebarFooter>
     </Sidebar>
   )
