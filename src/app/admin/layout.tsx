@@ -1,8 +1,7 @@
 import { ReactNode, Suspense } from "react";
-import SignOutButton from "@/components/SignOutButton";
-
 import { AppSidebar } from '@/components/app-sidebar'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
+import { SiteHeader } from '@/components/site-header'
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
@@ -14,20 +13,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     >
       <div className="min-h-screen bg-[#0B0F15] text-white flex">
         <Suspense fallback={<div className="w-64" />}>
-          <AppSidebar variant="sidebar" role="admin" />
+          <AppSidebar variant="inset" role="admin" />
         </Suspense>
-        <SidebarInset className="md:!m-0 md:!ml-0 !rounded-none !shadow-none w-full">
-          {/* Main header */}
-          <div className="h-(--header-height) flex items-center justify-between px-4 md:px-8 border-b border-gray-800 bg-black/20">
-            <div className="flex items-center gap-3">
-              <span className="md:hidden text-amber-400 font-semibold">Club Aureus</span>
-              <span className="text-sm text-gray-400">Admin Dashboard</span>
+        <SidebarInset>
+          <SiteHeader />
+          <div className="flex flex-1 flex-col">
+            <div className="@container/main flex flex-1 flex-col gap-2">
+              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+                <div className="px-4 lg:px-6 space-y-4">
+                  {children}
+                </div>
+              </div>
             </div>
-            <SignOutButton />
-          </div>
-          {/* Main content */}
-          <div className="px-2 md:px-8 py-8 w-full">
-            {children}
           </div>
         </SidebarInset>
       </div>

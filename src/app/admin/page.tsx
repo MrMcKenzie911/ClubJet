@@ -336,7 +336,115 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
           <VerifiedUsersCards />
         </section>
       )}
+
+      {/* Placeholder handlers for all new Admin tabs to avoid 404s and ensure smooth navigation */}
+      {tab === 'account-balances' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+            <h2 className="text-white font-semibold mb-2">Account Balances</h2>
+            <p className="text-sm text-gray-400">Overview of all member balances across the platform. (Coming soon)</p>
+          </div>
+        </section>
+      )}
+      {tab === 'referral-networks' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+            <h2 className="text-white font-semibold mb-2">Referral Networks</h2>
+            <p className="text-sm text-gray-400">Complete tree view with founding member tools. (Coming soon)</p>
+          </div>
+        </section>
+      )}
+      {tab === 'signup-bonuses' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+            <h2 className="text-white font-semibold mb-2">Signup Bonus Processing</h2>
+            <p className="text-sm text-gray-400">Calculate and distribute referral bonuses. (Coming soon)</p>
+          </div>
+        </section>
+      )}
+      {tab === 'transactions' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+            <h2 className="text-white font-semibold mb-2">Transaction Management</h2>
+            <p className="text-sm text-gray-400">All platform transactions. (Coming soon)</p>
+          </div>
+        </section>
+      )}
+      {tab === 'payment-methods' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+            <h2 className="text-white font-semibold mb-2">Payment Methods</h2>
+            <p className="text-sm text-gray-400">Manage platform payment options. (Coming soon)</p>
+          </div>
+        </section>
+      )}
+      {tab === 'financial-reports' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+            <h2 className="text-white font-semibold mb-2">Financial Reports</h2>
+            <p className="text-sm text-gray-400">Platform totals and growth metrics. (Coming soon)</p>
+          </div>
+        </section>
+      )}
+      {tab === 'network-analysis' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+            <h2 className="text-white font-semibold mb-2">Network Analysis</h2>
+            <p className="text-sm text-gray-400">Founding member performance and deep networks. (Coming soon)</p>
+          </div>
+        </section>
+      )}
+      {tab === 'commission-reports' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+            <h2 className="text-white font-semibold mb-2">Commission Reports</h2>
+            <p className="text-sm text-gray-400">Bonus calculations and distributions. (Coming soon)</p>
+          </div>
+        </section>
+      )}
+      {tab === 'user-activity' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+            <h2 className="text-white font-semibold mb-2">User Activity</h2>
+            <p className="text-sm text-gray-400">Login tracking and engagement metrics. (Coming soon)</p>
+          </div>
+        </section>
+      )}
+      {tab === 'settings' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+            <h2 className="text-white font-semibold mb-2">Platform Settings</h2>
+            <p className="text-sm text-gray-400">Business rules and fee structures. (Coming soon)</p>
+          </div>
+        </section>
+      )}
+      {tab === 'audit-logs' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+            <h2 className="text-white font-semibold mb-2">Audit Logs</h2>
+            <p className="text-sm text-gray-400">Complete system activity tracking. (Coming soon)</p>
+          </div>
+        </section>
+      )}
+      {tab === 'notifications' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+            <h2 className="text-white font-semibold mb-2">Notifications</h2>
+            <p className="text-sm text-gray-400">Send alerts to users. (Coming soon)</p>
+          </div>
+        </section>
+      )}
+      {tab === 'data-export' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+            <h2 className="text-white font-semibold mb-2">Data Export</h2>
+            <p className="text-sm text-gray-400">CSV exports for compliance. (Coming soon)</p>
+          </div>
+        </section>
+      )}
+
     </div>
+
   )
 }
 

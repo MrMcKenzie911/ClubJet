@@ -1,6 +1,7 @@
 import { AppSidebar } from "@/components/app-sidebar"
 import { ChartAreaInteractive } from "@/components/chart-area-interactive"
-import { DataTable } from "@/components/data-table"
+// import { DataTable } from "@/components/data-table"
+import ReferralNetworkTable from "@/components/referrals/ReferralNetworkTable"
 import { SectionCards } from "@/components/section-cards"
 import { SiteHeader } from "@/components/site-header"
 import {
@@ -8,17 +9,17 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar"
 
-import data from "./data.json"
 import ProgressTarget from "@/components/dashboard/ProgressTarget"
 import CalculatorToggle from "@/components/dashboard/CalculatorToggle"
 import InvitePanel from "@/components/referrals/InvitePanel"
 import ReferralDetailedModalLauncher from "@/components/referrals/ReferralDetailedModalLauncher"
-import QuickActionOpenReferral from "@/components/referrals/QuickActionOpenReferral"
 
 import { getSupabaseServer } from "@/lib/supabaseServer"
 import { ensureUserReferralCode } from "@/lib/referral"
 
-export default async function Page() {
+import { redirect } from "next/navigation"
+
+export default async function Page({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
   const supabase = getSupabaseServer()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
@@ -38,6 +39,10 @@ export default async function Page() {
   const initialBalance = Number(acct?.balance ?? 0)
   const startDateISO = (acct?.start_date as string) || new Date().toISOString().slice(0,10)
   const referralCode = await ensureUserReferralCode(user.id)
+  const tabParam = searchParams?.tab
+  const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
+  if (tab === 'transactions') redirect('/dashboard/activity')
+
   return (
     <SidebarProvider
       style={
@@ -55,21 +60,75 @@ export default async function Page() {
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               {/* Single large container with inner components */}
               <div className="px-4 lg:px-6 space-y-4">
-                <SectionCards />
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="md:col-span-2">
-                    <ChartAreaInteractive />
+                {(!tab || tab === 'dashboard') && (
+                  <>
+                    <SectionCards />
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="md:col-span-2">
+                        <ChartAreaInteractive />
+                      </div>
+                      <div className="space-y-3">
+                        <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} />
+                        <CalculatorToggle />
+                      </div>
+                    </div>
+                    <InvitePanel userCode={referralCode} />
+                    <ReferralNetworkTable />
+                  </>
+                )}
+
+                {tab === 'my-network' && (
+                  <>
+                    <InvitePanel userCode={referralCode} />
+                    <ReferralNetworkTable defaultTab="analytics" />
+                  </>
+                )}
+
+                {tab === 'invite' && (
+                  <InvitePanel userCode={referralCode} />
+                )}
+
+                {tab === 'account-balance' && (
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+                    <h2 className="text-white font-semibold mb-2">Account Balance</h2>
+                    <p className="text-sm text-gray-400">Overview of your balance, stream type, status, and locked amounts. (Coming soon)</p>
+                    <div className="mt-4">
+                      <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} />
+                    </div>
                   </div>
-                  <div className="space-y-3">
-                    <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} />
-                    <CalculatorToggle />
-                  </div>
-                </div>
-                <InvitePanel userCode={referralCode} />
-                <DataTable data={data} />
+                )}
+
+                {tab === 'investment-history' && (
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Investment history is available under Activity. (Enhanced view coming soon)</div>
+                )}
+
+                {tab === 'earnings-summary' && (
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Monthly earnings and bonuses breakdown. (Coming soon)</div>
+                )}
+
+                {tab === 'contribute' && (
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Make Contribution form. (Coming soon)</div>
+                )}
+                {tab === 'withdrawal' && (
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Request Withdrawal form. (Coming soon)</div>
+                )}
+                {tab === 'smart' && (
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">SmartContributions setup. (Coming soon)</div>
+                )}
+                {tab === 'payment-methods' && (
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Manage payment options. (Coming soon)</div>
+                )}
+                {tab === 'support' && (
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Support Center placeholder. (Coming soon)</div>
+                )}
+                {tab === 'messages' && (
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Messages placeholder. (Coming soon)</div>
+                )}
+                {tab === 'documents' && (
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Documents: statements, agreements, tax docs. (Coming soon)</div>
+                )}
+
                 <div className="pt-2">
-                  <QuickActionOpenReferral />
-                  <div id="dashboard-root" />
                   <ReferralDetailedModalLauncher />
                 </div>
               </div>
