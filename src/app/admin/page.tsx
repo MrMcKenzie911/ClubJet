@@ -11,6 +11,9 @@ import InvitePanel from '@/components/referrals/InvitePanel'
 import { ensureUserReferralCode } from '@/lib/referral'
 import { SectionCards } from '@/components/section-cards'
 import { ChartAreaInteractive } from '@/components/chart-area-interactive'
+import { AppSidebar } from "@/components/app-sidebar"
+import { SiteHeader } from "@/components/site-header"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 
 async function getAdminData() {
@@ -63,103 +66,90 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
   const referralCode = await ensureUserReferralCode(res.user.id)
 
   return (
-    <>
-      <ToastFromQuery />
+    <SidebarProvider
+      style={{
+        "--sidebar-width": "calc(var(--spacing) * 72)",
+        "--header-height": "calc(var(--spacing) * 12)",
+      } as React.CSSProperties}
+    >
+      <AppSidebar variant="inset" role="admin" />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <div className="px-4 lg:px-6 space-y-4">
+                <ToastFromQuery />
 
-      {/* Tabbed view: default dashboard shows all; specific tabs show focused lists */}
-      {!tab && (
-        <section className="mt-6">
-          <div className="w-full max-w-none rounded-3xl border border-gray-800 bg-[#0B0F14] p-6 shadow-inner space-y-6">
-            {/* Combined container: Verified Users at top, then Trends + Client Requests */}
-            <SectionCards />
-            <div>
-              <VerifiedUsersCards />
-            </div>
-            <div className="grid w-full gap-6 lg:grid-cols-3">
-              <div className="lg:col-span-2 space-y-6">
-                <ChartAreaInteractive />
-              </div>
-              <div className="space-y-2">
-                <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 shadow">
-                  <h2 className="mb-3 text-white font-semibold">Client Requests</h2>
-                  <div className="space-y-2">
-                    {pendingDeposits.length > 0 && (
-                      <div className="text-xs text-gray-400">Deposits</div>
-                    )}
-                    {pendingDeposits.map((t: any) => (
-                      <form key={`dep-${t.id}`} action="/api/admin/approve-deposit" method="post" className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
-                        <input type="hidden" name="tx_id" defaultValue={t.id} />
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="text-white font-medium">{t.account?.user?.first_name} {t.account?.user?.last_name}</div>
-                            <div className="text-xs text-gray-400">{t.account?.user?.email} • {t.account?.user?.phone ?? 'n/a'}</div>
-                            <div className="mt-1 text-sm text-gray-300">Deposit • ${Number(t.amount).toLocaleString()} • {new Date(t.created_at).toLocaleString()}</div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button name="decision" value="approve" className="bg-emerald-600 hover:bg-emerald-500 text-white">Approve</Button>
-                            <Button name="decision" value="deny" className="bg-red-600 hover:bg-red-500 text-white">Deny</Button>
+                {!tab && (
+                  <>
+                    <SectionCards />
+                    <VerifiedUsersCards />
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="md:col-span-2 space-y-6">
+                        <ChartAreaInteractive />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 shadow">
+                          <h2 className="mb-3 text-white font-semibold">Client Requests</h2>
+                          <div className="space-y-2">
+                            {pendingDeposits.length > 0 && (
+                              <div className="text-xs text-gray-400">Deposits</div>
+                            )}
+                            {pendingDeposits.map((t: any) => (
+                              <form key={`dep-${t.id}`} action="/api/admin/approve-deposit" method="post" className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
+                                <input type="hidden" name="tx_id" defaultValue={t.id} />
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <div className="text-white font-medium">{t.account?.user?.first_name} {t.account?.user?.last_name}</div>
+                                    <div className="text-xs text-gray-400">{t.account?.user?.email} • {t.account?.user?.phone ?? 'n/a'}</div>
+                                    <div className="mt-1 text-sm text-gray-300">Deposit • ${Number(t.amount).toLocaleString()} • {new Date(t.created_at).toLocaleString()}</div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button name="decision" value="approve" className="bg-emerald-600 hover:bg-emerald-500 text-white">Approve</Button>
+                                    <Button name="decision" value="deny" className="bg-red-600 hover:bg-red-500 text-white">Deny</Button>
+                                  </div>
+                                </div>
+                              </form>
+                            ))}
+
+                            {pendingWithdrawals.length > 0 && (
+                              <div className="pt-2 text-xs text-gray-400">Withdrawals</div>
+                            )}
+                            {pendingWithdrawals.map((w: any) => (
+                              <form key={`wr-${w.id}`} action="/api/admin/decide-withdrawal" method="post" className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
+                                <input type="hidden" name="wr_id" defaultValue={w.id} />
+                                <input type="hidden" name="account_id" defaultValue={w.account_id} />
+                                <input type="hidden" name="amount" defaultValue={w.amount} />
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <div className="text-white font-medium">{w.account?.user?.first_name} {w.account?.user?.last_name}</div>
+                                    <div className="text-xs text-gray-400">{w.account?.user?.email} • {w.account?.user?.phone ?? 'n/a'}</div>
+                                    <div className="mt-1 text-sm text-gray-300">Withdraw • ${Number(w.amount).toLocaleString()} • {w.method}</div>
+                                    <div className="text-xs text-gray-500">Requested: {new Date(w.requested_at).toLocaleString()}</div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button name="decision" value="approve" className="bg-emerald-600 hover:bg-emerald-500 text-white">Approve</Button>
+                                    <Button name="decision" value="deny" className="bg-red-600 hover:bg-red-500 text-white">Deny</Button>
+                                  </div>
+                                </div>
+                              </form>
+                            ))}
+
+                            {pendingDeposits.length + pendingWithdrawals.length === 0 && (
+                              <div className="text-sm text-gray-400">No client requests.</div>
+                            )}
                           </div>
                         </div>
-                      </form>
-                    ))}
+                      </div>
+                    </div>
 
-                    {pendingWithdrawals.length > 0 && (
-                      <div className="pt-2 text-xs text-gray-400">Withdrawals</div>
-                    )}
-                    {pendingWithdrawals.map((w: any) => (
-                      <form key={`wr-${w.id}`} action="/api/admin/decide-withdrawal" method="post" className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
-                        <input type="hidden" name="wr_id" defaultValue={w.id} />
-                        <input type="hidden" name="account_id" defaultValue={w.account_id} />
-                        <input type="hidden" name="amount" defaultValue={w.amount} />
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="text-white font-medium">{w.account?.user?.first_name} {w.account?.user?.last_name}</div>
-                            <div className="text-xs text-gray-400">{w.account?.user?.email} • {w.account?.user?.phone ?? 'n/a'}</div>
-                            <div className="mt-1 text-sm text-gray-300">Withdraw • ${Number(w.amount).toLocaleString()} • {w.method}</div>
-                            <div className="text-xs text-gray-500">Requested: {new Date(w.requested_at).toLocaleString()}</div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button name="decision" value="approve" className="bg-emerald-600 hover:bg-emerald-500 text-white">Approve</Button>
-                            <Button name="decision" value="deny" className="bg-red-600 hover:bg-red-500 text-white">Deny</Button>
-                          </div>
-                        </div>
-                      </form>
-                    ))}
-
-                    {pendingDeposits.length + pendingWithdrawals.length === 0 && (
-                      <div className="text-sm text-gray-400">No client requests.</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Pending Users only visible via tab now */}
-                {false && (
-                  <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
-                  <h2 className="mb-3 text-white font-semibold">Pending Users</h2>
-                  <div className="space-y-2">
-                    {pendingUsers.map((u: any) => (
-                      <form key={u.id} action="/api/admin/approve-user" method="post" className="flex items-center justify-between rounded border border-gray-800 bg-gray-950 p-2">
-                        <input type="hidden" name="user_id" defaultValue={u.id} />
-                        <div className="text-sm text-gray-300">{u.email} • {u.first_name} {u.last_name}</div>
-                        <div className="flex gap-2">
-                          <Button name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
-                          <Button name="decision" value="reject" className="bg-red-600 text-white">Reject</Button>
-                        </div>
-                      </form>
-                    ))}
-                    {pendingUsers.length === 0 && <div className="text-sm text-gray-400">No pending users.</div>}
-                  </div>
-                </div>
+                    <div className="mt-6">
+                      <InvitePanel userCode={referralCode} />
+                    </div>
+                  </>
                 )}
-
-              </div>
-              <div className="mt-6">
-                <InvitePanel userCode={referralCode} />
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
 
 
 
@@ -183,6 +173,11 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
           </div>
         </section>
       )}
+      </div>
+      </div>
+      </div>
+      </SidebarInset>
+    </SidebarProvider>
 
       {tab === 'pending-deposits' && (
         <section className="mt-6 space-y-2">
