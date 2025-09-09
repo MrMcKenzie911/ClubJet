@@ -77,6 +77,14 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
         </div>
       )}
 
+      {/* Verified Users list at the top of the main dashboard */}
+      {!tab && (
+        <section className="mt-6">
+          <VerifiedUsersCards />
+        </section>
+      )}
+
+
       {/* Tabbed view: default dashboard shows all; specific tabs show focused lists */}
       {!tab && (
         <section className="mt-6">
