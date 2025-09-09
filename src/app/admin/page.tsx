@@ -57,7 +57,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
   const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts } = res
 
   return (
-    <div className="w-full px-6 py-10">
+    <div className="w-full px-4 md:px-8 py-8">
       <ToastFromQuery />
 
       <div className="flex items-center justify-between">

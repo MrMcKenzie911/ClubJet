@@ -16,7 +16,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <Suspense fallback={<div className="w-64" />}>
           <AppSidebar variant="inset" role="admin" />
         </Suspense>
-        <SidebarInset>
+        <SidebarInset className="md:!m-0 md:!ml-0 !rounded-none !shadow-none w-full">
           {/* Main header */}
           <div className="h-(--header-height) flex items-center justify-between px-4 md:px-8 border-b border-gray-800 bg-black/20">
             <div className="flex items-center gap-3">
@@ -27,9 +27,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
           {/* Main content */}
           <div className="px-2 md:px-8 py-8 w-full">
-            <div className="mx-auto w-full max-w-[1600px]">
-              {children}
-            </div>
+            {children}
           </div>
         </SidebarInset>
       </div>
