@@ -130,11 +130,6 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                   {pendingDeposits.length + pendingWithdrawals.length === 0 && (
                     <div className="text-sm text-gray-400">No client requests.</div>
                   )}
-                <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
-                  <h2 className="mb-3 text-white font-semibold">Admin Monthly Trends</h2>
-                  <AdminMonthlyChart profiles={profilesAll} accounts={verifiedAccounts} />
-                </div>
-
                 </div>
 
                 {/* Pending Users only visible via tab now */}
