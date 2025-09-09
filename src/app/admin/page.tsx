@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import ToastFromQuery from '@/components/ToastFromQuery'
 import InvitePanel from '@/components/referrals/InvitePanel'
 import { ensureUserReferralCode } from '@/lib/referral'
+import { SectionCards } from '@/components/section-cards'
+import { ChartAreaInteractive } from '@/components/chart-area-interactive'
 
 
 async function getAdminData() {
@@ -86,15 +88,13 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
         <section className="mt-6">
           <div className="w-full max-w-none rounded-3xl border border-gray-800 bg-[#0B0F14] p-6 shadow-inner space-y-6">
             {/* Combined container: Verified Users at top, then Trends + Client Requests */}
+            <SectionCards />
             <div>
               <VerifiedUsersCards />
             </div>
             <div className="grid w-full gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-6">
-                <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
-                  <h2 className="mb-3 text-white font-semibold">Admin Monthly Trends</h2>
-                  <AdminMonthlyChart profiles={profilesAll} accounts={verifiedAccounts} />
-                </div>
+                <ChartAreaInteractive />
               </div>
               <div className="space-y-2">
                 <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 shadow">
