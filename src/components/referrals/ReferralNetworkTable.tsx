@@ -124,11 +124,6 @@ function ReferralAnalyticsContent({ userId }: { userId?: string }) {
   )
 }
 
-      <div id="dashboard-root" />
-    </div>
-  )
-}
-
 function Metric({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
   return (
     <div className="rounded-lg border border-gray-800 bg-black/20 p-3">
