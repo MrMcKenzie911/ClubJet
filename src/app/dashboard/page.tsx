@@ -73,7 +73,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
                       </div>
                     </div>
                     <InvitePanel userCode={referralCode} />
-                    <ReferralNetworkTable />
+                    <ReferralNetworkTable userId={user.id} />
                   </>
                 )}
 

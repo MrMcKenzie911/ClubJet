@@ -2,18 +2,22 @@
 
 import React from "react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import QuickActionOpenReferral from "./QuickActionOpenReferral"
 
-const rows = [
-  { name: "Sarah Chen", level: "Level 1", stream: "Lender Stream", investment: 8500, join: "Feb 1, 2024", status: "Active", bonus: 25.0 },
-  { name: "Mike Rodriguez", level: "Level 2", stream: "Network Stream", investment: 6200, join: "Feb 15, 2024", status: "Active", bonus: 25.0 },
-  { name: "Lisa Park", level: "Level 3", stream: "Pilot Stream", investment: 3400, join: "Mar 2, 2024", status: "Active", bonus: 16.67 },
-]
+export type ReferralRow = {
+  id: string
+  name: string
+  level: string
+  stream: string
+  investment: number
+  joinDate: string
+  status: string
+  bonus: number
+}
 
-export default function ReferralNetworkTable({ defaultTab = "table" }: { defaultTab?: "table" | "analytics" }) {
+export default function ReferralNetworkTable({ defaultTab = "table", userId }: { defaultTab?: "table" | "analytics"; userId?: string }) {
   return (
     <div className="rounded-2xl border border-gray-800 bg-[#0B0F14]">
       <Tabs defaultValue={defaultTab} className="w-full">
@@ -29,51 +33,88 @@ export default function ReferralNetworkTable({ defaultTab = "table" }: { default
           </div>
         </div>
         <TabsContent value="table" className="px-4 pb-4 lg:px-6">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-muted sticky top-0 z-10">
-                <TableRow>
-                  <TableHead>Member Name</TableHead>
-                  <TableHead>Level</TableHead>
-                  <TableHead>Stream Type</TableHead>
-                  <TableHead>Investment</TableHead>
-                  <TableHead>Join Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Bonuses Earned</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.name}>
-                    <TableCell className="text-gray-200">{r.name}</TableCell>
-                    <TableCell className="text-gray-300">{r.level}</TableCell>
-                    <TableCell className="text-gray-300">{r.stream}</TableCell>
-                    <TableCell className="text-gray-200">${Number(r.investment).toLocaleString()}</TableCell>
-                    <TableCell className="text-gray-300">{r.join}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-emerald-400 border-emerald-700/40">
-                        {r.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-amber-400 font-medium">${r.bonus.toFixed(2)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <ReferralTableContent userId={userId} />
         </TabsContent>
         <TabsContent value="analytics" className="px-4 pb-4 lg:px-6">
-          <div className="rounded-xl border border-gray-800 bg-[#0F141B] p-4 text-gray-200">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Metric label="Direct Referrals" value="1" />
-              <Metric label="Second Level" value="1" />
-              <Metric label="Total Bonuses" value="$66.67" accent />
-              <Metric label="Avg. Investment" value="$6,033" />
-            </div>
-            <p className="mt-3 text-sm text-gray-400">This is a lightweight placeholder view for Network Performance. We will wire this to live data in a follow-up step.</p>
-          </div>
+          <ReferralAnalyticsContent userId={userId} />
         </TabsContent>
       </Tabs>
+function useReferralData(userId?: string) {
+  const [rows, setRows] = React.useState<ReferralRow[]>([])
+  const [analytics, setAnalytics] = React.useState<{ l1: number; l2: number; totalBonus: number; avgInvestment: number } | null>(null)
+  React.useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      if (!userId) return
+      const r = await fetch(`/api/referrals/table?userId=${encodeURIComponent(userId)}`)
+      if (!cancelled && r.ok) {
+        const json = await r.json()
+        setRows(json.rows || [])
+        setAnalytics(json.analytics || null)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [userId])
+  return { rows, analytics }
+}
+
+function ReferralTableContent({ userId }: { userId?: string }) {
+  const { rows } = useReferralData(userId)
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader className="bg-muted sticky top-0 z-10">
+          <TableRow>
+            <TableHead>Member Name</TableHead>
+            <TableHead>Level</TableHead>
+            <TableHead>Stream Type</TableHead>
+            <TableHead>Investment</TableHead>
+            <TableHead>Join Date</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Bonuses Earned</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((r) => (
+            <TableRow key={r.id}>
+              <TableCell className="text-gray-200">{r.name}</TableCell>
+              <TableCell className="text-gray-300">{r.level}</TableCell>
+              <TableCell className="text-gray-300">{r.stream}</TableCell>
+              <TableCell className="text-gray-200">${Number(r.investment).toLocaleString()}</TableCell>
+              <TableCell className="text-gray-300">{new Date(r.joinDate).toLocaleDateString()}</TableCell>
+              <TableCell>
+                <Badge variant="outline" className="text-emerald-400 border-emerald-700/40">
+                  {r.status}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-amber-400 font-medium">${r.bonus.toFixed(2)}</TableCell>
+            </TableRow>
+          ))}
+          {rows.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={7} className="text-gray-400">No referral data available yet.</TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
+function ReferralAnalyticsContent({ userId }: { userId?: string }) {
+  const { analytics } = useReferralData(userId)
+  return (
+    <div className="rounded-xl border border-gray-800 bg-[#0F141B] p-4 text-gray-200">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Metric label="Direct Referrals" value={String(analytics?.l1 ?? 0)} />
+        <Metric label="Second Level" value={String(analytics?.l2 ?? 0)} />
+        <Metric label="Total Bonuses" value={`$${(analytics?.totalBonus ?? 0).toFixed(2)}`} accent />
+        <Metric label="Avg. Investment" value={`$${Number(analytics?.avgInvestment ?? 0).toLocaleString()}`} />
+      </div>
+    </div>
+  )
+}
+
       <div id="dashboard-root" />
     </div>
   )
