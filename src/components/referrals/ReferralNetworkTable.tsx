@@ -18,6 +18,11 @@ export type ReferralRow = {
 }
 
 export default function ReferralNetworkTable({ defaultTab = "table", userId }: { defaultTab?: "table" | "analytics"; userId?: string }) {
+  const onExport = () => {
+    const url = userId ? `/api/referrals/table/csv?userId=${encodeURIComponent(userId)}` : '#'
+    if (userId) window.open(url, '_blank')
+  }
+
   return (
     <div className="rounded-2xl border border-gray-800 bg-[#0B0F14]">
       <Tabs defaultValue={defaultTab} className="w-full">
@@ -29,6 +34,7 @@ export default function ReferralNetworkTable({ defaultTab = "table", userId }: {
             </TabsList>
           </div>
           <div className="flex items-center gap-2">
+            <button type="button" onClick={onExport} className="rounded-lg border border-gray-700 bg-[#0F141B] px-3 py-1.5 text-sm text-gray-200 hover:border-amber-600 hover:text-amber-400">Export CSV</button>
             <QuickActionOpenReferral />
           </div>
         </div>
@@ -39,6 +45,9 @@ export default function ReferralNetworkTable({ defaultTab = "table", userId }: {
           <ReferralAnalyticsContent userId={userId} />
         </TabsContent>
       </Tabs>
+    </div>
+  )
+}
 function useReferralData(userId?: string) {
   const [rows, setRows] = React.useState<ReferralRow[]>([])
   const [analytics, setAnalytics] = React.useState<{ l1: number; l2: number; totalBonus: number; avgInvestment: number } | null>(null)
