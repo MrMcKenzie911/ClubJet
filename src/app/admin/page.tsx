@@ -7,6 +7,8 @@ import MultiLineChart from '@/components/charts/MultiLineChart'
 import { Button } from '@/components/ui/button'
 
 import ToastFromQuery from '@/components/ToastFromQuery'
+import InvitePanel from '@/components/referrals/InvitePanel'
+import { ensureUserReferralCode } from '@/lib/referral'
 
 
 async function getAdminData() {
@@ -56,6 +58,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
 
   const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts } = res
 
+  const referralCode = await ensureUserReferralCode(res.user.id)
+
   return (
     <div className="w-full px-4 md:px-6 py-6">
       <ToastFromQuery />
@@ -81,7 +85,10 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
       {!tab && (
         <section className="mt-6">
           <div className="w-full max-w-none rounded-3xl border border-gray-800 bg-[#0B0F14] p-6 shadow-inner">
-            {/* Combined container: Verified Users + Client Requests + Pending Users */}
+            {/* Combined container: Verified Users at top, then Trends + Client Requests */}
+            <div className="mb-6">
+              <VerifiedUsersCards />
+            </div>
             <div className="grid w-full gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-6">
                 <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
@@ -90,7 +97,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                 </div>
               </div>
               <div className="space-y-2">
-                <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
+                <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 shadow">
                   <h2 className="mb-3 text-white font-semibold">Client Requests</h2>
                   {pendingDeposits.map((t: any) => (
                     <form key={`dep-${t.id}`} action="/api/admin/approve-deposit" method="post" className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
@@ -152,6 +159,9 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                 </div>
                 )}
 
+              </div>
+              <div className="mt-6">
+                <InvitePanel userCode={referralCode} />
               </div>
             </div>
           </div>
