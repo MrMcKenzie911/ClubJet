@@ -57,7 +57,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
   const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts } = res
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-screen-2xl px-6 py-10">
       <ToastFromQuery />
 
       <div className="flex items-center justify-between">
@@ -76,14 +76,6 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
           <OverviewCard label="Current Earnings %" value={`${rates[0]?.fixed_rate_monthly ?? '—'}%`} />
         </div>
       )}
-
-      {/* Verified Users list at the top of the main dashboard */}
-      {!tab && (
-        <section className="mt-6">
-          <VerifiedUsersCards />
-        </section>
-      )}
-
 
       {/* Tabbed view: default dashboard shows all; specific tabs show focused lists */}
       {!tab && (
