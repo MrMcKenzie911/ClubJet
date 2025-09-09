@@ -63,25 +63,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
   const referralCode = await ensureUserReferralCode(res.user.id)
 
   return (
-    <div className="w-full px-4 md:px-6 py-6">
+    <>
       <ToastFromQuery />
-
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-white">Admin Dashboard</h1>
-        {/* quick sign out */}
-        <SignOutInline />
-      </div>
-
-      {/* Overview stats */}
-      {!tab && (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <OverviewCard label="Pending Users" value={String(pendingUsers.length)} />
-          <OverviewCard label="Pending Deposits" value={String(pendingDeposits.length)} />
-          <OverviewCard label="Pending Withdrawals" value={String(pendingWithdrawals.length)} />
-          <OverviewCard label="Pending Accounts" value={String(pendingAccounts.length)} />
-          <OverviewCard label="Current Earnings %" value={`${rates[0]?.fixed_rate_monthly ?? '—'}%`} />
-        </div>
-      )}
 
       {/* Tabbed view: default dashboard shows all; specific tabs show focused lists */}
       {!tab && (
@@ -463,7 +446,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
         </section>
       )}
 
-    </div>
+    </>
 
   )
 }
