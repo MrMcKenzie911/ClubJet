@@ -64,7 +64,7 @@ function getNavItems(role: SidebarRole): NavItem[] {
 
       // Analytics & Reports
       { title: "Financial Reports", url: "/admin?tab=financial-reports", icon: IconChartBar },
-      { title: "Network Analysis", url: "/admin?tab=network-analysis", icon: IconChartInfographic },
+      { title: "Network Analysis", url: "/admin?tab=network-analysis", icon: IconChartBar },
       { title: "Commission Reports", url: "/admin?tab=commission-reports", icon: IconReport },
       { title: "User Activity", url: "/admin?tab=user-activity", icon: IconUsers },
 
