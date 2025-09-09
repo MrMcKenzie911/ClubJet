@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react'
 import UserDrawer from './UserDrawer'
+import { IconPencil, IconTrash } from '@tabler/icons-react'
 
 function ActionIcon({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -88,7 +89,7 @@ export default function VerifiedUsersCards() {
               </div>
               <div className="flex gap-2">
                 <ActionIcon title="Edit" onClick={() => setEditing({ ...u })}>
-                  <span className="material-icons" style={{ fontSize: 16 }}>edit</span>
+                  <IconPencil size={16} />
                 </ActionIcon>
                 <ActionIcon title="Delete" onClick={async () => {
                   if (!confirm('Delete this user?')) return
@@ -99,7 +100,7 @@ export default function VerifiedUsersCards() {
                     setError(j.error ?? 'Failed to delete user')
                   }
                 }}>
-                  <span className="material-icons" style={{ fontSize: 16 }}>delete</span>
+                  <IconTrash size={16} />
                 </ActionIcon>
               </div>
             </div>
