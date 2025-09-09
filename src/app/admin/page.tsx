@@ -57,7 +57,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
   const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts } = res
 
   return (
-    <div className="w-full px-4 md:px-8 py-8">
+    <div className="w-full max-w-none px-4 md:px-8 py-8">
       <ToastFromQuery />
 
       <div className="flex items-center justify-between">
@@ -80,9 +80,9 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
       {/* Tabbed view: default dashboard shows all; specific tabs show focused lists */}
       {!tab && (
         <section className="mt-6">
-          <div className="rounded-3xl border border-gray-800 bg-[#0B0F14] p-6 shadow-inner">
+          <div className="w-full max-w-none rounded-3xl border border-gray-800 bg-[#0B0F14] p-6 shadow-inner">
             {/* Combined container: Verified Users + Client Requests + Pending Users */}
-            <div className="grid gap-6 lg:grid-cols-3">
+            <div className="grid w-full gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-6">
                 <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-6 shadow-lg">
                   <h2 className="mb-3 text-white font-semibold">Admin Monthly Trends</h2>
