@@ -173,11 +173,6 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
           </div>
         </section>
       )}
-      </div>
-      </div>
-      </div>
-      </SidebarInset>
-    </SidebarProvider>
 
       {tab === 'pending-deposits' && (
         <section className="mt-6 space-y-2">
@@ -441,8 +436,12 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
         </section>
       )}
 
-    </>
-
+                </div>
+              </div>
+            </div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
   )
 }
 
