@@ -26,8 +26,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <SignOutButton />
           </div>
           {/* Main content */}
-          <div className="px-4 md:px-8 py-8">
-            {children}
+          <div className="px-2 md:px-8 py-8 w-full">
+            <div className="mx-auto w-full max-w-[1600px]">
+              {children}
+            </div>
           </div>
         </SidebarInset>
       </div>
