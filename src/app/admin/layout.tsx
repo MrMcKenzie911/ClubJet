@@ -14,7 +14,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     >
       <div className="min-h-screen bg-[#0B0F15] text-white flex">
         <Suspense fallback={<div className="w-64" />}>
-          <AppSidebar variant="inset" role="admin" />
+          <AppSidebar variant="sidebar" role="admin" />
         </Suspense>
         <SidebarInset className="md:!m-0 md:!ml-0 !rounded-none !shadow-none w-full">
           {/* Main header */}
