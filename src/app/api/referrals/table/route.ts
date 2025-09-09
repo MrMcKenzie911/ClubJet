@@ -16,10 +16,11 @@ export async function GET(req: Request) {
     .eq('referrer_id', userId)
 
   const l1Ids = (level1 || []).map(u => u.id)
+  type ProfileBasic = { id: string; first_name: string|null; last_name: string|null; created_at: string|null; role?: string|null; referrer_id?: string|null }
   const { data: level2 } = l1Ids.length ? await supabaseAdmin
     .from('profiles')
     .select('id, first_name, last_name, created_at, role, referrer_id')
-    .in('referrer_id', l1Ids) : { data: [] as any[] }
+    .in('referrer_id', l1Ids) : { data: [] as ProfileBasic[] }
 
   const all = [
     ...(level1 || []).map(u => ({ ...u, level: 1, parent: userId })),
@@ -27,8 +28,9 @@ export async function GET(req: Request) {
   ]
 
   // For each referral, read first account for stream type & investment (balance)
-  const rows: any[] = []
-  for (const u of all) {
+  type Row = { id: string; name: string; level: string; stream: string; investment: number; joinDate: string|null; status: string; bonus: number }
+  const rows: Row[] = []
+  for (const u of all as Array<ProfileBasic & { level: number; parent: string|null }>) {
     const { data: acct } = await supabaseAdmin
       .from('accounts')
       .select('type, balance, start_date, verified_at')
