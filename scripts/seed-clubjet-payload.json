@@ -1,0 +1,27 @@
+{
+  "records": [
+    { "name": "Jordan Williams", "phone": "(555) 123-4567", "email": "jordan.williams@email.com", "pin": "2487", "investment": 25000, "stream": "Lender", "referrerCode": null, "ownCode": "JORDAN2024", "joinDate": "2024-01-15", "status": "Founding Member", "level": 0 },
+    { "name": "Mr. Jared", "phone": "(555) 234-5678", "email": "jared@clubjetfx.com", "pin": "9173", "investment": 32000, "stream": "Lender", "referrerCode": null, "ownCode": "JARED2024", "joinDate": "2024-01-18", "status": "Founding Member", "level": 0 },
+    { "name": "Richard Nuffer", "phone": "(801) 893-2503", "email": "richard.nuffer@live.com", "pin": "5629", "investment": 28500, "stream": "Lender", "referrerCode": null, "ownCode": "RICHARD2024", "joinDate": "2024-01-22", "status": "Founding Member", "level": 0 },
+    { "name": "Diana Foster", "phone": "(555) 456-7890", "email": "diana.foster@email.com", "pin": "8041", "investment": 35000, "stream": "Lender", "referrerCode": null, "ownCode": "DIANA2024", "joinDate": "2024-01-25", "status": "Founding Member", "level": 0 },
+
+    { "name": "Sarah Thompson", "phone": "(555) 567-8901", "email": "sarah.thompson@email.com", "pin": "3756", "investment": 8500, "stream": "Lender", "referrerCode": "JORDAN2024", "ownCode": "SARAH2024", "joinDate": "2024-02-01", "level": 1 },
+    { "name": "Michael Kim", "phone": "(555) 678-9012", "email": "michael.kim@email.com", "pin": "1924", "investment": 6200, "stream": "Network", "referrerCode": "JORDAN2024", "ownCode": "MICHAEL2024", "joinDate": "2024-02-05", "level": 1 },
+    { "name": "Rachel Green", "phone": "(555) 789-0123", "email": "rachel.green@email.com", "pin": "6148", "investment": 4800, "stream": "Network", "referrerCode": "JORDAN2024", "ownCode": "RACHEL2024", "joinDate": "2024-02-08", "level": 1 },
+
+    { "name": "David Park", "phone": "(555) 890-1234", "email": "david.park@email.com", "pin": "7305", "investment": 9200, "stream": "Lender", "referrerCode": "JARED2024", "ownCode": "DAVID2024", "joinDate": "2024-02-03", "level": 1 },
+    { "name": "Lisa Martinez", "phone": "(555) 901-2345", "email": "lisa.martinez@email.com", "pin": "4863", "investment": 5700, "stream": "Network", "referrerCode": "JARED2024", "ownCode": "LISA2024", "joinDate": "2024-02-07", "level": 1 },
+    { "name": "Kevin Zhang", "phone": "(555) 012-3456", "email": "kevin.zhang@email.com", "pin": "2579", "investment": 3400, "stream": "Pilot", "referrerCode": "JARED2024", "ownCode": "KEVIN2024", "joinDate": "2024-02-10", "level": 1 },
+
+    { "name": "Emma Davis", "phone": "(555) 123-4568", "email": "emma.davis@email.com", "pin": "9812", "investment": 7800, "stream": "Lender", "referrerCode": "RICHARD2024", "ownCode": "EMMA2024", "joinDate": "2024-02-04", "level": 1 },
+    { "name": "Tyler Brooks", "phone": "(555) 234-5679", "email": "tyler.brooks@email.com", "pin": "5401", "investment": 4300, "stream": "Network", "referrerCode": "RICHARD2024", "ownCode": "TYLER2024", "joinDate": "2024-02-09", "level": 1 },
+    { "name": "Sophia Wilson", "phone": "(555) 345-6780", "email": "sophia.wilson@email.com", "pin": "3267", "investment": 2900, "stream": "Pilot", "referrerCode": "RICHARD2024", "ownCode": "SOPHIA2024", "joinDate": "2024-02-12", "level": 1 },
+
+    { "name": "Ryan Miller", "phone": "(555) 456-7891", "email": "ryan.miller@email.com", "pin": "8935", "investment": 11500, "stream": "Lender", "referrerCode": "DIANA2024", "ownCode": "RYAN2024", "joinDate": "2024-02-02", "level": 1 },
+    { "name": "Olivia Cruz", "phone": "(555) 567-8902", "email": "olivia.cruz@email.com", "pin": "1658", "investment": 6600, "stream": "Network", "referrerCode": "DIANA2024", "ownCode": "OLIVIA2024", "joinDate": "2024-02-06", "level": 1 },
+    { "name": "Noah Taylor", "phone": "(555) 678-9013", "email": "noah.taylor@email.com", "pin": "4720", "investment": 3800, "stream": "Pilot", "referrerCode": "DIANA2024", "ownCode": "NOAH2024", "joinDate": "2024-02-11", "level": 1 }
+
+    // NOTE: For brevity, include remaining Level 2+ records in further batches or extend this file.
+  ]
+}
+

@@ -1,0 +1,4 @@
+curl -X POST "$NEXT_PUBLIC_SITE_URL/api/admin/seed/clubjet?token=$ADMIN_SEED_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d @scripts/seed-clubjet-payload.json
+
