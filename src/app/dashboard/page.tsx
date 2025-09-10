@@ -45,11 +45,15 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
 
   // Posted transactions for the first account (for portfolio line)
   const firstAccountId = acct?.id as string | undefined
-  const { data: txs } = firstAccountId ? await supabase
-    .from('transactions')
-    .select('type, amount, created_at, status')
-    .eq('account_id', firstAccountId)
-    .eq('status', 'posted') : { data: [] } as any
+  let txs: { type: string; amount: number; created_at: string; status?: string | null }[] = []
+  if (firstAccountId) {
+    const { data: txData } = await supabase
+      .from('transactions')
+      .select('type, amount, created_at, status')
+      .eq('account_id', firstAccountId)
+      .eq('status', 'posted')
+    txs = txData ?? []
+  }
   const initialBalance = Number(acct?.balance ?? 0)
   const startDateISO = (acct?.start_date as string) || new Date().toISOString().slice(0,10)
   const referralCode = await ensureUserReferralCode(user.id)
@@ -75,7 +79,6 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
 
     const data: MultiLineDatum[] = months.map((ym) => {
       const [y, m] = ym.split('-').map(Number)
-      const monthDate = new Date(y, m - 1, 1)
       const monthEnd = endOfMonth(y, m)
       const newSignups = (signups || []).filter(s => s.created_at && new Date(s.created_at).getFullYear() === y && new Date(s.created_at).getMonth() + 1 === m).length
 
@@ -124,7 +127,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
                     <SectionCards />
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2">
-                        <UserPortfolioSignupsChart initialBalance={initialBalance} startDateISO={startDateISO} signups={l1 ?? []} txs={txs ?? []} />
+                        <UserPortfolioSignupsChart initialBalance={initialBalance} startDateISO={startDateISO} signups={l1 ?? []} txs={txs} />
                       </div>
                       <div className="space-y-3">
                         <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} />

@@ -136,6 +136,8 @@ export function AppSidebar({ role = "user", ...props }: { role?: SidebarRole } &
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
               <Link href={role === 'admin' ? '/admin' : '/dashboard'}>
+                {/* Prefer Next Image for perf; basic <img> ok for now, suppress lint in Netlify */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/brand/icon.svg" alt="Club Aureus" className="size-5" />
                 <span className="text-base font-semibold">Club Aureus</span>
               </Link>

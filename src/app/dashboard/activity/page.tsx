@@ -1,7 +1,7 @@
 import { getSupabaseServer } from '@/lib/supabaseServer'
 import { ReferralTree } from '@/components/referrals/ReferralTree'
 import ReferralDetailedModalLauncher from '@/components/referrals/ReferralDetailedModalLauncher'
-import CopyToClipboard from '@/components/CopyToClipboard'
+// import CopyToClipboard from '@/components/CopyToClipboard'
 
 export const dynamic = 'force-dynamic'
 
