@@ -1,0 +1,43 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
+
+export async function POST(req: NextRequest) {
+  try {
+    const { email, pin } = await req.json().catch(() => ({ email: '', pin: '' })) as { email?: string; pin?: string }
+    const em = (email || '').trim().toLowerCase()
+    const pw = (pin || '').trim()
+    if (!em || !pw) return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
+
+    // Look up profile by email to get id + stored pin_code
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('id, role, is_founding_member, pin_code')
+      .eq('email', em)
+      .maybeSingle()
+
+    if (!profile?.id) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+
+    // If we have a stored pin_code and it doesn't match provided PIN, reject
+    if (profile.pin_code && String(profile.pin_code) !== pw) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    }
+
+    // Ensure auth password equals the PIN (idempotent). If policy previously forced a different value,
+    // this will re-sync the password to the 4-digit PIN.
+    try {
+      await supabaseAdmin.auth.admin.updateUserById(profile.id, { password: pw })
+    } catch {}
+
+    // Sign in on the server to set auth cookies for the client correctly
+    const supabase = createRouteHandlerClient({ cookies })
+    const { error } = await supabase.auth.signInWithPassword({ email: em, password: pw })
+    if (error) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+
+    return NextResponse.json({ ok: true, role: profile.role, is_founding_member: profile.is_founding_member === true })
+  } catch (e) {
+    return NextResponse.json({ error: 'Login failed' }, { status: 500 })
+  }
+}
+

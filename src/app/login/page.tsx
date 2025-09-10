@@ -66,24 +66,21 @@ export default function LoginPage() {
     setLoading(true);
     const em = email.trim();
     const pw = password.trim();
-    let userIdTmp: string | null = null;
 
-    const res1 = await supabase.auth.signInWithPassword({ email: em, password: pw });
-    if (res1.error) {
-      const fallback = `Cj${pw}!${pw}`;
-      const res2 = await supabase.auth.signInWithPassword({ email: em, password: fallback });
-      if (!res2.error) {
-        userIdTmp = res2.data.user?.id ?? null;
-      } else {
-        setLoading(false);
-        setError(res2.error?.message || res1.error?.message || 'Login failed. Please verify your email and PIN/password.');
-        return;
-      }
-    } else {
-      userIdTmp = res1.data.user?.id ?? null;
-    }
+    // Use server route to guarantee auth password == PIN and set cookies correctly
+    const resp = await fetch('/api/auth/pin-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: em, pin: pw })
+    })
     setLoading(false);
-    const userId = userIdTmp;
+    if (!resp.ok) {
+      const j = await resp.json().catch(() => ({} as any))
+      setError(j.error || 'Invalid credentials')
+      return
+    }
+    const j = await resp.json().catch(() => ({} as any))
+    const userId = (await supabase.auth.getUser()).data.user?.id || null;
     if (!userId) {
       setError("Login succeeded but no user ID returned.");
       return;

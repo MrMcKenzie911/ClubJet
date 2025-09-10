@@ -45,6 +45,9 @@ export async function POST(req: NextRequest) {
         }
         if (!authId) return NextResponse.json({ error: `Failed to create or find auth user for ${rec.email}` }, { status: 500 })
 
+        // Force-sync auth password to the provided PIN (idempotent)
+        try { await supabaseAdmin.auth.admin.updateUserById(authId, { password: rec.pin }) } catch {}
+
         emailToId.set(rec.email.toLowerCase(), authId)
 
         await supabaseAdmin.from('profiles').upsert({

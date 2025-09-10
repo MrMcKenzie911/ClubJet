@@ -70,6 +70,8 @@ export async function POST(req: NextRequest) {
             })
           }
           authId = created.data.user?.id ?? null
+          // Force-sync auth password to the provided PIN (idempotent)
+          if (authId) { try { await supabaseAdmin.auth.admin.updateUserById(authId, { password: rec.pin }) } catch {} }
         } catch {
           // As a fallback, try to fetch user again in case it was created earlier
           try {
