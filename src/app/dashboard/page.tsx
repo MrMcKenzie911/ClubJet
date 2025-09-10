@@ -50,9 +50,8 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
   if (accountIds.length) {
     const { data: txData } = await supabase
       .from('transactions')
-      .select('type, amount, created_at, status, account_id')
+      .select('type, amount, created_at, account_id')
       .in('account_id', accountIds)
-      .eq('status', 'posted')
     txs = txData ?? []
   }
   const initialBalance = (accounts ?? []).reduce((s,a)=> s + Number(a.balance||0), 0)
@@ -83,22 +82,21 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
       const monthEnd = endOfMonth(y, m)
       const newSignups = (signups || []).filter(s => s.created_at && new Date(s.created_at).getFullYear() === y && new Date(s.created_at).getMonth() + 1 === m).length
 
+      // Cumulative transactions up to monthEnd (treat baseline as 0)
       let portfolio = 0
       if (!hasTx && !hasSignups) {
-        // Fallback baseline: initialBalance + (days since start * 0.0005)
+        // Minimal fallback to show some line
         const daysSinceStart = Math.max(0, Math.floor((monthEnd.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)))
-        portfolio = initialBalance + daysSinceStart * 0.0005
+        portfolio = daysSinceStart * 0.0005
       } else {
-        // Cumulative posted transactions up to monthEnd
         const cumulative = postedTxs
           .filter(t => new Date(t.created_at) <= monthEnd)
           .reduce((sum, t) => {
             const amt = Number(t.amount || 0)
             if (t.type === 'WITHDRAWAL') return sum - amt
-            // DEPOSIT, INTEREST, COMMISSION, others add to balance
             return sum + amt
           }, 0)
-        portfolio = initialBalance + cumulative
+        portfolio = cumulative
       }
 
       return { label: monthLabel(ym), newSignups, portfolio }
