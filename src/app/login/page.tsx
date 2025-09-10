@@ -75,11 +75,11 @@ export default function LoginPage() {
     })
     setLoading(false);
     if (!resp.ok) {
-      const j = await resp.json().catch(() => ({} as any))
+      const j = await resp.json().catch(() => ({} as { error?: string; ok?: boolean; role?: string; is_founding_member?: boolean }))
       setError(j.error || 'Invalid credentials')
       return
     }
-    const j = await resp.json().catch(() => ({} as any))
+    const j = await resp.json().catch(() => ({} as { error?: string; ok?: boolean; role?: string; is_founding_member?: boolean }))
     const userId = (await supabase.auth.getUser()).data.user?.id || null;
     if (!userId) {
       setError("Login succeeded but no user ID returned.");
