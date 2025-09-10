@@ -1,5 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar"
-import { ChartAreaInteractive } from "@/components/chart-area-interactive"
+import MultiLineChart from "@/components/charts/MultiLineChart"
 // import { DataTable } from "@/components/data-table"
 import ReferralNetworkTable from "@/components/referrals/ReferralNetworkTable"
 import { SectionCards } from "@/components/section-cards"
@@ -36,12 +36,39 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()
+
+  // Direct referrals (for new signups line)
+  const { data: l1 } = await supabase
+    .from('profiles')
+    .select('id, created_at')
+    .eq('referrer_id', user.id)
   const initialBalance = Number(acct?.balance ?? 0)
   const startDateISO = (acct?.start_date as string) || new Date().toISOString().slice(0,10)
   const referralCode = await ensureUserReferralCode(user.id)
   const tabParam = searchParams?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
   if (tab === 'transactions') redirect('/dashboard/activity')
+
+  function UserPortfolioSignupsChart({ initialBalance, startDateISO, signups }: { initialBalance: number; startDateISO: string; signups: { id: string; created_at: string|null }[] }) {
+    const now = new Date()
+    const months: string[] = Array.from({ length: 6 }).map((_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    })
+    const monthLabel = (ym: string) => {
+      const [y, m] = ym.split('-').map(Number)
+      return `${new Date(y, m - 1, 1).toLocaleString(undefined, { month: 'short' })}`
+    }
+    const start = new Date(startDateISO)
+    const data = months.map((ym) => {
+      const [y, m] = ym.split('-').map(Number)
+      const monthDate = new Date(y, m - 1, 1)
+      const newSignups = (signups || []).filter(s => s.created_at && new Date(s.created_at).getFullYear() === y && new Date(s.created_at).getMonth() + 1 === m).length
+      const portfolio = monthDate >= new Date(start.getFullYear(), start.getMonth(), 1) ? initialBalance : 0
+      return { label: monthLabel(ym), newSignups, portfolio }
+    })
+    return <MultiLineChart data={data as any} series={[{ key: 'newSignups', label: 'New Signups' }, { key: 'portfolio', label: 'Portfolio Balance' }]} />
+  }
 
   return (
     <SidebarProvider
@@ -65,7 +92,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
                     <SectionCards />
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2">
-                        <ChartAreaInteractive />
+                        <UserPortfolioSignupsChart initialBalance={initialBalance} startDateISO={startDateISO} signups={l1 ?? []} />
                       </div>
                       <div className="space-y-3">
                         <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} />

@@ -10,7 +10,7 @@ import InvitePanel from '@/components/referrals/InvitePanel'
 import ReferralNetworkTable from '@/components/referrals/ReferralNetworkTable'
 import { ensureUserReferralCode } from '@/lib/referral'
 import { SectionCards } from '@/components/section-cards'
-import { ChartAreaInteractive } from '@/components/chart-area-interactive'
+import MultiLineChart from '@/components/charts/MultiLineChart'
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -61,7 +61,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
   const tabParam = searchParams?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
 
-  const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts } = res
+  const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts } = res
 
   const referralCode = await ensureUserReferralCode(res.user.id)
 
@@ -87,7 +87,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2 space-y-6">
-                        <ChartAreaInteractive />
+                        <AdminAUMSignupsChart profiles={profilesAll} accounts={verifiedAccounts} />
                       </div>
                       <div className="space-y-2">
                         <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 shadow">
@@ -419,6 +419,28 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
         </SidebarInset>
       </SidebarProvider>
   )
+}
+
+function AdminAUMSignupsChart({ profiles, accounts }: { profiles: { created_at: string; role?: string|null }[]; accounts: { balance?: number; verified_at?: string|null }[] }) {
+  const now = new Date()
+  const months: string[] = Array.from({ length: 6 }).map((_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
+  const monthLabel = (ym: string) => {
+    const [y, m] = ym.split('-').map(Number)
+    return `${new Date(y, m - 1, 1).toLocaleString(undefined, { month: 'short' })}`
+  }
+  const series = months.map((ym) => {
+    const [y, m] = ym.split('-').map(Number)
+    const newSignups = (profiles || []).filter(p => p.created_at && (p.role ?? 'user') !== 'admin' && new Date(p.created_at).getFullYear() === y && new Date(p.created_at).getMonth() + 1 === m).length
+    const aum = (accounts || [])
+      .filter(a => a.verified_at)
+      .filter(a => new Date(a.verified_at as string).getFullYear() < y || (new Date(a.verified_at as string).getFullYear() === y && new Date(a.verified_at as string).getMonth() + 1 <= m))
+      .reduce((s, a) => s + Number(a.balance || 0), 0)
+    return { label: monthLabel(ym), aum, newSignups }
+  })
+  return <MultiLineChart data={series as any} series={[{ key: 'aum', label: 'Total AUM' }, { key: 'newSignups', label: 'New Signups' }]} />
 }
 
 // Small server wrappers that render client components (keeps admin auth guard on server)
