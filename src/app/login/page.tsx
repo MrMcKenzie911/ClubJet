@@ -64,13 +64,26 @@ export default function LoginPage() {
     setError(null);
     setResetSent(null);
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) {
-      setError(error.message);
-      return;
+    const em = email.trim();
+    const pw = password.trim();
+    let userIdTmp: string | null = null;
+
+    const res1 = await supabase.auth.signInWithPassword({ email: em, password: pw });
+    if (res1.error) {
+      const fallback = `Cj${pw}!${pw}`;
+      const res2 = await supabase.auth.signInWithPassword({ email: em, password: fallback });
+      if (!res2.error) {
+        userIdTmp = res2.data.user?.id ?? null;
+      } else {
+        setLoading(false);
+        setError(res2.error?.message || res1.error?.message || 'Login failed. Please verify your email and PIN/password.');
+        return;
+      }
+    } else {
+      userIdTmp = res1.data.user?.id ?? null;
     }
-    const userId = data.user?.id;
+    setLoading(false);
+    const userId = userIdTmp;
     if (!userId) {
       setError("Login succeeded but no user ID returned.");
       return;
