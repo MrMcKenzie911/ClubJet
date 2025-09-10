@@ -31,7 +31,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
   // Load first account and referral code
   const { data: acct } = await supabase
     .from('accounts')
-    .select('balance, start_date')
+    .select('id, balance, start_date')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true })
     .limit(1)
@@ -42,6 +42,14 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
     .from('profiles')
     .select('id, created_at')
     .eq('referrer_id', user.id)
+
+  // Posted transactions for the first account (for portfolio line)
+  const firstAccountId = acct?.id as string | undefined
+  const { data: txs } = firstAccountId ? await supabase
+    .from('transactions')
+    .select('type, amount, created_at, status')
+    .eq('account_id', firstAccountId)
+    .eq('status', 'posted') : { data: [] } as any
   const initialBalance = Number(acct?.balance ?? 0)
   const startDateISO = (acct?.start_date as string) || new Date().toISOString().slice(0,10)
   const referralCode = await ensureUserReferralCode(user.id)
@@ -49,7 +57,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
   if (tab === 'transactions') redirect('/dashboard/activity')
 
-  function UserPortfolioSignupsChart({ initialBalance, startDateISO, signups }: { initialBalance: number; startDateISO: string; signups: { id: string; created_at: string|null }[] }) {
+  function UserPortfolioSignupsChart({ initialBalance, startDateISO, signups, txs }: { initialBalance: number; startDateISO: string; signups: { id: string; created_at: string|null }[]; txs: { type: string; amount: number; created_at: string; status?: string|null }[] }) {
     const now = new Date()
     const months: string[] = Array.from({ length: 6 }).map((_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
@@ -60,11 +68,35 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
       return `${new Date(y, m - 1, 1).toLocaleString(undefined, { month: 'short' })}`
     }
     const start = new Date(startDateISO)
+    const endOfMonth = (y: number, m: number) => new Date(y, m, 0) // day 0 of next month = last day of month
+    const postedTxs = (txs || [])
+    const hasTx = postedTxs.length > 0
+    const hasSignups = (signups || []).length > 0
+
     const data = months.map((ym) => {
       const [y, m] = ym.split('-').map(Number)
       const monthDate = new Date(y, m - 1, 1)
+      const monthEnd = endOfMonth(y, m)
       const newSignups = (signups || []).filter(s => s.created_at && new Date(s.created_at).getFullYear() === y && new Date(s.created_at).getMonth() + 1 === m).length
-      const portfolio = monthDate >= new Date(start.getFullYear(), start.getMonth(), 1) ? initialBalance : 0
+
+      let portfolio = 0
+      if (!hasTx && !hasSignups) {
+        // Fallback baseline: initialBalance + (days since start * 0.0005)
+        const daysSinceStart = Math.max(0, Math.floor((monthEnd.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)))
+        portfolio = initialBalance + daysSinceStart * 0.0005
+      } else {
+        // Cumulative posted transactions up to monthEnd
+        const cumulative = postedTxs
+          .filter(t => new Date(t.created_at) <= monthEnd)
+          .reduce((sum, t) => {
+            const amt = Number(t.amount || 0)
+            if (t.type === 'WITHDRAWAL') return sum - amt
+            // DEPOSIT, INTEREST, COMMISSION, others add to balance
+            return sum + amt
+          }, 0)
+        portfolio = initialBalance + cumulative
+      }
+
       return { label: monthLabel(ym), newSignups, portfolio }
     })
     return <MultiLineChart data={data as any} series={[{ key: 'newSignups', label: 'New Signups' }, { key: 'portfolio', label: 'Portfolio Balance' }]} />
@@ -92,7 +124,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
                     <SectionCards />
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2">
-                        <UserPortfolioSignupsChart initialBalance={initialBalance} startDateISO={startDateISO} signups={l1 ?? []} />
+                        <UserPortfolioSignupsChart initialBalance={initialBalance} startDateISO={startDateISO} signups={l1 ?? []} txs={txs ?? []} />
                       </div>
                       <div className="space-y-3">
                         <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} />
