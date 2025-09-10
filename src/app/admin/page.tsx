@@ -3,11 +3,11 @@
 import { redirect } from 'next/navigation'
 import { getSupabaseServer } from '@/lib/supabaseServer'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import MultiLineChart from '@/components/charts/MultiLineChart'
 import { Button } from '@/components/ui/button'
 
 import ToastFromQuery from '@/components/ToastFromQuery'
 import InvitePanel from '@/components/referrals/InvitePanel'
+import ReferralNetworkTable from '@/components/referrals/ReferralNetworkTable'
 import { ensureUserReferralCode } from '@/lib/referral'
 import { SectionCards } from '@/components/section-cards'
 import { ChartAreaInteractive } from '@/components/chart-area-interactive'
@@ -39,7 +39,7 @@ async function getAdminData() {
   const { data: rates } = await supabase.from('earnings_rates').select('*').order('effective_from', { ascending: false })
 
   // Pending accounts: owners are pending and account.verified_at is null
-  const pendingOwnerIds = (pendingUsers ?? []).map(u => u.id)
+  const pendingOwnerIds = (pendingUsers ?? []).map((u: any) => u.id)
   const { data: pendingAccounts } = await supabase
     .from('accounts')
     .select('id, user_id, type, balance, minimum_balance, start_date, lockup_end_date, verified_at, user:profiles(id, email, first_name, last_name, phone)')
@@ -61,7 +61,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
   const tabParam = searchParams?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
 
-  const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts } = res
+  const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts } = res
 
   const referralCode = await ensureUserReferralCode(res.user.id)
 
@@ -84,7 +84,6 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                 {!tab && (
                   <>
                     <SectionCards />
-                    <VerifiedUsersCards />
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2 space-y-6">
@@ -147,6 +146,10 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
 
                     <div className="mt-6">
                       <InvitePanel userCode={referralCode} />
+                    </div>
+
+                    <div className="mt-6">
+                      <ReferralNetworkTable userId={res.user.id} />
                     </div>
                   </>
                 )}
@@ -296,37 +299,10 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
         </section>
       )}
 
-      {!tab && (
-        <section className="mt-6 grid gap-6 sm:grid-cols-2">
-          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 sm:col-span-2">
-            <h2 className="mb-3 text-white font-semibold">Set Earnings Rate</h2>
-            <form action={setRate} className="flex flex-wrap gap-2 items-end">
-              <label className="text-xs text-gray-400">Account Type
-                <select name="account_type" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
-                  <option value="LENDER">LENDER</option>
-                  <option value="NETWORK">NETWORK</option>
-                </select>
-              </label>
-              <label className="text-xs text-gray-400">Monthly %
-                <input name="fixed_rate_monthly" type="number" step="0.001" placeholder='e.g., 1.25' className="mt-1 w-48 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
-              </label>
-              <button className="rounded bg-emerald-600 px-3 py-1 text-white">Set</button>
-            </form>
-            <div className="mt-3 text-sm text-gray-300">Recent:</div>
-          {/* Verified Users Cards inline when tab is active */}
-
-            <ul className="text-sm text-gray-400">
-              {rates.map((r: any) => (
-                <li key={r.id}>{r.account_type} • {r.fixed_rate_monthly ?? 'n/a'}% • from {r.effective_from}</li>
-              ))}
-            </ul>
-          </div>
-        </section>
-      )}
 
       {tab === 'verified-users' && (
         <section className="mt-6">
-          <VerifiedUsersCards />
+          <UsersManagerSection />
         </section>
       )}
 
@@ -445,53 +421,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
   )
 }
 
-function AdminMonthlyChart({ profiles, accounts }: { profiles: { created_at: string; role?: string }[]; accounts: { balance?: number; verified_at?: string | null }[] }) {
-  const now = new Date()
-  const months: string[] = Array.from({ length: 6 }).map((_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-  })
-  const monthLabel = (ym: string) => {
-    const [y, m] = ym.split('-').map(Number)
-    return `${new Date(y, m - 1, 1).toLocaleString(undefined, { month: 'short' })}`
-  }
-  const series = months.map((ym) => {
-    const [y, m] = ym.split('-').map(Number)
-    const newMembers = (profiles || []).filter(p => p.created_at && new Date(p.created_at).getFullYear() === y && new Date(p.created_at).getMonth() + 1 === m).length
-    const aum = (accounts || [])
-      .filter(a => a.verified_at)
-      .filter(a => new Date(a.verified_at as string).getFullYear() <= y && (new Date(a.verified_at as string).getFullYear() < y || new Date(a.verified_at as string).getMonth() + 1 <= m))
-      .reduce((s, a) => s + Number(a.balance || 0), 0)
-    return { label: monthLabel(ym), newMembers, aum }
-  })
-  return <MultiLineChart data={series as any} series={[{ key: 'newMembers', label: 'New Members' }, { key: 'aum', label: 'AUM' }]} />
-}
-
 // Small server wrappers that render client components (keeps admin auth guard on server)
-import SignOutButton from '@/components/SignOutButton'
 import UsersManager from '@/components/admin/UsersManager'
-import ReferralsAllLevels from '@/components/admin/ReferralsAllLevels'
-import VerifiedUsersCards from '@/components/admin/VerifiedUsersCards'
-
-function SignOutInline() {
-  return <SignOutButton />
-}
-
-
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
-function OverviewCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Card className="bg-[#0B0F14] border-gray-800 transition hover:border-amber-600/60">
-      <CardHeader>
-        <CardTitle className="text-xs text-gray-400 font-normal">{label}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-extrabold text-[color:var(--gold-400,#FFD700)]">{value}</div>
-      </CardContent>
-    </Card>
-  )
-}
 
 function UsersManagerSection() {
   return (
@@ -499,10 +430,6 @@ function UsersManagerSection() {
       <UsersManager />
     </div>
   )
-}
-
-function ReferralsAllLevelsSection({ userId }: { userId: string }) {
-  return <ReferralsAllLevels userId={userId} />
 }
 
 
