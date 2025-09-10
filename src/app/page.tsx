@@ -4,7 +4,7 @@ import { useState } from "react";
 import SignupModal from "@/components/auth/SignupModal";
 import Navbar from "@/components/landing/Navbar";
 import Hero from "@/components/landing/Hero";
-import InvestmentOptions from "@/components/landing/InvestmentOptions";
+// import InvestmentOptions from "@/components/landing/InvestmentOptions";
 import FeaturesRow from "@/components/landing/FeaturesRow";
 import NoticeRelease from "@/components/landing/NoticeRelease";
 import About from "@/components/landing/About";

@@ -39,7 +39,6 @@ export async function POST(req: NextRequest) {
     for (const rec of records) {
       const [first_name, ...rest] = rec.name.trim().split(' ')
       const last_name = rest.join(' ') || null
-      const isFounding = (rec.status || '').toLowerCase().includes('founding')
       const joinDate = rec.joinDate
       const accountType = rec.stream.toUpperCase() === 'LENDER' ? 'LENDER' : 'NETWORK' // map Pilot/Network -> NETWORK (schema constraint)
       const streamLabel = rec.stream
@@ -94,10 +93,7 @@ export async function POST(req: NextRequest) {
         last_name,
         phone: rec.phone,
         role: 'user',
-        approval_status: 'approved',
         referral_code: rec.ownCode,
-        referral_level: rec.level ?? null,
-        is_founding_member: isFounding,
         created_at: new Date(joinDate).toISOString(),
         updated_at: new Date(joinDate).toISOString(),
       }
@@ -120,10 +116,7 @@ export async function POST(req: NextRequest) {
             user_id: authId,
             type: accountType,
             balance: rec.investment,
-            initial_balance: rec.investment,
-            start_date: rec.joinDate,
-            verified_at: new Date(joinDate).toISOString(),
-            is_active: true,
+            start_date: rec.joinDate
           })
           .select('id')
           .single()

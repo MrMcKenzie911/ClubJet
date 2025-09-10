@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export async function POST(req: NextRequest) {
   // Optional seed token path: allows headless import without interactive admin auth
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
       for (const rec of records) {
         const [first_name, ...rest] = rec.name.trim().split(' ')
         const last_name = rest.join(' ') || null
-        const isFounding = (rec.status || '').toLowerCase().includes('founding')
+        // Founding status not persisted directly (column may not exist in live schema)
         const joinDate = rec.joinDate
         const accountType = rec.stream.toUpperCase() === 'LENDER' ? 'LENDER' : 'NETWORK'
         const streamLabel = rec.stream
@@ -53,10 +54,7 @@ export async function POST(req: NextRequest) {
           last_name,
           phone: rec.phone,
           role: 'user',
-          approval_status: 'approved',
           referral_code: rec.ownCode,
-          referral_level: rec.level ?? null,
-          is_founding_member: isFounding,
           created_at: new Date(joinDate).toISOString(),
           updated_at: new Date(joinDate).toISOString(),
         }, { onConflict: 'email' })
@@ -70,10 +68,7 @@ export async function POST(req: NextRequest) {
             user_id: authId,
             type: accountType,
             balance: rec.investment,
-            initial_balance: rec.investment,
-            start_date: rec.joinDate,
-            verified_at: new Date(joinDate).toISOString(),
-            is_active: true,
+            start_date: rec.joinDate
           }).select('id').single()
           if (acctErr) return NextResponse.json({ error: `Account insert failed for ${rec.email}: ${acctErr.message}` }, { status: 500 })
           accountId = acctIns!.id
@@ -86,8 +81,6 @@ export async function POST(req: NextRequest) {
               account_id: accountId,
               type: 'DEPOSIT',
               amount: rec.investment,
-              status: 'posted',
-              metadata: { seed: 'clubjet', stream: streamLabel },
               created_at: new Date(joinDate).toISOString(),
             })
           }

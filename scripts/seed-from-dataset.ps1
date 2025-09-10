@@ -35,7 +35,7 @@ $bodyObj = @{ records = $records }
 $bodyJson = $bodyObj | ConvertTo-Json -Depth 6
 
 $token = "0021"
-$apiUrl = "https://clubjet.netlify.app/api/admin/seed/clubjet?token=$token"
+$apiUrl = "https://clubjet.netlify.app/api/admin/seed?token=$token"
 
 Write-Host "Seeding to: $apiUrl"
 Write-Host "Records: $($records.Count)"
