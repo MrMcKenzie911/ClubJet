@@ -29,12 +29,12 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
     )
   }
   // If admin, route to admin dashboard
-  const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
-  if (me?.role === 'admin') redirect('/admin')
+  const { data: me } = await supabase.from('profiles').select('role, is_founding_member').eq('id', user.id).maybeSingle()
+  if (me?.role === 'admin' || me?.is_founding_member === true) redirect('/admin')
   // Load all accounts for the user
   const { data: accounts } = await supabase
     .from('accounts')
-    .select('id, balance, start_date, type')
+    .select('id, balance, start_date, verified_at, initial_balance, type')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true })
 
@@ -54,8 +54,8 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
       .in('account_id', accountIds)
     txs = txData ?? []
   }
-  const initialBalance = (accounts ?? []).reduce((s,a)=> s + Number(a.balance||0), 0)
-  const startDateISO = ((accounts ?? [])[0]?.start_date as string) || new Date().toISOString().slice(0,10)
+  const initialBalance = (accounts ?? []).reduce((s,a:any)=> s + Number(a.initial_balance ?? 0), 0)
+  const startDateISO = ((accounts ?? [])[0]?.verified_at as string) || ((accounts ?? [])[0]?.start_date as string) || new Date().toISOString().slice(0,10)
   const referralCode = await ensureUserReferralCode(user.id)
   const tabParam = searchParams?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam

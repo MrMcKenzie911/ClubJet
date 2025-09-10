@@ -48,11 +48,12 @@ export default function LoginPage() {
       const user = session.user;
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, is_founding_member')
         .eq('id', user.id)
         .maybeSingle();
       if (!cancelled) {
-        router.replace(profile?.role === 'admin' ? '/admin' : '/dashboard');
+        const toAdmin = profile?.role === 'admin' || profile?.is_founding_member === true
+        router.replace(toAdmin ? '/admin' : '/dashboard');
       }
     })();
     return () => { cancelled = true };
@@ -76,7 +77,7 @@ export default function LoginPage() {
     }
     const { data: profile, error: profileErr } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, is_founding_member")
       .eq("id", userId)
       .maybeSingle();
     if (profileErr) {
@@ -85,8 +86,8 @@ export default function LoginPage() {
     }
     await supabase.auth.getSession();
     router.refresh();
-    if (profile?.role === "admin") router.push("/admin");
-    else router.push("/dashboard");
+    const toAdmin = profile?.role === "admin" || profile?.is_founding_member === true
+    router.push(toAdmin ? "/admin" : "/dashboard");
   };
 
   const handleForgotPassword = async () => {
