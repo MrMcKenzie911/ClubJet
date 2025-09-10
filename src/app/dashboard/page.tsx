@@ -28,14 +28,15 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
       <div className="p-6 text-white">Please log in.</div>
     )
   }
-  // Load first account and referral code
-  const { data: acct } = await supabase
+  // If admin, route to admin dashboard
+  const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  if (me?.role === 'admin') redirect('/admin')
+  // Load all accounts for the user
+  const { data: accounts } = await supabase
     .from('accounts')
-    .select('id, balance, start_date')
+    .select('id, balance, start_date, type')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle()
 
   // Direct referrals (for new signups line)
   const { data: l1 } = await supabase
@@ -43,19 +44,19 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
     .select('id, created_at')
     .eq('referrer_id', user.id)
 
-  // Posted transactions for the first account (for portfolio line)
-  const firstAccountId = acct?.id as string | undefined
+  // Posted transactions across all accounts (for portfolio line)
+  const accountIds = (accounts ?? []).map(a => a.id)
   let txs: { type: string; amount: number; created_at: string; status?: string | null }[] = []
-  if (firstAccountId) {
+  if (accountIds.length) {
     const { data: txData } = await supabase
       .from('transactions')
-      .select('type, amount, created_at, status')
-      .eq('account_id', firstAccountId)
+      .select('type, amount, created_at, status, account_id')
+      .in('account_id', accountIds)
       .eq('status', 'posted')
     txs = txData ?? []
   }
-  const initialBalance = Number(acct?.balance ?? 0)
-  const startDateISO = (acct?.start_date as string) || new Date().toISOString().slice(0,10)
+  const initialBalance = (accounts ?? []).reduce((s,a)=> s + Number(a.balance||0), 0)
+  const startDateISO = ((accounts ?? [])[0]?.start_date as string) || new Date().toISOString().slice(0,10)
   const referralCode = await ensureUserReferralCode(user.id)
   const tabParam = searchParams?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
@@ -124,7 +125,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
               <div className="px-4 lg:px-6 space-y-4">
                 {(!tab || tab === 'dashboard') && (
                   <>
-                    <SectionCards />
+                    <SectionCards totalAUM={initialBalance} newSignups={(l1 ?? []).filter(s=>{ const d=s.created_at? new Date(s.created_at):null; const now=new Date(); return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(txs||[]).filter(t=>t.type==='INTEREST').filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0)} referralPayoutPct={(function(){ const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }); const comm=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=> s+Number(t.amount||0),0); const int=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100 : 0; })()} />
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2">
                         <UserPortfolioSignupsChart initialBalance={initialBalance} startDateISO={startDateISO} signups={l1 ?? []} txs={txs} />

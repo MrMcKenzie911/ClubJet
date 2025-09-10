@@ -50,8 +50,7 @@ async function getAdminData() {
   const { data: profilesAll } = await supabase.from('profiles').select('id, created_at, role').order('created_at', { ascending: true })
   const { data: verifiedAccounts } = await supabase
     .from('accounts')
-    .select('id, balance, verified_at')
-    .not('verified_at', 'is', null)
+    .select('id, balance, start_date')
 
   return { user, pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [], profilesAll: profilesAll ?? [], verifiedAccounts: verifiedAccounts ?? [] }
 }
@@ -83,7 +82,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
 
                 {!tab && (
                   <>
-                    <SectionCards />
+                    <SectionCards totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)} newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{ const d=p.created_at? new Date(p.created_at):null; const now=new Date(); return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={0} referralPayoutPct={0} />
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2 space-y-6">
@@ -421,7 +420,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
   )
 }
 
-function AdminAUMSignupsChart({ profiles, accounts }: { profiles: { created_at: string; role?: string|null }[]; accounts: { balance?: number; verified_at?: string|null }[] }) {
+function AdminAUMSignupsChart({ profiles, accounts }: { profiles: { created_at: string; role?: string|null }[]; accounts: { balance?: number; start_date?: string|null }[] }) {
   const now = new Date()
   const months: string[] = Array.from({ length: 6 }).map((_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
@@ -435,8 +434,8 @@ function AdminAUMSignupsChart({ profiles, accounts }: { profiles: { created_at: 
     const [y, m] = ym.split('-').map(Number)
     const newSignups = (profiles || []).filter(p => p.created_at && (p.role ?? 'user') !== 'admin' && new Date(p.created_at).getFullYear() === y && new Date(p.created_at).getMonth() + 1 === m).length
     const aum = (accounts || [])
-      .filter(a => a.verified_at)
-      .filter(a => new Date(a.verified_at as string).getFullYear() < y || (new Date(a.verified_at as string).getFullYear() === y && new Date(a.verified_at as string).getMonth() + 1 <= m))
+      .filter(a => a.start_date)
+      .filter(a => new Date(a.start_date as string).getFullYear() < y || (new Date(a.start_date as string).getFullYear() === y && new Date(a.start_date as string).getMonth() + 1 <= m))
       .reduce((s, a) => s + Number(a.balance || 0), 0)
     return { label: monthLabel(ym), aum, newSignups }
   })
