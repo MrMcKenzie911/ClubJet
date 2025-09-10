@@ -1,5 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar"
-import MultiLineChart from "@/components/charts/MultiLineChart"
+import MultiLineChart, { type MultiLineDatum } from "@/components/charts/MultiLineChart"
 // import { DataTable } from "@/components/data-table"
 import ReferralNetworkTable from "@/components/referrals/ReferralNetworkTable"
 import { SectionCards } from "@/components/section-cards"
@@ -73,7 +73,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
     const hasTx = postedTxs.length > 0
     const hasSignups = (signups || []).length > 0
 
-    const data = months.map((ym) => {
+    const data: MultiLineDatum[] = months.map((ym) => {
       const [y, m] = ym.split('-').map(Number)
       const monthDate = new Date(y, m - 1, 1)
       const monthEnd = endOfMonth(y, m)
@@ -99,7 +99,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
 
       return { label: monthLabel(ym), newSignups, portfolio }
     })
-    return <MultiLineChart data={data as any} series={[{ key: 'newSignups', label: 'New Signups' }, { key: 'portfolio', label: 'Portfolio Balance' }]} />
+    return <MultiLineChart data={data} series={[{ key: 'newSignups', label: 'New Signups' }, { key: 'portfolio', label: 'Portfolio Balance' }]} />
   }
 
   return (

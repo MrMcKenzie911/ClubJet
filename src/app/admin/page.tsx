@@ -10,7 +10,7 @@ import InvitePanel from '@/components/referrals/InvitePanel'
 import ReferralNetworkTable from '@/components/referrals/ReferralNetworkTable'
 import { ensureUserReferralCode } from '@/lib/referral'
 import { SectionCards } from '@/components/section-cards'
-import MultiLineChart from '@/components/charts/MultiLineChart'
+import MultiLineChart, { type MultiLineDatum } from '@/components/charts/MultiLineChart'
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -431,7 +431,7 @@ function AdminAUMSignupsChart({ profiles, accounts }: { profiles: { created_at: 
     const [y, m] = ym.split('-').map(Number)
     return `${new Date(y, m - 1, 1).toLocaleString(undefined, { month: 'short' })}`
   }
-  const series = months.map((ym) => {
+  const series: MultiLineDatum[] = months.map((ym) => {
     const [y, m] = ym.split('-').map(Number)
     const newSignups = (profiles || []).filter(p => p.created_at && (p.role ?? 'user') !== 'admin' && new Date(p.created_at).getFullYear() === y && new Date(p.created_at).getMonth() + 1 === m).length
     const aum = (accounts || [])
@@ -440,7 +440,7 @@ function AdminAUMSignupsChart({ profiles, accounts }: { profiles: { created_at: 
       .reduce((s, a) => s + Number(a.balance || 0), 0)
     return { label: monthLabel(ym), aum, newSignups }
   })
-  return <MultiLineChart data={series as any} series={[{ key: 'aum', label: 'Total AUM' }, { key: 'newSignups', label: 'New Signups' }]} />
+  return <MultiLineChart data={series} series={[{ key: 'aum', label: 'Total AUM' }, { key: 'newSignups', label: 'New Signups' }]} />
 }
 
 // Small server wrappers that render client components (keeps admin auth guard on server)

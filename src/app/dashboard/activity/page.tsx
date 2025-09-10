@@ -30,16 +30,16 @@ export default async function ActivityPage({ searchParams }: { searchParams?: { 
   const page = Math.max(parseInt(pageStr || '1', 10), 1)
   const offset = (page - 1) * limit
 
-  const qs = new URLSearchParams()
-  qs.set('limit', String(limit))
-  qs.set('offset', String(offset))
-  if (from) qs.set('from', from)
-  if (to) qs.set('to', to)
-  if (type) qs.set('type', type)
-
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
-  const { items, total }: { items: Tx[]; total: number } = await fetch(`${baseUrl}/api/user/transactions?${qs.toString()}`, { cache: 'no-store' }).then(r=>r.json())
-  const transactions = items
+  // Query Supabase directly server-side (avoid cross-origin and cookie issues)
+  const accountIds = (await supabase.from('accounts').select('id').eq('user_id', user.id)).data?.map(a=>a.id) ?? []
+  let txQuery = supabase.from('transactions').select('*', { count: 'exact' })
+  if (accountIds.length > 0) txQuery = txQuery.in('account_id', accountIds)
+  if (from) txQuery = txQuery.gte('created_at', from)
+  if (to) txQuery = txQuery.lte('created_at', to)
+  if (type) txQuery = txQuery.eq('type', type)
+  txQuery = txQuery.order('created_at', { ascending: false }).range(offset, offset + limit - 1)
+  const { data: items, count: total } = await txQuery
+  const transactions = (items ?? []) as Tx[]
   const totalPages = Math.max(Math.ceil((total ?? 0) / limit), 1)
 
   return (
