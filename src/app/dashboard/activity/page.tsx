@@ -32,7 +32,7 @@ export default async function ActivityPage({ searchParams }: { searchParams?: { 
   const offset = (page - 1) * limit
 
   // Query Supabase directly server-side (avoid cross-origin and cookie issues)
-  const accountIds = (await supabase.from('accounts').select('id').eq('user_id', user.id)).data?.map(a=>a.id) ?? []
+  const accountIds = (await supabase.from('accounts').select('id').eq('user_id', user.id)).data?.map((a: { id: string }) => a.id) ?? []
   let txQuery = supabase.from('transactions').select('*', { count: 'exact' })
   if (accountIds.length > 0) txQuery = txQuery.in('account_id', accountIds)
   if (from) txQuery = txQuery.gte('created_at', from)
@@ -45,7 +45,10 @@ export default async function ActivityPage({ searchParams }: { searchParams?: { 
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-xl font-semibold text-white">Activity</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-white">Activity</h1>
+        <a href="/dashboard" className="rounded bg-gray-800 hover:bg-gray-700 px-3 py-1.5 text-sm text-gray-100">← Back to Dashboard</a>
+      </div>
       {/* Invite link + Copy button */}
       <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-5">
         <h2 className="text-white font-semibold mb-3">Invite a Friend</h2>
@@ -66,7 +69,7 @@ export default async function ActivityPage({ searchParams }: { searchParams?: { 
         <div className="rounded-2xl border border-gray-800 bg-[#0B0F14] p-5">
           <h2 className="text-white font-semibold mb-3">Accounts</h2>
           <ul className="space-y-2 text-sm text-gray-300">
-            {(accounts ?? []).map(a => (
+            {(accounts ?? []).map((a: { id: string; type: string; balance: number | null; verified_at: string | null }) => (
               <li key={a.id} className="rounded border border-gray-800 bg-[#0F141B] px-3 py-2 flex items-center justify-between">
                 <span>{a.type} • {a.verified_at ? 'Verified' : 'Pending'}</span>
                 <span className="text-amber-400">${Number(a.balance || 0).toLocaleString()}</span>
