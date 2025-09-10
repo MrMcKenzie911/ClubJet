@@ -4,7 +4,6 @@ import * as React from "react"
 import Link from "next/link"
 import {
   IconDashboard,
-  IconDatabase,
   IconFolder,
   IconSettings,
   IconUsers,
@@ -20,6 +19,8 @@ import {
   IconHistory,
   IconCreditCard,
   IconUserPlus,
+  IconChevronDown,
+  IconChevronRight,
 } from "@tabler/icons-react"
 import type { Icon } from "@tabler/icons-react"
 
@@ -107,6 +108,27 @@ function getNavItems(role: SidebarRole): NavItem[] {
 
 export function AppSidebar({ role = "user", ...props }: { role?: SidebarRole } & React.ComponentProps<typeof Sidebar>) {
   const items = React.useMemo(() => getNavItems(role), [role])
+  const [openSections, setOpenSections] = React.useState<{[k:string]: boolean}>({
+    dashboard: true,
+    people: true,
+    money: false,
+    streams: false,
+    reports: false,
+    system: false,
+  })
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem('sidebarSections')
+    if (saved) {
+      try { setOpenSections(JSON.parse(saved)) } catch {}
+    }
+  }, [])
+  React.useEffect(() => {
+    localStorage.setItem('sidebarSections', JSON.stringify(openSections))
+  }, [openSections])
+
+  const toggle = (key: string) => setOpenSections(s => ({ ...s, [key]: !s[key] }))
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -122,7 +144,131 @@ export function AppSidebar({ role = "user", ...props }: { role?: SidebarRole } &
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={items} />
+        {role === 'admin' ? (
+          <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+            {/* 📊 Dashboard Overview */}
+            <button onClick={() => toggle('dashboard')} className="flex items-center justify-between w-full rounded-lg px-3 py-2 hover:bg-sidebar-accent">
+              <div className="flex items-center gap-3"><span>📊</span><span>Dashboard Overview</span></div>
+              {openSections.dashboard ? <IconChevronDown className="h-4 w-4" /> : <IconChevronRight className="h-4 w-4" />}
+            </button>
+            {openSections.dashboard && (
+              <div className="ml-7 space-y-1">
+                <Link href="/admin" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconDashboard className="h-4 w-4" /> <span>Admin Dashboard</span>
+                </Link>
+              </div>
+            )}
+
+            {/* 👥 User Operations */}
+            <button onClick={() => toggle('people')} className="flex items-center justify-between w-full rounded-lg px-3 py-2 hover:bg-sidebar-accent mt-1">
+              <div className="flex items-center gap-3"><span>👥</span><span>User Operations</span></div>
+              {openSections.people ? <IconChevronDown className="h-4 w-4" /> : <IconChevronRight className="h-4 w-4" />}
+            </button>
+            {openSections.people && (
+              <div className="ml-7 space-y-1">
+                <Link href="/admin?tab=verified-users" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconUsers className="h-4 w-4" /> <span>User Management</span>
+                </Link>
+                <Link href="/admin?tab=pending-users" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconUserPlus className="h-4 w-4" /> <span>Pending Users</span>
+                </Link>
+              </div>
+            )}
+
+            {/* 💰 Financial Management */}
+            <button onClick={() => toggle('money')} className="flex items-center justify-between w-full rounded-lg px-3 py-2 hover:bg-sidebar-accent mt-1">
+              <div className="flex items-center gap-3"><span>💰</span><span>Financial Management</span></div>
+              {openSections.money ? <IconChevronDown className="h-4 w-4" /> : <IconChevronRight className="h-4 w-4" />}
+            </button>
+            {openSections.money && (
+              <div className="ml-7 space-y-1">
+                <Link href="/admin?tab=account-balances" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconFileDollar className="h-4 w-4" /> <span>Account Balances</span>
+                </Link>
+                <Link href="/admin?tab=pending-deposits" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconCurrencyDollar className="h-4 w-4" /> <span>Pending Deposits</span>
+                </Link>
+                <Link href="/admin?tab=pending-withdrawals" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconCurrencyDollar className="h-4 w-4" /> <span>Pending Withdrawals</span>
+                </Link>
+                <Link href="/admin?tab=pending-accounts" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconFolder className="h-4 w-4" /> <span>Pending Accounts</span>
+                </Link>
+                <Link href="/admin?tab=transactions" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconHistory className="h-4 w-4" /> <span>Transaction Management</span>
+                </Link>
+                <Link href="/admin?tab=payment-methods" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconCreditCard className="h-4 w-4" /> <span>Payment Methods</span>
+                </Link>
+              </div>
+            )}
+
+            {/* 🎯 Stream Management */}
+            <button onClick={() => toggle('streams')} className="flex items-center justify-between w-full rounded-lg px-3 py-2 hover:bg-sidebar-accent mt-1">
+              <div className="flex items-center gap-3"><span>🎯</span><span>Stream Management</span></div>
+              {openSections.streams ? <IconChevronDown className="h-4 w-4" /> : <IconChevronRight className="h-4 w-4" />}
+            </button>
+            {openSections.streams && (
+              <div className="ml-7 space-y-1">
+                <Link href="/admin?tab=earnings-rate" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconSettings className="h-4 w-4" /> <span>Set Earnings Rate</span>
+                </Link>
+                <Link href="/admin?tab=signup-bonuses" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconReport className="h-4 w-4" /> <span>Signup Bonus Processing</span>
+                </Link>
+                <Link href="/admin?tab=referral-networks" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconChartBar className="h-4 w-4" /> <span>Referral Networks</span>
+                </Link>
+              </div>
+            )}
+
+            {/* 📈 Reports & Analytics */}
+            <button onClick={() => toggle('reports')} className="flex items-center justify-between w-full rounded-lg px-3 py-2 hover:bg-sidebar-accent mt-1">
+              <div className="flex items-center gap-3"><span>📈</span><span>Reports & Analytics</span></div>
+              {openSections.reports ? <IconChevronDown className="h-4 w-4" /> : <IconChevronRight className="h-4 w-4" />}
+            </button>
+            {openSections.reports && (
+              <div className="ml-7 space-y-1">
+                <Link href="/admin?tab=financial-reports" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconChartBar className="h-4 w-4" /> <span>Financial Reports</span>
+                </Link>
+                <Link href="/admin?tab=commission-reports" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconReport className="h-4 w-4" /> <span>Commission Reports</span>
+                </Link>
+                <Link href="/admin?tab=network-analysis" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconChartBar className="h-4 w-4" /> <span>Network Analysis</span>
+                </Link>
+                <Link href="/admin?tab=user-activity" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconUsers className="h-4 w-4" /> <span>User Activity</span>
+                </Link>
+              </div>
+            )}
+
+            {/* ⚙️ System Administration */}
+            <button onClick={() => toggle('system')} className="flex items-center justify-between w-full rounded-lg px-3 py-2 hover:bg-sidebar-accent mt-1">
+              <div className="flex items-center gap-3"><span>⚙️</span><span>System Administration</span></div>
+              {openSections.system ? <IconChevronDown className="h-4 w-4" /> : <IconChevronRight className="h-4 w-4" />}
+            </button>
+            {openSections.system && (
+              <div className="ml-7 space-y-1">
+                <Link href="/admin?tab=settings" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconTool className="h-4 w-4" /> <span>Platform Settings</span>
+                </Link>
+                <Link href="/admin?tab=audit-logs" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconReport className="h-4 w-4" /> <span>Audit Logs</span>
+                </Link>
+                <Link href="/admin?tab=notifications" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconBell className="h-4 w-4" /> <span>Notifications</span>
+                </Link>
+                <Link href="/admin?tab=data-export" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconDownload className="h-4 w-4" /> <span>Data Export</span>
+                </Link>
+              </div>
+            )}
+          </nav>
+        ) : (
+          <NavMain items={items} />
+        )}
       </SidebarContent>
       <SidebarFooter>
         <NavUser />
