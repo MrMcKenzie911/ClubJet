@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
             })
           }
           authId = created.data.user?.id ?? null
-        } catch (_err) {
+        } catch {
           // As a fallback, try to fetch user again in case it was created earlier
           try {
             const { data: existing } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 })

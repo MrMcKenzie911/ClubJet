@@ -126,7 +126,6 @@ export default function UserDrawer({ userId, onClose }: { userId: string; onClos
                       const j: any = await res.json().catch(() => ({}));
                       toast.error(j.error || 'Failed to reassign referrer');
                     } else {
-                      const j: any = await res.json().catch(() => ({}));
                       toast.success('Referrer updated');
                       // Reload profile
                       const { data: p2 } = await supabase.from('profiles').select('*').eq('id', userId).single();

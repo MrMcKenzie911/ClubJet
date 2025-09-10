@@ -54,8 +54,9 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
       .in('account_id', accountIds)
     txs = txData ?? []
   }
-  const initialBalance = (accounts ?? []).reduce((s,a:any)=> s + Number(a.initial_balance ?? 0), 0)
-  const startDateISO = ((accounts ?? [])[0]?.verified_at as string) || ((accounts ?? [])[0]?.start_date as string) || new Date().toISOString().slice(0,10)
+  const userAccounts = (accounts ?? []) as { initial_balance?: number; verified_at?: string|null; start_date?: string|null }[]
+  const initialBalance = userAccounts.reduce((s, a) => s + Number(a.initial_balance ?? 0), 0)
+  const startDateISO = (userAccounts[0]?.verified_at as string) || (userAccounts[0]?.start_date as string) || new Date().toISOString().slice(0,10)
   const referralCode = await ensureUserReferralCode(user.id)
   const tabParam = searchParams?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
