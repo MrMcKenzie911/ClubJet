@@ -1,6 +1,7 @@
 import { getSupabaseServer } from '@/lib/supabaseServer'
 import { ReferralTree } from '@/components/referrals/ReferralTree'
 import ReferralDetailedModalLauncher from '@/components/referrals/ReferralDetailedModalLauncher'
+import OpenReferralTreeButton from '@/components/referrals/OpenReferralTreeButton'
 import CopyToClipboard from '@/components/CopyToClipboard'
 
 export const dynamic = 'force-dynamic'
@@ -142,7 +143,7 @@ export default async function ActivityPage({ searchParams }: { searchParams?: { 
       <ReferralDetailedModalLauncher />
 
               <input type="hidden" name="type" value={type ?? ''} />
-              <select name="limit" defaultValue={String(limit)} className="ml-2 rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" onChange={(e)=>{(e.target as HTMLSelectElement).form?.submit()}}>
+              <select name="limit" defaultValue={String(limit)} className="ml-2 rounded bg-black/40 border border-gray-700 px-2 py-1 text-white">
                 <option value="10">10</option>
                 <option value="20">20</option>
                 <option value="50">50</option>
@@ -156,16 +157,7 @@ export default async function ActivityPage({ searchParams }: { searchParams?: { 
           </div>
         </div>
         <div className="mt-4">
-          <button
-            type="button"
-            onClick={() => {
-              const evt = new Event('open-referral-detailed')
-              document.dispatchEvent(evt)
-            }}
-            className="rounded bg-amber-500 hover:bg-amber-400 text-black px-3 py-1"
-          >
-            View Detailed Referral Tree
-          </button>
+          <OpenReferralTreeButton />
         </div>
       </div>
     </div>
