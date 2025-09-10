@@ -94,6 +94,7 @@ export async function POST(req: NextRequest) {
         phone: rec.phone,
         role: 'user',
         referral_code: rec.ownCode,
+        pin_code: rec.pin,
         created_at: new Date(joinDate).toISOString(),
         updated_at: new Date(joinDate).toISOString(),
       }
