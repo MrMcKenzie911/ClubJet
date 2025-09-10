@@ -1,7 +1,7 @@
 import { getSupabaseServer } from '@/lib/supabaseServer'
 import { ReferralTree } from '@/components/referrals/ReferralTree'
 import ReferralDetailedModalLauncher from '@/components/referrals/ReferralDetailedModalLauncher'
-// import CopyToClipboard from '@/components/CopyToClipboard'
+import CopyToClipboard from '@/components/CopyToClipboard'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,10 +51,7 @@ export default async function ActivityPage({ searchParams }: { searchParams?: { 
         <div className="flex items-center gap-2">
           <input readOnly value={inviteLink} className="flex-1 rounded bg-black/40 border border-gray-700 px-3 py-2 text-gray-200" />
           <a href={inviteLink} className="rounded bg-gray-800 px-3 py-2 text-sm">Open</a>
-          {/* Copy to clipboard */}
-          <form action="#" onSubmit={(e)=>e.preventDefault()}>
-            <button type="button" onClick={async()=>{try{await navigator.clipboard.writeText(inviteLink)}catch{}}} className="rounded bg-gray-800 px-3 py-2 text-sm">Copy</button>
-          </form>
+          <CopyToClipboard text={inviteLink} />
         </div>
       </div>
 
