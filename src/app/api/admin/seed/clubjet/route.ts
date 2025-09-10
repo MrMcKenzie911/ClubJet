@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
             })
           }
           authId = created.data.user?.id ?? null
-        } catch (e) {
+        } catch (_err) {
           // As a fallback, try to fetch user again in case it was created earlier
           try {
             const { data: existing } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 })
@@ -161,8 +161,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, inserted: records.length })
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Seed failed' }, { status: 500 })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Seed failed'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 

@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         // Founding status not persisted directly (column may not exist in live schema)
         const joinDate = rec.joinDate
         const accountType = rec.stream.toUpperCase() === 'LENDER' ? 'LENDER' : 'NETWORK'
-        const streamLabel = rec.stream
+        // const streamLabel = rec.stream
 
         // find or create auth
         let authId: string | null = null
@@ -97,8 +97,9 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json({ ok: true, inserted: records.length })
-    } catch (e: any) {
-      return NextResponse.json({ error: e?.message || 'Seed failed' }, { status: 500 })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Seed failed'
+      return NextResponse.json({ error: msg }, { status: 500 })
     }
   }
 

@@ -87,7 +87,7 @@ export default function UserDrawer({ userId, onClose }: { userId: string; onClos
                   View Detailed Referral Tree
                 </button>
 
-                <button onClick={async ()=>{ const res = await fetch('/api/admin/generate-reset-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: profile.email })}); const j = await res.json(); if (j.link) { window.open(j.link, '_blank'); } }} className="rounded bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 text-sm">Reset Password</button>
+                <button onClick={async ()=>{ const res = await fetch('/api/admin/generate-reset-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: profile.email })}); const j:any = await res.json().catch(()=>({})); if (j.link) { window.open(j.link, '_blank'); } }} className="rounded bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 text-sm">Reset Password</button>
               </div>
             </div>
             <div className="rounded border border-gray-800 p-3">
@@ -123,10 +123,10 @@ export default function UserDrawer({ userId, onClose }: { userId: string; onClos
                       body: JSON.stringify({ userId: userId, referrerCode: code || null, referrerEmail: email || null })
                     });
                     if (!res.ok) {
-                      const j = await res.json().catch(() => ({}));
+                      const j: any = await res.json().catch(() => ({}));
                       toast.error(j.error || 'Failed to reassign referrer');
                     } else {
-                      const j = await res.json().catch(() => ({}));
+                      const j: any = await res.json().catch(() => ({}));
                       toast.success('Referrer updated');
                       // Reload profile
                       const { data: p2 } = await supabase.from('profiles').select('*').eq('id', userId).single();
