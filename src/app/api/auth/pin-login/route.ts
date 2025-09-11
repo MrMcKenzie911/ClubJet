@@ -63,8 +63,9 @@ export async function POST(req: NextRequest) {
         .eq('id', authId)
         .maybeSingle()
       if (prof2) {
-        roleOut = (prof2 as any).role ?? null
-        isFounderOut = (prof2 as any).is_founding_member === true
+        const p = prof2 as { role: string | null; is_founding_member: boolean | null }
+        roleOut = p.role ?? null
+        isFounderOut = p.is_founding_member === true
       }
     }
     return NextResponse.json({ ok: true, role: roleOut, is_founding_member: isFounderOut })
