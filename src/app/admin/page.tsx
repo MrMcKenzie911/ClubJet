@@ -419,7 +419,7 @@ export async function approveUser(formData: FormData) {
   const decision = String(formData.get('decision'))
   try {
     if (decision === 'approve') {
-      const { error: upErr } = await supabaseAdmin.from('profiles').update({ role: 'user' }).eq('id', userId)
+      const { error: upErr } = await supabaseAdmin.from('profiles').update({ role: 'user', approval_status: 'approved', approved_at: new Date().toISOString() }).eq('id', userId)
       if (upErr) throw upErr
       const { data: acct } = await supabaseAdmin.from('accounts').select('id').eq('user_id', userId).order('created_at', { ascending: true }).limit(1).maybeSingle()
       if (acct?.id) {

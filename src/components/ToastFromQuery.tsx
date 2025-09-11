@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
 
 const labels: Record<string, string> = {
-  user_approved: "User verified",
+  user_approved: "Success",
   user_rejected: "User rejected",
   deposit_approved: "Deposit approved",
   deposit_denied: "Deposit denied",

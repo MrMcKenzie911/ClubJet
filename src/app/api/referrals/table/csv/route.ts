@@ -29,13 +29,13 @@ export async function GET(req: Request) {
   for (const u of all) {
     const { data: acct } = await supabaseAdmin
       .from('accounts')
-      .select('type, balance, start_date, verified_at')
+      .select('type, balance, start_date, verified_at, initial_balance')
       .eq('user_id', u.id)
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
     const streamType = acct?.type === 'NETWORK' ? 'Network Stream' : 'Lender Stream'
-    const investment = Number(acct?.balance ?? 0)
+    const investment = Number(acct?.initial_balance ?? acct?.balance ?? 0)
     const status = (u.role === 'pending' ? 'Pending' : (acct?.verified_at ? 'Active' : 'Active'))
     const bonus = u.level === 1 || u.level === 2 ? 25 : 16.67
     rows.push({
