@@ -54,6 +54,22 @@ export async function POST(req: Request) {
         console.warn('processInitialDeposit skipped or failed', e)
       }
 
+      // Credit referrer $25 commission upon approval
+      try {
+        const { data: prof } = await supabaseAdmin.from('profiles').select('referrer_id').eq('id', userId).maybeSingle()
+        const refId = (prof?.referrer_id as string | null) ?? null
+        if (refId) {
+          const { data: refAcct } = await supabaseAdmin.from('accounts').select('id, balance').eq('user_id', refId).order('created_at', { ascending: true }).limit(1).maybeSingle()
+          if (refAcct?.id) {
+            const amt = 25
+            await supabaseAdmin.from('transactions').insert({ account_id: refAcct.id, type: 'COMMISSION', amount: amt, status: 'posted', created_at: new Date().toISOString(), memo: 'Referral approval bonus' })
+            await supabaseAdmin.from('accounts').update({ balance: Number(refAcct.balance || 0) + amt }).eq('id', refAcct.id)
+          }
+        }
+      } catch (e) {
+        console.warn('referrer bonus credit failed', e)
+      }
+
       return NextResponse.redirect(new URL('/admin?toast=user_approved', req.url))
     } else if (decision === 'reject') {
       const { error: delErr } = await supabaseAdmin.from('profiles').delete().eq('id', userId)

@@ -6,7 +6,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { id, email, first_name, last_name, phone, referral_code, account_type } = body || {}
+    const { id, email, first_name, last_name, phone, referral_code, account_type, investment_amount } = body || {}
     if (!id || !email) return NextResponse.json({ error: 'Missing id or email' }, { status: 400 })
 
     // Determine referrer (by code or email passed via referral_code or referrer_email)
@@ -43,14 +43,25 @@ export async function POST(req: Request) {
       .from('accounts')
       .select('id')
       .eq('user_id', id)
+      .order('created_at', { ascending: true })
       .limit(1);
-    const hasAcct = Array.isArray(acctRows) && acctRows.length > 0;
-    if (!hasAcct) {
+    let accountId = Array.isArray(acctRows) && acctRows.length > 0 ? acctRows[0].id : null;
+    if (!accountId) {
       const minBal = acctType === 'NETWORK' ? 500 : 5000
       // Set lockup: NETWORK 6 months, LENDER 12 months
       const months = acctType === 'NETWORK' ? 6 : 12
       const end = new Date(); end.setMonth(end.getMonth() + months)
-      await supabaseAdmin.from('accounts').insert({ user_id: id, type: acctType, balance: 0, minimum_balance: minBal, lockup_end_date: end.toISOString().slice(0,10) })
+      const { data: created } = await supabaseAdmin.from('accounts').insert({ user_id: id, type: acctType, balance: 0, minimum_balance: minBal, lockup_end_date: end.toISOString().slice(0,10) }).select('id').maybeSingle()
+      accountId = created?.id ?? null
+    }
+    // Set initial_balance to investment_amount for KPI baseline (does not credit balance)
+    const inv = Number(investment_amount || 0)
+    if (accountId && inv > 0) {
+      await supabaseAdmin.from('accounts').update({ initial_balance: inv }).eq('id', accountId)
+      // Also create a pending deposit so admin can approve and post the funds later
+      try {
+        await supabaseAdmin.from('pending_deposits').insert({ user_id: id, amount: inv, account_type: acctType })
+      } catch {}
     }
 
     // Notify referrers (level 1 and 2)

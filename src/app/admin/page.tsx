@@ -14,6 +14,8 @@ import MultiLineChart, { type MultiLineDatum } from '@/components/charts/MultiLi
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { revalidatePath } from 'next/cache'
+
 
 
 async function getAdminData() {
@@ -97,59 +99,6 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2 space-y-6">
                         <AdminAUMSignupsChart profiles={profilesAll} accounts={verifiedAccounts} />
-                      </div>
-                      <div className="space-y-2">
-                        <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 shadow">
-                          <h2 className="mb-3 text-white font-semibold">Client Requests</h2>
-                          <div className="space-y-2">
-                            {pendingDeposits.length > 0 && (
-                              <div className="text-xs text-gray-400">Deposits</div>
-                            )}
-                            {pendingDeposits.map((t: any) => (
-                              <form key={`dep-${t.id}`} action="/api/admin/approve-deposit" method="post" className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
-                                <input type="hidden" name="tx_id" defaultValue={t.id} />
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <div className="text-white font-medium">{t.account?.user?.first_name} {t.account?.user?.last_name}</div>
-                                    <div className="text-xs text-gray-400">{t.account?.user?.email} • {t.account?.user?.phone ?? 'n/a'}</div>
-                                    <div className="mt-1 text-sm text-gray-300">Deposit • ${Number(t.amount).toLocaleString()} • {new Date(t.created_at).toLocaleString()}</div>
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <Button name="decision" value="approve" className="bg-emerald-600 hover:bg-emerald-500 text-white">Approve</Button>
-                                    <Button name="decision" value="deny" className="bg-red-600 hover:bg-red-500 text-white">Deny</Button>
-                                  </div>
-                                </div>
-                              </form>
-                            ))}
-
-                            {pendingWithdrawals.length > 0 && (
-                              <div className="pt-2 text-xs text-gray-400">Withdrawals</div>
-                            )}
-                            {pendingWithdrawals.map((w: any) => (
-                              <form key={`wr-${w.id}`} action="/api/admin/decide-withdrawal" method="post" className="rounded-lg border border-gray-700 bg-[#0f141b] p-4 shadow">
-                                <input type="hidden" name="wr_id" defaultValue={w.id} />
-                                <input type="hidden" name="account_id" defaultValue={w.account_id} />
-                                <input type="hidden" name="amount" defaultValue={w.amount} />
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <div className="text-white font-medium">{w.account?.user?.first_name} {w.account?.user?.last_name}</div>
-                                    <div className="text-xs text-gray-400">{w.account?.user?.email} • {w.account?.user?.phone ?? 'n/a'}</div>
-                                    <div className="mt-1 text-sm text-gray-300">Withdraw • ${Number(w.amount).toLocaleString()} • {w.method}</div>
-                                    <div className="text-xs text-gray-500">Requested: {new Date(w.requested_at).toLocaleString()}</div>
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <Button name="decision" value="approve" className="bg-emerald-600 hover:bg-emerald-500 text-white">Approve</Button>
-                                    <Button name="decision" value="deny" className="bg-red-600 hover:bg-red-500 text-white">Deny</Button>
-                                  </div>
-                                </div>
-                              </form>
-                            ))}
-
-                            {pendingDeposits.length + pendingWithdrawals.length === 0 && (
-                              <div className="text-sm text-gray-400">No client requests.</div>
-                            )}
-                          </div>
-                        </div>
                       </div>
                     </div>
 
@@ -477,10 +426,23 @@ export async function approveUser(formData: FormData) {
         const { error: vErr } = await supabaseAdmin.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', acct.id)
         if (vErr) throw vErr
       }
+      // Credit referrer $25 commission upon approval
+      const { data: prof } = await supabaseAdmin.from('profiles').select('referrer_id').eq('id', userId).maybeSingle()
+      const refId = (prof?.referrer_id as string | null) ?? null
+      if (refId) {
+        const { data: refAcct } = await supabaseAdmin.from('accounts').select('id, balance').eq('user_id', refId).order('created_at', { ascending: true }).limit(1).maybeSingle()
+        if (refAcct?.id) {
+          const amt = 25
+          await supabaseAdmin.from('transactions').insert({ account_id: refAcct.id, type: 'COMMISSION', amount: amt, status: 'posted', created_at: new Date().toISOString(), memo: 'Referral approval bonus' })
+          await supabaseAdmin.from('accounts').update({ balance: Number(refAcct.balance || 0) + amt }).eq('id', refAcct.id)
+        }
+      }
+      try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}
       redirect('/admin?toast=user_approved')
     } else if (decision === 'reject') {
       const { error: delErr } = await supabaseAdmin.from('profiles').delete().eq('id', userId)
       if (delErr) throw delErr
+      try { revalidatePath('/admin') } catch {}
       redirect('/admin?toast=user_rejected')
     }
   } catch (e) {
@@ -506,9 +468,11 @@ export async function approveDeposit(formData: FormData) {
           await supabaseAdmin.from('accounts').update({ balance: newBal }).eq('id', acct.id)
         }
       }
+      try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}
       redirect('/admin?toast=deposit_approved')
     } else if (decision === 'deny') {
       await supabaseAdmin.from('transactions').update({ status: 'denied' }).eq('id', txId)
+      try { revalidatePath('/admin') } catch {}
       redirect('/admin?toast=deposit_denied')
     }
   } catch (e) {
@@ -547,9 +511,11 @@ export async function decideWithdrawal(formData: FormData) {
     if (decision === 'approve') {
       const schedule = nextReleaseDate(new Date())
       await supabaseAdmin.from('withdrawal_requests').update({ status: 'approved', scheduled_release_at: schedule }).eq('id', wrId)
+      try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}
       redirect('/admin?toast=withdrawal_approved')
     } else if (decision === 'deny') {
       await supabaseAdmin.from('withdrawal_requests').update({ status: 'denied' }).eq('id', wrId)
+      try { revalidatePath('/admin') } catch {}
       redirect('/admin?toast=withdrawal_denied')
     }
   } catch (e) {

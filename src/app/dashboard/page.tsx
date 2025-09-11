@@ -17,6 +17,8 @@ import ReferralDetailedModalLauncher from "@/components/referrals/ReferralDetail
 import { getSupabaseServer } from "@/lib/supabaseServer"
 import { ensureUserReferralCode } from "@/lib/referral"
 
+import ToastFromQuery from '@/components/ToastFromQuery'
+
 import { redirect } from "next/navigation"
 
 export default async function Page({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
@@ -122,6 +124,8 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               {/* Single large container with inner components */}
               <div className="px-4 lg:px-6 space-y-4">
+                <ToastFromQuery />
+
                 {(!tab || tab === 'dashboard') && (
                   <>
                     <SectionCards totalAUM={initialBalance} newSignups={(l1 ?? []).filter(s=>{ const d=s.created_at? new Date(s.created_at):null; const now=new Date(); return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(txs||[]).filter(t=>t.type==='INTEREST').filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0)} referralPayoutPct={(function(){ const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }); const comm=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=> s+Number(t.amount||0),0); const int=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100 : 0; })()} />
@@ -152,8 +156,31 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
 
                 {tab === 'account-balance' && (
                   <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
-                    <h2 className="text-white font-semibold mb-2">Account Balance</h2>
-                    <p className="text-sm text-gray-400">Overview of your balance, stream type, status, and locked amounts. (Coming soon)</p>
+                    <h2 className="text-white font-semibold mb-3">Account Balance</h2>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="text-gray-400">
+                            <th className="text-left py-1 pr-4">Type</th>
+                            <th className="text-left py-1 pr-4">Verified</th>
+                            <th className="text-left py-1 pr-4">Balance</th>
+                            <th className="text-left py-1 pr-4">Initial</th>
+                            <th className="text-left py-1 pr-4">Start</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(accounts ?? []).map((a:any) => (
+                            <tr key={a.id} className="border-t border-gray-800">
+                              <td className="py-1 pr-4 text-amber-300">{a.type}</td>
+                              <td className="py-1 pr-4">{a.verified_at ? new Date(a.verified_at).toLocaleDateString() : 'Pending'}</td>
+                              <td className="py-1 pr-4">${Number(a.balance||0).toLocaleString()}</td>
+                              <td className="py-1 pr-4">${Number(a.initial_balance||0).toLocaleString()}</td>
+                              <td className="py-1 pr-4">{a.start_date ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                     <div className="mt-4">
                       <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} />
                     </div>
@@ -161,33 +188,151 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
                 )}
 
                 {tab === 'investment-history' && (
-                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Investment history is available under Activity. (Enhanced view coming soon)</div>
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+                    <h2 className="text-white font-semibold mb-3">Investment History</h2>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="text-gray-400">
+                            <th className="text-left py-1 pr-4">Date</th>
+                            <th className="text-left py-1 pr-4">Type</th>
+                            <th className="text-left py-1 pr-4">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[...(txs || [])].sort((a,b)=> new Date(b.created_at).getTime()-new Date(a.created_at).getTime()).map((t:any, i:number) => (
+                            <tr key={`${t.created_at}-${i}`} className="border-t border-gray-800">
+                              <td className="py-1 pr-4">{new Date(t.created_at).toLocaleString()}</td>
+                              <td className="py-1 pr-4">{t.type}</td>
+                              <td className="py-1 pr-4">${Number(t.amount||0).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                          {(txs||[]).length===0 && (
+                            <tr><td colSpan={3} className="py-2 text-gray-400">No transactions yet.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 )}
 
                 {tab === 'earnings-summary' && (
-                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Monthly earnings and bonuses breakdown. (Coming soon)</div>
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+                    <h2 className="text-white font-semibold mb-3">Earnings Summary (This Month)</h2>
+                    {(() => {
+                      const now=new Date(); const y=now.getFullYear(); const m=now.getMonth();
+                      const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return d.getFullYear()===y && d.getMonth()===m })
+                      const interest=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=>s+Number(t.amount||0),0)
+                      const commissions=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=>s+Number(t.amount||0),0)
+                      return (
+                        <ul className="text-sm text-gray-300 space-y-1">
+                          <li>Interest: ${interest.toLocaleString()}</li>
+                          <li>Referral Bonuses: ${commissions.toLocaleString()}</li>
+                          <li>Total Earnings: ${(interest+commissions).toLocaleString()}</li>
+                        </ul>
+                      )
+                    })()}
+                  </div>
                 )}
 
                 {tab === 'contribute' && (
-                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Make Contribution form. (Coming soon)</div>
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+                    <h2 className="text-white font-semibold mb-3">Make a Contribution</h2>
+                    <form action="/api/user/deposit" method="post" className="flex flex-wrap gap-2 items-end">
+                      <label className="text-xs text-gray-400">Amount
+                        <input name="amount" type="number" min="1" step="0.01" required className="mt-1 w-40 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
+                      </label>
+                      <label className="text-xs text-gray-400">Account Type
+                        <select name="account_type" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
+                          <option value="LENDER">LENDER</option>
+                          <option value="NETWORK">NETWORK</option>
+                        </select>
+                      </label>
+                      <button className="rounded bg-emerald-600 px-3 py-1 text-white">Submit</button>
+                    </form>
+                    <p className="text-xs text-gray-400 mt-2">Admin will review and approve your deposit.</p>
+                  </div>
                 )}
                 {tab === 'withdrawal' && (
-                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Request Withdrawal form. (Coming soon)</div>
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+                    <h2 className="text-white font-semibold mb-3">Request a Withdrawal</h2>
+                    <form action="/api/user/withdrawal" method="post" className="flex flex-wrap gap-2 items-end">
+                      <label className="text-xs text-gray-400">Amount
+                        <input name="amount" type="number" min="1" step="0.01" required className="mt-1 w-40 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
+                      </label>
+                      <label className="text-xs text-gray-400">Method
+                        <select name="method" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
+                          <option value="ACH">ACH</option>
+                          <option value="WIRE">Wire</option>
+                          <option value="CRYPTO">Crypto</option>
+                        </select>
+                      </label>
+                      <button className="rounded bg-emerald-600 px-3 py-1 text-white">Submit</button>
+                    </form>
+                    <p className="text-xs text-gray-400 mt-2">Withdrawals are scheduled for the next release date per policy.</p>
+                  </div>
                 )}
                 {tab === 'smart' && (
-                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">SmartContributions setup. (Coming soon)</div>
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+                    <h2 className="text-white font-semibold mb-3">Smart Contributions</h2>
+                    <form action="/api/send-to-n8n" method="post" className="flex flex-wrap gap-2 items-end">
+                      <input type="hidden" name="event" value="smart_contribution" />
+                      <label className="text-xs text-gray-400">Monthly Amount
+                        <input name="amount" type="number" min="1" step="0.01" required className="mt-1 w-40 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
+                      </label>
+                      <label className="text-xs text-gray-400">Day of Month
+                        <input name="day" type="number" min="1" max="28" required className="mt-1 w-24 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
+                      </label>
+                      <button className="rounded bg-emerald-600 px-3 py-1 text-white">Save</button>
+                    </form>
+                    <p className="text-xs text-gray-400 mt-2">We’ll notify you when scheduling is confirmed.</p>
+                  </div>
                 )}
                 {tab === 'payment-methods' && (
-                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Manage payment options. (Coming soon)</div>
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+                    <h2 className="text-white font-semibold mb-3">Payment Methods</h2>
+                    <form action="/api/send-to-n8n" method="post" className="flex flex-wrap gap-2 items-end">
+                      <input type="hidden" name="event" value="payment_method_update" />
+                      <label className="text-xs text-gray-400">Preferred Method
+                        <select name="method" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
+                          <option value="ACH">ACH</option>
+                          <option value="WIRE">Wire</option>
+                          <option value="CRYPTO">Crypto</option>
+                        </select>
+                      </label>
+                      <label className="text-xs text-gray-400">Details
+                        <input name="details" placeholder="Last 4 / wallet / notes" className="mt-1 w-64 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
+                      </label>
+                      <button className="rounded bg-emerald-600 px-3 py-1 text-white">Save</button>
+                    </form>
+                  </div>
                 )}
                 {tab === 'support' && (
-                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Support Center placeholder. (Coming soon)</div>
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+                    <h2 className="text-white font-semibold mb-3">Support</h2>
+                    <form action="/api/send-to-n8n" method="post" className="flex flex-wrap gap-2 items-end">
+                      <input type="hidden" name="event" value="support_message" />
+                      <label className="text-xs text-gray-400">Subject
+                        <input name="subject" required className="mt-1 w-64 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
+                      </label>
+                      <label className="text-xs text-gray-400">Message
+                        <input name="message" required className="mt-1 w-[32rem] rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
+                      </label>
+                      <button className="rounded bg-emerald-600 px-3 py-1 text-white">Send</button>
+                    </form>
+                  </div>
                 )}
                 {tab === 'messages' && (
-                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Messages placeholder. (Coming soon)</div>
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+                    <h2 className="text-white font-semibold mb-3">Messages</h2>
+                    <p className="text-sm text-gray-300">At this time, account messages are delivered via email and phone. Your referrals’ updates appear in the dashboard KPIs.</p>
+                  </div>
                 )}
                 {tab === 'documents' && (
-                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6 text-gray-300">Documents: statements, agreements, tax docs. (Coming soon)</div>
+                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+                    <h2 className="text-white font-semibold mb-3">Documents</h2>
+                    <p className="text-sm text-gray-300">Statements and tax documents are issued monthly/annually. We will email you when ready.</p>
+                  </div>
                 )}
 
                 <div className="pt-2">

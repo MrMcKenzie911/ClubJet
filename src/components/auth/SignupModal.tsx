@@ -21,6 +21,7 @@ export default function SignupModal({ open, onClose }: Props) {
     referral_code: "",
     referrer_email: "",
     account_type: "LENDER" as "LENDER" | "NETWORK",
+    investment_amount: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,6 +54,7 @@ export default function SignupModal({ open, onClose }: Props) {
             referral_code: form.referral_code,
             referrer_email: form.referrer_email,
             account_type: form.account_type,
+            investment_amount: Number(form.investment_amount || 0),
           }),
         });
         if (!res.ok) {
@@ -114,6 +116,7 @@ export default function SignupModal({ open, onClose }: Props) {
                 <option value="LENDER">Lender (Fixed)</option>
                 <option value="NETWORK">Network (Variable)</option>
               </select>
+              <input name="investment_amount" type="number" min="0" step="0.01" placeholder="Investment amount (initial)" value={form.investment_amount as any} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
               <button disabled={loading} className="mt-2 rounded-md bg-amber-400 px-4 py-2 font-semibold text-black hover:bg-amber-300 disabled:opacity-50">{loading ? "Submitting..." : "Sign Up"}</button>
               <p className="text-xs text-gray-400">Look out for approval call.</p>
             </form>
