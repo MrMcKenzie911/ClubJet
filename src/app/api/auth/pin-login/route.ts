@@ -36,6 +36,19 @@ export async function POST(req: NextRequest) {
         .eq('email', em)
         .maybeSingle()
       authId = profByEmail?.id ?? null
+
+      // If still no id, try to find the profile by PIN (unique per user). If exactly one match, trust it.
+      if (!authId) {
+        const { data: pinMatch } = await supabaseAdmin
+          .from('profiles')
+          .select('id')
+          .eq('pin_code', pw)
+          .limit(2)
+        if (Array.isArray(pinMatch) && pinMatch.length === 1) {
+          authId = pinMatch[0].id as string
+        }
+      }
+
       // If still no id, list auth users to find by email
       if (!authId) {
         try {
@@ -47,16 +60,24 @@ export async function POST(req: NextRequest) {
 
       if (!authId) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
 
+      // Determine canonical login email for this auth user id
+      let loginEmail = em
+      try {
+        const { data: u } = await supabaseAdmin.auth.admin.getUserById(authId)
+        const authEmail = (u?.user?.email || '').trim().toLowerCase()
+        if (authEmail) loginEmail = authEmail
+      } catch {}
+
       // Try force-setting password to the PIN, then sign in
       try { await supabaseAdmin.auth.admin.updateUserById(authId, { password: pw }) } catch {}
       {
-        const { error } = await supabase.auth.signInWithPassword({ email: em, password: pw })
+        const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: pw })
         if (!error) signedIn = true
       }
       // If still failing, set to fallback and try fallback
       if (!signedIn) {
         try { await supabaseAdmin.auth.admin.updateUserById(authId, { password: fallback }) } catch {}
-        const { error } = await supabase.auth.signInWithPassword({ email: em, password: fallback })
+        const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: fallback })
         if (!error) signedIn = true
       }
       if (!signedIn) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
