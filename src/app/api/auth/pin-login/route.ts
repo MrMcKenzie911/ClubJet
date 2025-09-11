@@ -32,8 +32,20 @@ export async function POST(req: NextRequest) {
 
     // Sign in on the server to set auth cookies for the client correctly
     const supabase = createRouteHandlerClient({ cookies })
-    const { error } = await supabase.auth.signInWithPassword({ email: em, password: pw })
-    if (error) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    let signInErr: { message?: string } | null = null
+    {
+      const { error } = await supabase.auth.signInWithPassword({ email: em, password: pw })
+      signInErr = error
+    }
+    if (signInErr) {
+      // If password policy prevented resetting to PIN and the account still has the seeded fallback,
+      // try the seeded fallback format transparently, without exposing it.
+      const fallback = `Cj${pw}!${pw}`
+      const { error: error2 } = await supabase.auth.signInWithPassword({ email: em, password: fallback })
+      if (error2) {
+        return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+      }
+    }
 
     return NextResponse.json({ ok: true, role: profile.role, is_founding_member: profile.is_founding_member === true })
   } catch (e) {

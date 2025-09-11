@@ -67,37 +67,60 @@ export default function LoginPage() {
     const em = email.trim();
     const pw = password.trim();
 
-    // Use server route to guarantee auth password == PIN and set cookies correctly
-    const resp = await fetch('/api/auth/pin-login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: em, pin: pw })
-    })
-    setLoading(false);
-    if (!resp.ok) {
-      const j = await resp.json().catch(() => ({} as { error?: string; ok?: boolean; role?: string; is_founding_member?: boolean }))
-      setError(j.error || 'Invalid credentials')
-      return
+    type PinLoginResp = { error?: string; ok?: boolean; role?: string; is_founding_member?: boolean }
+
+    let serverOk = false
+    try {
+      const resp = await fetch('/api/auth/pin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: em, pin: pw })
+      })
+      if (resp.ok) {
+        serverOk = true
+      } else if (resp.status === 401) {
+        const j = await resp.json().catch(() => ({} as PinLoginResp))
+        setError(j.error || 'Invalid credentials')
+        setLoading(false)
+        return
+      }
+    } catch {
+      // fall through to client-side fallback
     }
-    const j = await resp.json().catch(() => ({} as { error?: string; ok?: boolean; role?: string; is_founding_member?: boolean }))
+
+    if (!serverOk) {
+      // Fallback path if server route unavailable: try PIN, then seeded fallback
+      const res1 = await supabase.auth.signInWithPassword({ email: em, password: pw })
+      if (res1.error) {
+        const fallback = `Cj${pw}!${pw}`
+        const res2 = await supabase.auth.signInWithPassword({ email: em, password: fallback })
+        if (res2.error) {
+          setLoading(false)
+          setError(res2.error.message || res1.error.message || 'Invalid credentials')
+          return
+        }
+      }
+    }
+
+    setLoading(false)
     const userId = (await supabase.auth.getUser()).data.user?.id || null;
     if (!userId) {
-      setError("Login succeeded but no user ID returned.");
-      return;
+      setError('Login succeeded but no user ID returned.')
+      return
     }
     const { data: profile, error: profileErr } = await supabase
-      .from("profiles")
-      .select("role, is_founding_member")
-      .eq("id", userId)
+      .from('profiles')
+      .select('role, is_founding_member')
+      .eq('id', userId)
       .maybeSingle();
     if (profileErr) {
-      setError("Failed to fetch user profile.");
-      return;
+      setError('Failed to fetch user profile.')
+      return
     }
     await supabase.auth.getSession();
     router.refresh();
-    const toAdmin = profile?.role === "admin" || profile?.is_founding_member === true
-    router.push(toAdmin ? "/admin" : "/dashboard");
+    const toAdmin = profile?.role === 'admin' || profile?.is_founding_member === true
+    router.push(toAdmin ? '/admin' : '/dashboard');
   };
 
   const handleForgotPassword = async () => {
