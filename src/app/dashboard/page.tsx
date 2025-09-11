@@ -64,7 +64,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
   if (tab === 'transactions') redirect('/dashboard/activity')
 
-  function UserPortfolioSignupsChart({ initialBalance, startDateISO, signups, txs }: { initialBalance: number; startDateISO: string; signups: { id: string; created_at: string|null }[]; txs: { type: string; amount: number; created_at: string; status?: string|null }[] }) {
+  function UserPortfolioSignupsChart({ startDateISO, signups, txs }: { startDateISO: string; signups: { id: string; created_at: string|null }[]; txs: { type: string; amount: number; created_at: string; status?: string|null }[] }) {
     const now = new Date()
     const months: string[] = Array.from({ length: 6 }).map((_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
@@ -131,7 +131,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
                     <SectionCards totalAUM={initialBalance} newSignups={(l1 ?? []).filter(s=>{ const d=s.created_at? new Date(s.created_at):null; const now=new Date(); return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(txs||[]).filter(t=>t.type==='INTEREST').filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0)} referralPayoutPct={(function(){ const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }); const comm=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=> s+Number(t.amount||0),0); const int=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100 : 0; })()} />
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2">
-                        <UserPortfolioSignupsChart initialBalance={initialBalance} startDateISO={startDateISO} signups={l1 ?? []} txs={txs} />
+                        <UserPortfolioSignupsChart startDateISO={startDateISO} signups={l1 ?? []} txs={txs} />
                       </div>
                       <div className="space-y-3">
                         <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} />
@@ -169,7 +169,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
                           </tr>
                         </thead>
                         <tbody>
-                          {(accounts ?? []).map((a:any) => (
+                          {(accounts ?? []).map((a: { id: string; type: string; verified_at: string | null; balance: number | null; initial_balance: number | null; start_date: string | null }) => (
                             <tr key={a.id} className="border-t border-gray-800">
                               <td className="py-1 pr-4 text-amber-300">{a.type}</td>
                               <td className="py-1 pr-4">{a.verified_at ? new Date(a.verified_at).toLocaleDateString() : 'Pending'}</td>
@@ -200,7 +200,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
                           </tr>
                         </thead>
                         <tbody>
-                          {[...(txs || [])].sort((a,b)=> new Date(b.created_at).getTime()-new Date(a.created_at).getTime()).map((t:any, i:number) => (
+                          {[...(txs || [])].sort((a,b)=> new Date(b.created_at).getTime()-new Date(a.created_at).getTime()).map((t: { created_at: string; type: string; amount: number }, i: number) => (
                             <tr key={`${t.created_at}-${i}`} className="border-t border-gray-800">
                               <td className="py-1 pr-4">{new Date(t.created_at).toLocaleString()}</td>
                               <td className="py-1 pr-4">{t.type}</td>

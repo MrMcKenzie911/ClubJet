@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, role: profile.role, is_founding_member: profile.is_founding_member === true })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Login failed' }, { status: 500 })
   }
 }
