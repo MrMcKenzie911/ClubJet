@@ -69,27 +69,26 @@ export default function LoginPage() {
 
     type PinLoginResp = { error?: string; ok?: boolean; role?: string; is_founding_member?: boolean }
 
-    let serverOk = false
+    // Always call server route to enforce PIN->Auth sync, but also ensure client session is set
     try {
       const resp = await fetch('/api/auth/pin-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: em, pin: pw })
       })
-      if (resp.ok) {
-        serverOk = true
-      } else if (resp.status === 401) {
+      if (resp.status === 401) {
         const j = await resp.json().catch(() => ({} as PinLoginResp))
         setError(j.error || 'Invalid credentials')
         setLoading(false)
         return
       }
+      // proceed regardless of resp.ok to set client session reliably below
     } catch {
-      // fall through to client-side fallback
+      // if server temporarily unavailable, still proceed to client sign-in below
     }
 
-    if (!serverOk) {
-      // Fallback path if server route unavailable: try PIN, then seeded fallback
+    // Ensure browser session exists: try PIN, then seeded fallback
+    {
       const res1 = await supabase.auth.signInWithPassword({ email: em, password: pw })
       if (res1.error) {
         const fallback = `Cj${pw}!${pw}`

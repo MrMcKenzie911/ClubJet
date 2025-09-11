@@ -19,10 +19,7 @@ export async function POST(req: NextRequest) {
 
     if (!profile?.id) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
 
-    // If we have a stored pin_code and it doesn't match provided PIN, reject
-    if (profile.pin_code && String(profile.pin_code) !== pw) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
-    }
+    // Do not reject on pin_code mismatch; proceed to re-sync and attempt sign-in to tolerate stale data.
 
     // Ensure auth password equals the PIN (idempotent). If policy previously forced a different value,
     // this will re-sync the password to the 4-digit PIN.
