@@ -10,57 +10,69 @@ export async function POST(req: NextRequest) {
     const pw = (pin || '').trim()
     if (!em || !pw) return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
 
-    // Look up profile by email to get id + stored pin_code
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('id, role, is_founding_member, pin_code')
-      .eq('email', em)
-      .maybeSingle()
-
-    // Fallback: if profile not found by email, try to locate auth user directly by email
-    let authId: string | null = profile?.id ?? null
-    if (!authId) {
-      try {
-        const { data: existing } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 })
-        const found = existing.users.find(u => (u.email || '').toLowerCase() === em)
-        if (found) authId = found.id
-      } catch {}
-      if (!authId) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
-    }
-
-    // Do not reject on pin_code mismatch; proceed to re-sync and attempt sign-in to tolerate stale data.
-
-    // Ensure auth password equals the PIN (idempotent). If policy previously forced a different value,
-    // this will re-sync the password to the 4-digit PIN.
-    try {
-      await supabaseAdmin.auth.admin.updateUserById(authId, { password: pw })
-    } catch {}
-
-    // Sign in on the server to set auth cookies for the client correctly
+    // Attempt direct sign-in with provided credentials first
     const supabase = createRouteHandlerClient({ cookies })
-    let signInErr: { message?: string } | null = null
+    const fallback = `Cj${pw}!${pw}`
+    let signedIn = false
+
+    // First try with raw PIN
     {
       const { error } = await supabase.auth.signInWithPassword({ email: em, password: pw })
-      signInErr = error
+      if (!error) signedIn = true
     }
-    if (signInErr) {
-      // If password policy prevented resetting to PIN and the account still has the seeded fallback,
-      // try the seeded fallback format transparently, without exposing it.
-      const fallback = `Cj${pw}!${pw}`
-      const { error: error2 } = await supabase.auth.signInWithPassword({ email: em, password: fallback })
-      if (error2) {
-        return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
-      }
+    // Then try with seeded fallback format
+    if (!signedIn) {
+      const { error } = await supabase.auth.signInWithPassword({ email: em, password: fallback })
+      if (!error) signedIn = true
     }
 
-    // Ensure we can report role/founding flag even if initial profile lookup by email failed
-    let roleOut: string | null = profile?.role ?? null
-    let isFounderOut: boolean = profile?.is_founding_member === true
-    if (!roleOut) {
+    // If not yet signed in, repair password via Admin API and retry
+    let authId: string | null = null
+    if (!signedIn) {
+      // Try to locate profile by email to get id
+      const { data: profByEmail } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('email', em)
+        .maybeSingle()
+      authId = profByEmail?.id ?? null
+      // If still no id, list auth users to find by email
+      if (!authId) {
+        try {
+          const { data: existing } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 })
+          const found = existing.users.find(u => (u.email || '').toLowerCase() === em)
+          if (found) authId = found.id
+        } catch {}
+      }
+
+      if (!authId) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+
+      // Try force-setting password to the PIN, then sign in
+      try { await supabaseAdmin.auth.admin.updateUserById(authId, { password: pw }) } catch {}
+      {
+        const { error } = await supabase.auth.signInWithPassword({ email: em, password: pw })
+        if (!error) signedIn = true
+      }
+      // If still failing, set to fallback and try fallback
+      if (!signedIn) {
+        try { await supabaseAdmin.auth.admin.updateUserById(authId, { password: fallback }) } catch {}
+        const { error } = await supabase.auth.signInWithPassword({ email: em, password: fallback })
+        if (!error) signedIn = true
+      }
+      if (!signedIn) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    }
+
+    // Derive user id from current session and fetch role/founding flag
+    const { data: userData } = await supabase.auth.getUser()
+    const uid = userData?.user?.id || authId
+
+    let roleOut: string | null = null
+    let isFounderOut = false
+    if (uid) {
       const { data: prof2 } = await supabaseAdmin
         .from('profiles')
         .select('role, is_founding_member')
-        .eq('id', authId)
+        .eq('id', uid)
         .maybeSingle()
       if (prof2) {
         const p = prof2 as { role: string | null; is_founding_member: boolean | null }
@@ -68,6 +80,7 @@ export async function POST(req: NextRequest) {
         isFounderOut = p.is_founding_member === true
       }
     }
+
     return NextResponse.json({ ok: true, role: roleOut, is_founding_member: isFounderOut })
   } catch {
     return NextResponse.json({ error: 'Login failed' }, { status: 500 })

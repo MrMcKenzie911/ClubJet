@@ -23,7 +23,8 @@ export async function POST(req: Request) {
       first_name,
       last_name,
       phone,
-      referral_code,
+      // Do NOT set referral_code here; this value in the payload represents the REFERRER code.
+      // We will generate a unique referral_code for the new user below.
       referrer_id: referrer_id ?? null,
       role: 'pending',
       approval_status: 'pending',
@@ -31,9 +32,11 @@ export async function POST(req: Request) {
     })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    // Build referral chain row
+    // Ensure the new user has their OWN unique referral_code (avoid duplicate key violations)
     try {
-      const { buildReferralChain } = await import('@/lib/referral')
+      const { ensureUserReferralCode, buildReferralChain } = await import('@/lib/referral')
+      await ensureUserReferralCode(id)
+      // Build referral chain row
       await buildReferralChain(id, referrer_id ?? null)
     } catch {}
 
