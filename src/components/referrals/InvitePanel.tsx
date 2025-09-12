@@ -11,12 +11,32 @@ export default function InvitePanel({ userCode }: { userCode: string }) {
     toast.success('Invite link copied')
   }
 
+  const [loading, setLoading] = useState(false)
+
   const send = async () => {
-    if (!email) return
-    const res = await fetch('/api/send-invite', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recipientEmail: email, inviteUrl, senderName: '' })
-    })
-    if (res.ok) toast.success('Invite sent'); else toast.error('Failed to send invite')
+    if (!email || loading) return
+    setLoading(true)
+    try {
+      const res = await fetch('/api/send-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientEmail: email, inviteUrl, senderName: '' })
+      })
+      if (res.ok) {
+        toast.success('Invite sent')
+      } else {
+        let data: any = null
+        try { data = await res.json() } catch {}
+        console.warn('send-invite failed:', data)
+        const detail = data ? ` [${data.status ?? res.status}] ${data.body || data.error || ''} ${data.url ? `-> ${data.url}` : ''}` : ` [${res.status}]`
+        toast.error(`Invite failed${detail}`)
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Network error'
+      toast.error(`Invite failed: ${msg}`)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -29,7 +49,7 @@ export default function InvitePanel({ userCode }: { userCode: string }) {
       </div>
       <div className="mt-3 flex items-center gap-2">
         <input type="email" placeholder="Recipient email" value={email} onChange={e=>setEmail(e.target.value)} className="flex-1 rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white" />
-        <button onClick={send} className="rounded-md border border-amber-400/25 px-3 py-2 text-gray-200 hover:bg-white/5">Send</button>
+        <button onClick={send} disabled={loading} className="rounded-md border border-amber-400/25 px-3 py-2 text-gray-200 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed">{loading ? 'Sending…' : 'Send'}</button>
       </div>
     </div>
   )
