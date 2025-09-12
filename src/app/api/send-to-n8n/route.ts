@@ -3,6 +3,8 @@ import { cookies } from 'next/headers'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+export const runtime = 'nodejs'
+
 // Forward payloads (signup, forms, etc.) to n8n/Vapi webhook. Accepts JSON or form posts.
 export async function POST(req: Request) {
   try {
@@ -29,7 +31,7 @@ export async function POST(req: Request) {
     payload._ts = new Date().toISOString()
 
     // Use env var when set; otherwise fall back to the provided URL
-    const fallback = 'https://fmecorp.app.n8n.cloud/webhook-test/cffb265d-9fc0-44f1-8c2d-28cda8b2b290'
+    const fallback = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
     const url = process.env.VAPI_WEBHOOK_URL || fallback
 
     const res = await fetch(url, {

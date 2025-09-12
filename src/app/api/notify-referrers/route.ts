@@ -14,21 +14,25 @@ export async function POST(req: Request) {
     // level 1
     if (profile.referrer_id) {
       const { data: ref1 } = await supabaseAdmin.from('profiles').select('email, first_name, referrer_id').eq('id', profile.referrer_id).maybeSingle()
+
+      const fallback = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
+      const url = process.env.VAPI_WEBHOOK_URL || fallback
+
       if (ref1?.email) {
-        await fetch(process.env.VAPI_WEBHOOK_URL!, {
+        await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ event: 'referral_level1', to: ref1.email, subject: 'New referral joined', userName: `${profile.first_name} ${profile.last_name}` })
+          body: JSON.stringify({ event: 'referral_level1', to: ref1.email, subject: 'New referral joined', userName: `${profile.first_name} ${profile.last_name}`, _ts: new Date().toISOString() })
         })
       }
       // level 2
       if (ref1?.referrer_id) {
         const { data: ref2 } = await supabaseAdmin.from('profiles').select('email, first_name').eq('id', ref1.referrer_id).maybeSingle()
         if (ref2?.email) {
-          await fetch(process.env.VAPI_WEBHOOK_URL!, {
+          await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event: 'referral_level2', to: ref2.email, subject: 'Second-level referral joined', userName: `${profile.first_name} ${profile.last_name}` })
+            body: JSON.stringify({ event: 'referral_level2', to: ref2.email, subject: 'Second-level referral joined', userName: `${profile.first_name} ${profile.last_name}`, _ts: new Date().toISOString() })
           })
         }
       }
