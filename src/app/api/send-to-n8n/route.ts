@@ -30,20 +30,23 @@ export async function POST(req: Request) {
     } catch {}
     payload._ts = new Date().toISOString()
 
-    // Use the new webhook as the primary target (ignore env to avoid stale values)
-    const url = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
+    // Use the new webhook as the primary target (GET with query params)
+    const base = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
+    const u = new URL(base)
+    // Flatten known keys and include JSON for anything else
+    if (payload.event) u.searchParams.set('event', String(payload.event))
+    if (payload._user_id) u.searchParams.set('_user_id', String(payload._user_id))
+    if (payload._ts) u.searchParams.set('_ts', String(payload._ts))
+    // Send the whole payload as JSON too for completeness
+    u.searchParams.set('payload', encodeURIComponent(JSON.stringify(payload)))
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+    const res = await fetch(u.toString(), { method: 'GET' })
 
     const text = await res.text().catch(() => '')
     if (!res.ok) {
-      return NextResponse.json({ ok: false, status: res.status, body: text || 'Webhook error', url }, { status: 502 })
+      return NextResponse.json({ ok: false, status: res.status, body: text || 'Webhook error', url: u.toString() }, { status: 502 })
     }
-    return NextResponse.json({ ok: true, status: res.status, body: text, url })
+    return NextResponse.json({ ok: true, status: res.status, body: text, url: u.toString() })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? 'server error' }, { status: 500 })
   }

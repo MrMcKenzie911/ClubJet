@@ -37,28 +37,22 @@ export async function POST(req: Request) {
     } catch {}
 
 
-    // Forward to n8n (new webhook is primary; ignore env to avoid stale values)
-    const url = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
+    // Forward to n8n via GET with query params (per user instruction)
+    const base = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
+    const u = new URL(base)
+    u.searchParams.set('event', 'send_invite')
+    u.searchParams.set('recipientEmail', recipientEmail)
+    u.searchParams.set('inviteUrl', inviteUrl)
+    if (senderNameResolved) u.searchParams.set('senderName', senderNameResolved)
+    if (senderEmail) u.searchParams.set('senderEmail', senderEmail)
+    if (senderReferralCode) u.searchParams.set('senderReferralCode', senderReferralCode)
+    if (senderUserId) u.searchParams.set('senderUserId', senderUserId)
+    u.searchParams.set('_ts', new Date().toISOString())
 
-    const payload = {
-      event: 'send_invite',
-      recipientEmail,
-      inviteUrl,
-      senderName: senderNameResolved,
-      senderEmail,
-      senderReferralCode,
-      senderUserId,
-      _ts: new Date().toISOString(),
-    }
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    const text = await res.text().catch(()=>'')
-    if (!res.ok) return NextResponse.json({ ok: false, status: res.status, body: text, url }, { status: 502 })
-    return NextResponse.json({ ok: true, url })
+    const res = await fetch(u.toString(), { method: 'GET' })
+    const text = await res.text().catch(()=>'' )
+    if (!res.ok) return NextResponse.json({ ok: false, status: res.status, body: text, url: u.toString() }, { status: 502 })
+    return NextResponse.json({ ok: true, url: u.toString() })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? 'server error' }, { status: 500 })
   }

@@ -18,21 +18,25 @@ export async function POST(req: Request) {
       const url = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
 
       if (ref1?.email) {
-        await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ event: 'referral_level1', to: ref1.email, subject: 'New referral joined', userName: `${profile.first_name} ${profile.last_name}`, _ts: new Date().toISOString() })
-        })
+        const u1 = new URL(url)
+        u1.searchParams.set('event', 'referral_level1')
+        u1.searchParams.set('to', ref1.email)
+        u1.searchParams.set('subject', 'New referral joined')
+        u1.searchParams.set('userName', `${profile.first_name} ${profile.last_name}`)
+        u1.searchParams.set('_ts', new Date().toISOString())
+        await fetch(u1.toString(), { method: 'GET' })
       }
       // level 2
       if (ref1?.referrer_id) {
         const { data: ref2 } = await supabaseAdmin.from('profiles').select('email, first_name').eq('id', ref1.referrer_id).maybeSingle()
         if (ref2?.email) {
-          await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event: 'referral_level2', to: ref2.email, subject: 'Second-level referral joined', userName: `${profile.first_name} ${profile.last_name}`, _ts: new Date().toISOString() })
-          })
+          const u2 = new URL(url)
+          u2.searchParams.set('event', 'referral_level2')
+          u2.searchParams.set('to', ref2.email)
+          u2.searchParams.set('subject', 'Second-level referral joined')
+          u2.searchParams.set('userName', `${profile.first_name} ${profile.last_name}`)
+          u2.searchParams.set('_ts', new Date().toISOString())
+          await fetch(u2.toString(), { method: 'GET' })
         }
       }
     }
