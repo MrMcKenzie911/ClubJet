@@ -36,7 +36,19 @@ export async function POST(req: Request) {
     // Flatten known keys and include JSON for anything else
     if (payload.event) u.searchParams.set('event', String(payload.event))
     if (payload._user_id) u.searchParams.set('_user_id', String(payload._user_id))
+    if (payload.user_id) u.searchParams.set('user_id', String(payload.user_id))
     if (payload._ts) u.searchParams.set('_ts', String(payload._ts))
+
+    // Special handling for signup: include all signup fields as query params (except password)
+    if (payload.event === 'signup' && payload.payload && typeof payload.payload === 'object') {
+      const formObj = payload.payload as Record<string, unknown>
+      for (const [k, v] of Object.entries(formObj)) {
+        if (k === 'password') continue
+        if (v === undefined || v === null) continue
+        u.searchParams.set(k, String(v))
+      }
+    }
+
     // Send the whole payload as JSON too for completeness
     u.searchParams.set('payload', encodeURIComponent(JSON.stringify(payload)))
 
