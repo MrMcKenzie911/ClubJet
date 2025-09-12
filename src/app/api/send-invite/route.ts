@@ -37,9 +37,8 @@ export async function POST(req: Request) {
     } catch {}
 
 
-    // Forward to n8n (compose full payload the workflow can use)
-    const fallback = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
-    const url = process.env.VAPI_WEBHOOK_URL || fallback
+    // Forward to n8n (new webhook is primary; ignore env to avoid stale values)
+    const url = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
 
     const payload = {
       event: 'send_invite',
@@ -58,8 +57,8 @@ export async function POST(req: Request) {
       body: JSON.stringify(payload)
     })
     const text = await res.text().catch(()=>'')
-    if (!res.ok) return NextResponse.json({ ok: false, status: res.status, body: text }, { status: 502 })
-    return NextResponse.json({ ok: true })
+    if (!res.ok) return NextResponse.json({ ok: false, status: res.status, body: text, url }, { status: 502 })
+    return NextResponse.json({ ok: true, url })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? 'server error' }, { status: 500 })
   }

@@ -30,9 +30,8 @@ export async function POST(req: Request) {
     } catch {}
     payload._ts = new Date().toISOString()
 
-    // Use env var when set; otherwise fall back to the provided URL
-    const fallback = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
-    const url = process.env.VAPI_WEBHOOK_URL || fallback
+    // Use the new webhook as the primary target (ignore env to avoid stale values)
+    const url = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
 
     const res = await fetch(url, {
       method: 'POST',
@@ -42,9 +41,9 @@ export async function POST(req: Request) {
 
     const text = await res.text().catch(() => '')
     if (!res.ok) {
-      return NextResponse.json({ ok: false, status: res.status, body: text || 'Webhook error' }, { status: 502 })
+      return NextResponse.json({ ok: false, status: res.status, body: text || 'Webhook error', url }, { status: 502 })
     }
-    return NextResponse.json({ ok: true, status: res.status, body: text })
+    return NextResponse.json({ ok: true, status: res.status, body: text, url })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? 'server error' }, { status: 500 })
   }
