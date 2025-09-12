@@ -25,7 +25,7 @@ export default function InvitePanel({ userCode }: { userCode: string }) {
       if (res.ok) {
         toast.success('Invite sent')
       } else {
-        let data: any = null
+        let data: { status?: number; body?: string; error?: string; url?: string } | null = null
         try { data = await res.json() } catch {}
         console.warn('send-invite failed:', data)
         const detail = data ? ` [${data.status ?? res.status}] ${data.body || data.error || ''} ${data.url ? `-> ${data.url}` : ''}` : ` [${res.status}]`
