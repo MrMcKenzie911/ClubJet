@@ -166,22 +166,25 @@ export default function UsersManager() {
               <div className="text-gray-400">{u.email}</div>
               <div className="text-gray-300">{(u.accounts?.map((a:any)=> a.type === 'LENDER' ? 'Lender' : 'Network').join(', ')) || '—'}</div>
               <div className="flex justify-end gap-2">
-                <IconButton title="Edit" onClick={(e: any) => { e.stopPropagation?.(); setDrawerUser(u.id) }}>
-                  <span className="material-icons" style={{ fontSize: 16 }}>edit</span>
-                </IconButton>
-                <IconButton title="Delete" onClick={async (e: any) => {
-                  e.stopPropagation?.()
-                  if (!confirm('Delete this user?')) return
-                  const res = await fetch(`/api/admin/users?id=${u.id}`, { method: 'DELETE' })
-                  if (res.ok) {
-                    await fetchRows()
-                  } else {
-                    const j = await res.json().catch(()=>({}))
-                    setError(j.error ?? 'Failed to delete user')
-                  }
-                }}>
-                  <span className="material-icons" style={{ fontSize: 16 }}>delete</span>
-                </IconButton>
+                <span onClick={(e)=> e.stopPropagation()}>
+                  <IconButton title="Edit" onClick={() => { setDrawerUser(u.id) }}>
+                    <span className="material-icons" style={{ fontSize: 16 }}>edit</span>
+                  </IconButton>
+                </span>
+                <span onClick={(e)=> e.stopPropagation()}>
+                  <IconButton title="Delete" onClick={async () => {
+                    if (!confirm('Delete this user?')) return
+                    const res = await fetch(`/api/admin/users?id=${u.id}`, { method: 'DELETE' })
+                    if (res.ok) {
+                      await fetchRows()
+                    } else {
+                      const j = await res.json().catch(()=>({}))
+                      setError(j.error ?? 'Failed to delete user')
+                    }
+                  }}>
+                    <span className="material-icons" style={{ fontSize: 16 }}>delete</span>
+                  </IconButton>
+                </span>
               </div>
             </div>
         ))}
