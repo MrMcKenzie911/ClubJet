@@ -166,10 +166,11 @@ export default function UsersManager() {
               <div className="text-gray-400">{u.email}</div>
               <div className="text-gray-300">{(u.accounts?.map((a:any)=> a.type === 'LENDER' ? 'Lender' : 'Network').join(', ')) || '—'}</div>
               <div className="flex justify-end gap-2">
-                <IconButton title="Edit" onClick={() => setEditing({ ...u })}>
+                <IconButton title="Edit" onClick={(e: any) => { e.stopPropagation?.(); setDrawerUser(u.id) }}>
                   <span className="material-icons" style={{ fontSize: 16 }}>edit</span>
                 </IconButton>
-                <IconButton title="Delete" onClick={async () => {
+                <IconButton title="Delete" onClick={async (e: any) => {
+                  e.stopPropagation?.()
                   if (!confirm('Delete this user?')) return
                   const res = await fetch(`/api/admin/users?id=${u.id}`, { method: 'DELETE' })
                   if (res.ok) {
@@ -188,10 +189,10 @@ export default function UsersManager() {
       </div>
 
 
-      {editing && (
+      {editing && !editing.id && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <div className="w-full max-w-md rounded-xl border border-gray-700 bg-gray-900 p-4 space-y-3">
-            <h3 className="text-white font-semibold">{editing.id ? "Edit User" : "Add User"}</h3>
+            <h3 className="text-white font-semibold">Add User</h3>
             <input className="w-full rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" placeholder="First Name" value={editing.first_name}
               onChange={(e) => setEditing({ ...editing, first_name: e.target.value })} />
             <input className="w-full rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" placeholder="Last Name" value={editing.last_name}
@@ -206,11 +207,7 @@ export default function UsersManager() {
             </select>
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setEditing(null)} className="rounded bg-gray-700 hover:bg-gray-600 px-3 py-1">Cancel</button>
-              {editing.id ? (
-                <button onClick={saveUser} className="rounded bg-amber-500 hover:bg-amber-400 text-black px-3 py-1">Save</button>
-              ) : (
-                <button onClick={createUser} className="rounded bg-amber-500 hover:bg-amber-400 text-black px-3 py-1">Create</button>
-              )}
+              <button onClick={createUser} className="rounded bg-amber-500 hover:bg-amber-400 text-black px-3 py-1">Create</button>
             </div>
           </div>
         </div>

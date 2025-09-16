@@ -94,18 +94,54 @@ export default function UserDrawer({ userId, onClose }: { userId: string; onClos
               <div className="text-sm text-gray-400 mb-2">Accounts</div>
               <div className="space-y-2">
                 {accounts.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between rounded border border-gray-800 bg-black/20 px-3 py-2">
-                    <div className="font-medium text-white flex items-center gap-2">
-                      {a.type}
-                      {a.type === 'LENDER' && <span className="text-[11px] px-2 py-0.5 rounded-full border border-amber-500 text-amber-400">Fixed: 1% / 1 1/8 / 1.25%</span>}
-                      {a.type === 'NETWORK' && <span className="text-[11px] px-2 py-0.5 rounded-full border border-blue-500 text-blue-300">50% of Gross Monthly Return</span>}
+                  <div key={a.id} className="rounded border border-gray-800 bg-black/20">
+                    <div className="flex items-center justify-between px-3 py-2">
+                      <div className="font-medium text-white flex items-center gap-2">
+                        {a.type}
+                        {a.type === 'LENDER' && <span className="text-[11px] px-2 py-0.5 rounded-full border border-amber-500 text-amber-400">Fixed: 1% / 1 1/8 / 1.25%</span>}
+                        {a.type === 'NETWORK' && <span className="text-[11px] px-2 py-0.5 rounded-full border border-blue-500 text-blue-300">50% of Gross Monthly Return</span>}
+                      </div>
+                      <div className="text-amber-300 font-semibold">${Number(a.balance ?? 0).toLocaleString()}</div>
                     </div>
-                    <div className="text-amber-300 font-semibold">${Number(a.balance ?? 0).toLocaleString()}</div>
                     {a.type === 'LENDER' && (() => { const m = getMatchedBand(a.balance, bands); return (
-                      <div className="text-xs text-gray-400">
+                      <div className="px-3 pb-2 text-xs text-gray-400">
                         Suggested Band: {suggestBand(a.balance, bands)} {m ? `• ${m.rate_percent}% • ${m.duration_months} months` : ''}
                       </div>
                     ); })()}
+                    <form
+                      className="border-t border-gray-800 px-3 py-2 grid grid-cols-2 gap-2"
+                      onSubmit={async (e) => {
+                        e.preventDefault()
+                        const f = e.currentTarget as HTMLFormElement
+                        const balStr = (f.elements.namedItem('balance') as HTMLInputElement)?.value
+                        const payoutStr = (f.elements.namedItem('monthly_payout') as HTMLInputElement)?.value
+                        try {
+                          const payload: Record<string, unknown> = { account_id: a.id }
+                          if (balStr !== '' && balStr != null) payload.balance = Number(balStr)
+                          if (payoutStr !== '' && payoutStr != null) payload.monthly_payout = Number(payoutStr)
+                          const res = await fetch('/api/admin/accounts/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+                          const j = await res.json().catch(() => ({}))
+                          if (!res.ok) throw new Error(j.error || 'Update failed')
+                          toast.success('Account updated')
+                          // reload accounts
+                          const { data: a2 } = await supabase.from('accounts').select('*').eq('user_id', userId)
+                          setAccounts(a2 ?? [])
+                        } catch (err: unknown) {
+                          const msg = err instanceof Error ? err.message : 'Update failed'
+                          toast.error(msg)
+                        }
+                      }}
+                    >
+                      <label className="text-xs text-gray-400">Balance
+                        <input name="balance" defaultValue={Number(a.balance ?? 0)} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" type="number" step="0.01" />
+                      </label>
+                      <label className="text-xs text-gray-400">Monthly Commission Payout
+                        <input name="monthly_payout" defaultValue={Number(a.reserved_amount ?? 0)} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" type="number" step="0.01" />
+                      </label>
+                      <div className="col-span-2 flex justify-end">
+                        <button className="rounded bg-amber-500 hover:bg-amber-400 text-black px-3 py-1 text-sm">Save</button>
+                      </div>
+                    </form>
                   </div>
                 ))}
             <div className="rounded border border-gray-800 p-3">

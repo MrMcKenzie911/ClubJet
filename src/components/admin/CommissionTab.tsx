@@ -90,11 +90,13 @@ export default function CommissionTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bonusPct, bnePct, slushPct })
       })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.error || "Save failed")
+      const dataUnknown = await res.json().catch(() => ({})) as unknown
+      const data = (dataUnknown && typeof dataUnknown === 'object') ? dataUnknown as { error?: unknown } : {}
+      if (!res.ok) throw new Error(typeof data.error === 'string' ? data.error : "Save failed")
       toast.success("Founding member allocations saved")
-    } catch (e: any) {
-      toast.error(e?.message || "Save failed")
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Save failed'
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
