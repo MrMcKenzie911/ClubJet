@@ -519,8 +519,19 @@ export async function decideWithdrawal(formData: FormData) {
   const decision = String(formData.get('decision'))
   try {
     if (decision === 'approve') {
-      const schedule = nextReleaseDate(new Date())
-      await supabaseAdmin.from('withdrawal_requests').update({ status: 'approved', scheduled_release_at: schedule }).eq('id', wrId)
+      // Mark approved and schedule, then immediately decrement the account balance
+      const { data: wr, error: wrErr } = await supabaseAdmin.from('withdrawal_requests').select('*').eq('id', wrId).maybeSingle()
+      if (wrErr) throw wrErr
+      if (wr) {
+        const schedule = nextReleaseDate(new Date())
+        await supabaseAdmin.from('withdrawal_requests').update({ status: 'approved', scheduled_release_at: schedule }).eq('id', wrId)
+        const { data: acct, error: acctErr } = await supabaseAdmin.from('accounts').select('id, balance').eq('id', wr.account_id).maybeSingle()
+        if (acctErr) throw acctErr
+        if (acct) {
+          const newBal = Math.max(0, Number(acct.balance || 0) - Number(wr.amount || 0))
+          await supabaseAdmin.from('accounts').update({ balance: newBal }).eq('id', acct.id)
+        }
+      }
       try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}
       redirect('/admin?toast=withdrawal_approved')
     } else if (decision === 'deny') {
