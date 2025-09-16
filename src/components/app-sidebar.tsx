@@ -202,6 +202,9 @@ export function AppSidebar({ role = "user", ...props }: { role?: SidebarRole } &
                 <Link href="/admin?tab=payment-methods" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
                   <IconCreditCard className="h-4 w-4" /> <span>Payment Methods</span>
                 </Link>
+                <Link href="/admin?tab=commission" className="block rounded-lg px-3 py-2 hover:bg-sidebar-accent flex items-center gap-3">
+                  <IconCurrencyDollar className="h-4 w-4" /> <span>Commission</span>
+                </Link>
               </div>
             )}
 

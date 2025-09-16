@@ -15,6 +15,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { revalidatePath } from 'next/cache'
+import CommissionTab from '@/components/admin/CommissionTab'
 
 
 
@@ -253,6 +254,15 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
                 <li key={r.id}>{r.account_type} • {r.fixed_rate_monthly ?? 'n/a'}% • from {r.effective_from}</li>
               ))}
             </ul>
+          </div>
+        </section>
+      )}
+
+      {tab === 'commission' && (
+        <section className="mt-6">
+          <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-4">
+            <h2 className="text-white font-semibold mb-3">Commission</h2>
+            <CommissionTab />
           </div>
         </section>
       )}
