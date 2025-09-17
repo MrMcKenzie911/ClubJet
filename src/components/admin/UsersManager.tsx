@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import dynamic from "next/dynamic";
 const UserDrawer = dynamic(() => import('./UserDrawer'), { ssr: false });
 
-function IconButton({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
+function IconButton({ title, onClick, children }: { title: string; onClick: () => void; children: ReactNode }) {
   return (
     <button title={title} onClick={onClick} className="inline-flex items-center justify-center rounded-md border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-200 w-8 h-8">
       {children}
@@ -49,24 +49,6 @@ export default function UsersManager() {
 
   const [editing, setEditing] = useState<any | null>(null);
 
-  async function saveUser() {
-    if (!editing) return;
-    const { id, first_name, last_name, email, role } = editing;
-    try {
-      const res = await fetch('/api/admin/users', {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, first_name, last_name, email, role })
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(()=>({}));
-        setError(j.error ?? 'Failed to save user');
-      }
-    } catch (e: any) {
-      setError(e?.message || 'Failed to save user');
-    }
-    setEditing(null);
-    await fetchRows();
-  }
 
 
   async function addUser() {
