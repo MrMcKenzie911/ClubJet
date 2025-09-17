@@ -70,9 +70,9 @@ export default function CommissionTab() {
 
     return {
       ...standard,
-      bonus: +(bonus * scale).toFixed(2),
-      bneAdj: +(bneAdj * scale).toFixed(2),
-      slushAdj: +(slushAdj * scale).toFixed(2),
+      bonus: Number((bonus * scale).toFixed(2)),
+      bneAdj: Number((bneAdj * scale).toFixed(2)),
+      slushAdj: Number((slushAdj * scale).toFixed(2))
     }
   }, [balance, grossRate, fixedRate, hasRef2, isFounding, bonusPct, bnePct, slushPct])
 
