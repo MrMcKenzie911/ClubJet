@@ -66,10 +66,11 @@ async function getAdminData() {
 
   return { user, pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [], profilesAll: profilesAll ?? [], verifiedAccounts: verifiedAccounts ?? [], monthTx: monthTx ?? [] }
 }
-export default async function AdminPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
+export default async function AdminPage({ searchParams }: { searchParams?: Promise<any> }) {
   const res = await getAdminData()
   if ('redirect' in res) redirect('/login')
-  const tabParam = searchParams?.tab
+  const sp = searchParams ? await searchParams : undefined
+  const tabParam = sp?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
 
   const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts, monthTx } = res
