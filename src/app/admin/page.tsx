@@ -66,7 +66,7 @@ async function getAdminData() {
 
   return { user, pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [], profilesAll: profilesAll ?? [], verifiedAccounts: verifiedAccounts ?? [], monthTx: monthTx ?? [] }
 }
-export default async function AdminPage({ searchParams }: { searchParams?: Promise<any> }) {
+export default async function AdminPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const res = await getAdminData()
   if ('redirect' in res) redirect('/login')
   const sp = searchParams ? await searchParams : undefined

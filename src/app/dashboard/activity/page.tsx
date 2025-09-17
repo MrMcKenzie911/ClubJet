@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 type Tx = { id: string; type: string; amount: number; created_at: string; reference: string | null; account_id: string; status: string | null }
 
-export default async function ActivityPage({ searchParams }: { searchParams?: Promise<any> }) {
+export default async function ActivityPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const supabase = getSupabaseServer()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return (<div className="p-6 text-white">Please log in.</div>)

@@ -21,7 +21,7 @@ import ToastFromQuery from '@/components/ToastFromQuery'
 
 import { redirect } from "next/navigation"
 
-export default async function Page({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
+export default async function Page({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const supabase = getSupabaseServer()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
@@ -74,7 +74,8 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
   const initialBalance = userAccounts.reduce((s, a) => s + Number(a.initial_balance ?? 0), 0)
   const startDateISO = (userAccounts[0]?.verified_at as string) || (userAccounts[0]?.start_date as string) || new Date().toISOString().slice(0,10)
   const referralCode = await ensureUserReferralCode(user.id)
-  const tabParam = searchParams?.tab
+  const sp = searchParams ? await searchParams : undefined
+  const tabParam = sp?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
   if (tab === 'transactions') redirect('/dashboard/activity')
 
