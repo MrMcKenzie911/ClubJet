@@ -8,6 +8,12 @@ function currency(n: number) {
   return `$${(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
+
+// Types for admin user listing and referrals
+type UserAccount = { id: string; type: 'LENDER' | 'NETWORK'; balance?: number | null }
+type AdminListUser = { id: string; email: string; first_name?: string | null; last_name?: string | null; is_founding_member?: boolean | null; accounts?: UserAccount[] }
+type LevelsResp = { levels?: Array<{ level: number; users: Array<{ id: string }> }> }
+
 export default function CommissionTab() {
   const [loading, setLoading] = useState(false)
   const [balance, setBalance] = useState<number>(100000)
@@ -257,7 +263,7 @@ type SelectionProps = {
 }
 
 function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals }: SelectionProps) {
-  const [users, setUsers] = useState<any[]>([])
+  const [users, setUsers] = useState<AdminListUser[]>([])
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState<{ userId: string; firstName: string; accountId: string|null } | null>(null)
 
@@ -278,7 +284,7 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
     return () => { cancelled = true }
   }, [])
 
-  async function onSelect(u: any) {
+  async function onSelect(u: AdminListUser) {
     const primary = pickPrimaryAccount((u.accounts||[]) as {id:string; type:string; balance:number}[])
     setIsFounding(Boolean(u.is_founding_member))
     setBalance(Number(primary?.balance || 0))
@@ -287,16 +293,16 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
     try {
       const resp = await fetch(`/api/admin/referrals/all-levels?userId=${encodeURIComponent(u.id)}&maxDepth=2`)
       if (resp.ok) {
-        const data = await resp.json()
-        const l2 = Array.isArray(data?.levels) ? (data.levels.find((x:any)=>x.level===2)?.users || []) : []
-        setHasRef2((l2?.length||0) > 0)
+        const data = await resp.json().catch(() => ({})) as LevelsResp
+        const l2 = Array.isArray(data.levels) ? (data.levels.find((x) => x.level === 2)?.users || []) : []
+        setHasRef2((l2?.length || 0) > 0)
       }
     } catch {}
   }
 
   async function setPayoutNow() {
     if (!selected?.accountId) { toast.error('Select a user with an account'); return }
-    const payout = Number(isNaN(totals.member) ? 0 : totals.member) + Number(isNaN((totals as any).bonus) ? 0 : (totals as any).bonus || 0)
+    const payout = Number(isNaN(totals.member) ? 0 : totals.member) + Number(isNaN(totals.bonus ?? 0) ? 0 : (totals.bonus ?? 0))
     try {
       const res = await fetch('/api/admin/accounts/update', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -307,7 +313,7 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
         throw new Error(j.error || 'Failed to set payout')
       }
       toast.success(`Set ${selected.firstName}'s payout: $${payout.toLocaleString()}`)
-    } catch (e:any) {
+    } catch (e: unknown) {
       toast.error(e?.message || 'Failed to set payout')
     }
   }
@@ -333,9 +339,10 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
             {loading && (
               <tr><td className="px-3 py-3 text-gray-400" colSpan={5}>Loading...</td></tr>
             )}
-            {!loading && users.map((u:any) => {
-              const primary = pickPrimaryAccount((u.accounts||[]) as any[])
-              const types = (u.accounts||[]).map((a:any)=> a.type === 'LENDER' ? 'Lender' : 'Network').join(', ')
+            {!loading && users.map((u: AdminListUser) => {
+              const accounts = (u.accounts || []).map(a => ({ id: a.id, type: a.type, balance: Number(a.balance || 0) }))
+              const primary = pickPrimaryAccount(accounts)
+              const types = (u.accounts || []).map((a: UserAccount) => a.type === 'LENDER' ? 'Lender' : 'Network').join(', ')
               const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || '—'
               return (
                 <tr key={u.id} className="hover:bg-[#0F141B]">
