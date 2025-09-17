@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 type Tx = { id: string; type: string; amount: number; created_at: string; reference: string | null; account_id: string; status: string | null }
 
-export default async function ActivityPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
+export default async function ActivityPage({ searchParams }: { searchParams?: Promise<any> }) {
   const supabase = getSupabaseServer()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return (<div className="p-6 text-white">Please log in.</div>)
@@ -22,11 +22,12 @@ export default async function ActivityPage({ searchParams }: { searchParams?: { 
   const inviteLink = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/?ref=${user.id}`
 
   // Read filters from URL
-  const from = Array.isArray(searchParams?.from) ? searchParams?.from[0] : searchParams?.from
-  const to = Array.isArray(searchParams?.to) ? searchParams?.to[0] : searchParams?.to
-  const type = Array.isArray(searchParams?.type) ? searchParams?.type[0] : searchParams?.type
-  const limitStr = Array.isArray(searchParams?.limit) ? searchParams?.limit[0] : searchParams?.limit
-  const pageStr = Array.isArray(searchParams?.page) ? searchParams?.page[0] : searchParams?.page
+  const sp = searchParams ? await searchParams : undefined
+  const from = Array.isArray(sp?.from) ? sp?.from[0] : sp?.from
+  const to = Array.isArray(sp?.to) ? sp?.to[0] : sp?.to
+  const type = Array.isArray(sp?.type) ? sp?.type[0] : sp?.type
+  const limitStr = Array.isArray(sp?.limit) ? sp?.limit[0] : sp?.limit
+  const pageStr = Array.isArray(sp?.page) ? sp?.page[0] : sp?.page
   const limit = Math.min(Math.max(parseInt(limitStr || '10', 10), 1), 100)
   const page = Math.max(parseInt(pageStr || '1', 10), 1)
   const offset = (page - 1) * limit
