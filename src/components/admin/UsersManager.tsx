@@ -128,11 +128,12 @@ export default function UsersManager() {
 
       {/* Verified Users Table */}
       <div className="mt-4 rounded-2xl border border-gray-800 overflow-hidden">
-        <div className="bg-[#121821] px-4 py-3 text-gray-300 font-medium grid grid-cols-4">
+        <div className="bg-[#121821] px-4 py-3 text-gray-300 font-medium grid grid-cols-5">
           <div>First Name</div>
           <div>Last Name</div>
           <div>Email</div>
           <div>Account Type</div>
+          <div className="text-right">Balance</div>
         </div>
         <div className="divide-y divide-gray-800">
           {loading && <div className="p-4 text-sm text-gray-400">Loading...</div>}
@@ -159,35 +160,38 @@ export default function UsersManager() {
             const bn = `${b.first_name} ${b.last_name}`.trim()
             return an.localeCompare(bn)
           })
-          .map((u) => (
-            <div key={u.id} className="grid grid-cols-5 items-center px-4 py-4 hover:bg-[#0F141B] gap-2 cursor-pointer" onClick={() => setDrawerUser(u.id)}>
-              <div className="text-gray-200">{u.first_name || '—'}</div>
-              <div className="text-gray-200">{u.last_name || '—'}</div>
-              <div className="text-gray-400">{u.email}</div>
-              <div className="text-gray-300">{(u.accounts?.map((a:any)=> a.type === 'LENDER' ? 'Lender' : 'Network').join(', ')) || '—'}</div>
-              <div className="flex justify-end gap-2">
-                <span onClick={(e)=> e.stopPropagation()}>
-                  <IconButton title="Edit" onClick={() => { setDrawerUser(u.id) }}>
-                    <span className="material-icons" style={{ fontSize: 16 }}>edit</span>
-                  </IconButton>
-                </span>
-                <span onClick={(e)=> e.stopPropagation()}>
-                  <IconButton title="Delete" onClick={async () => {
-                    if (!confirm('Delete this user?')) return
-                    const res = await fetch(`/api/admin/users?id=${u.id}`, { method: 'DELETE' })
-                    if (res.ok) {
-                      await fetchRows()
-                    } else {
-                      const j = await res.json().catch(()=>({}))
-                      setError(j.error ?? 'Failed to delete user')
-                    }
-                  }}>
-                    <span className="material-icons" style={{ fontSize: 16 }}>delete</span>
-                  </IconButton>
-                </span>
+          .map((u) => {
+            const totalBalance = (u.accounts ?? []).reduce((s:number,a:any)=> s + Number(a.balance ?? 0), 0)
+            return (
+              <div key={u.id} className="grid grid-cols-6 items-center px-4 py-4 hover:bg-[#0F141B] gap-2 cursor-pointer" onClick={() => setDrawerUser(u.id)}>
+                <div className="text-gray-200">{u.first_name || '—'}</div>
+                <div className="text-gray-200">{u.last_name || '—'}</div>
+                <div className="text-gray-400">{u.email}</div>
+                <div className="text-gray-300">{(u.accounts?.map((a:any)=> a.type === 'LENDER' ? 'Lender' : 'Network').join(', ')) || '—'}</div>
+                <div className="text-right text-amber-300 font-medium">{`$${Number(totalBalance).toLocaleString()}`}</div>
+                <div className="flex justify-end gap-2">
+                  <span onClick={(e)=> e.stopPropagation()}>
+                    <IconButton title="Edit" onClick={() => { setDrawerUser(u.id) }}>
+                      <span className="material-icons" style={{ fontSize: 16 }}>edit</span>
+                    </IconButton>
+                  </span>
+                  <span onClick={(e)=> e.stopPropagation()}>
+                    <IconButton title="Delete" onClick={async () => {
+                      if (!confirm('Delete this user?')) return
+                      const res = await fetch(`/api/admin/users?id=${u.id}`, { method: 'DELETE' })
+                      if (res.ok) {
+                        await fetchRows()
+                      } else {
+                        const j = await res.json().catch(()=>({}))
+                        setError(j.error ?? 'Failed to delete user')
+                      }
+                    }}>
+                      <span className="material-icons" style={{ fontSize: 16 }}>delete</span>
+                    </IconButton>
+                  </span>
+                </div>
               </div>
-            </div>
-        ))}
+          )})}
       </div>
       </div>
 

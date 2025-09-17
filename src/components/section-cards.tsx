@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-export function SectionCards({ totalAUM, newSignups, monthlyProfits, referralPayoutPct }: { totalAUM: number; newSignups: number; monthlyProfits: number; referralPayoutPct: number }) {
+export function SectionCards({ totalAUM, newSignups, monthlyProfits, referralPayoutPct, rateAppliedPct }: { totalAUM: number; newSignups: number; monthlyProfits: number; referralPayoutPct: number; rateAppliedPct?: number }) {
   const pct = (n: number) => `${n.toFixed(1)}%`
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
@@ -23,8 +23,7 @@ export function SectionCards({ totalAUM, newSignups, monthlyProfits, referralPay
           <CardAction>
             <Badge variant="outline">
               <IconTrendingUp />
-              {/* Trend placeholder until we compute deltas */}
-              +0.0%
+              {typeof rateAppliedPct === 'number' && isFinite(rateAppliedPct) ? `+${rateAppliedPct.toFixed(1)}%` : '+0.0%'}
             </Badge>
           </CardAction>
         </CardHeader>

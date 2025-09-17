@@ -40,6 +40,20 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
     .eq('user_id', user.id)
     .order('created_at', { ascending: true })
 
+  // Latest applied earnings rate for user's primary account type (for KPI badge)
+  const primaryType = (accounts ?? [])[0]?.type as string | undefined
+  let rateAppliedPct = 0
+  if (primaryType) {
+    const { data: latestRate } = await supabase
+      .from('earnings_rates')
+      .select('fixed_rate_monthly, account_type, effective_from')
+      .eq('account_type', primaryType)
+      .order('effective_from', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    rateAppliedPct = Number(latestRate?.fixed_rate_monthly || 0)
+  }
+
   // Direct referrals (for new signups line)
   const { data: l1 } = await supabase
     .from('profiles')
@@ -128,7 +142,7 @@ export default async function Page({ searchParams }: { searchParams?: { [key: st
 
                 {(!tab || tab === 'dashboard') && (
                   <>
-                    <SectionCards totalAUM={(accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)} newSignups={(l1 ?? []).filter(s=>{ const d=s.created_at? new Date(s.created_at):null; const now=new Date(); return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(txs||[]).filter(t=>t.type==='INTEREST').filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0)} referralPayoutPct={(function(){ const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }); const comm=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=> s+Number(t.amount||0),0); const int=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100 : 0; })()} />
+                    <SectionCards totalAUM={(accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)} newSignups={(l1 ?? []).filter(s=>{ const d=s.created_at? new Date(s.created_at):null; const now=new Date(); return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(txs||[]).filter(t=>t.type==='INTEREST').filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0)} referralPayoutPct={(function(){ const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }); const comm=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=> s+Number(t.amount||0),0); const int=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100 : 0; })()} rateAppliedPct={rateAppliedPct} />
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2">
                         <UserPortfolioSignupsChart startDateISO={startDateISO} signups={l1 ?? []} txs={txs} />

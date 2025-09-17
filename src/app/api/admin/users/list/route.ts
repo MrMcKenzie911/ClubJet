@@ -15,7 +15,7 @@ export async function GET() {
 
     const { data: profiles, error: pErr } = await supabaseAdmin
       .from('profiles')
-      .select('id, first_name, last_name, email, role, created_at')
+      .select('id, first_name, last_name, email, role, created_at, is_founding_member')
       .order('created_at', { ascending: false })
     if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 })
 

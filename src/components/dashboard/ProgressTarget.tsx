@@ -41,8 +41,8 @@ export default function ProgressTarget({ initialBalance, startDateISO, monthlyTa
   return (
     <div className="rounded-xl border border-gray-800 bg-gray-900 p-4">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="font-semibold text-white">Monthly Target {monthlyTargetPct.toFixed(2)}%</h3>
-        <span className="text-xs text-gray-400">30-day cycle</span>
+        <h3 className="font-semibold text-white">Monthly Target</h3>
+        <span className="text-xs rounded-full border border-emerald-600/60 bg-emerald-600/10 px-2 py-0.5 text-emerald-300">+{monthlyTargetPct.toFixed(1)}%</span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded bg-gray-800">
         <div className="h-2 bg-emerald-500" style={{ width: `${progressPct.toFixed(2)}%` }} />

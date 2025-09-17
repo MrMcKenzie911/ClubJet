@@ -95,7 +95,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
 
                 {!tab && (
                   <>
-                    <SectionCards totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)} newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{ const d=p.created_at? new Date(p.created_at):null; const now=new Date(); return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0)} referralPayoutPct={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100:0 })()} />
+                    <SectionCards totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)} newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{ const d=p.created_at? new Date(p.created_at):null; const now=new Date(); return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0)} referralPayoutPct={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100:0 })()} rateAppliedPct={Number((rates?.[0] as any)?.fixed_rate_monthly ?? 0)} />
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2 space-y-6">
@@ -548,9 +548,34 @@ export async function decideWithdrawal(formData: FormData) {
 export async function setRate(formData: FormData) {
   'use server'
   const account_type = String(formData.get('account_type'))
-  const fixed_rate_monthly = Number(formData.get('fixed_rate_monthly')) || null
+  const fixed_rate_monthly_raw = String(formData.get('fixed_rate_monthly') ?? '')
+  const fixed_rate_monthly = Number(fixed_rate_monthly_raw)
   try {
+    if (!account_type || !isFinite(fixed_rate_monthly)) {
+      redirect('/admin?toast=error')
+      return
+    }
+    // 1) Record the new rate
     await supabaseAdmin.from('earnings_rates').insert({ account_type, fixed_rate_monthly, effective_from: new Date().toISOString().slice(0, 10) })
+
+    // 2) Immediately apply interest to all verified accounts of this type
+    const { data: accts } = await supabaseAdmin
+      .from('accounts')
+      .select('id, balance')
+      .eq('type', account_type)
+      .not('verified_at','is', null)
+
+    const pct = fixed_rate_monthly / 100
+    const nowIso = new Date().toISOString()
+    for (const a of (accts || []) as { id: string; balance: number|null }[]) {
+      const bal = Number(a.balance || 0)
+      const delta = +(bal * pct).toFixed(2)
+      if (delta <= 0) continue
+      await supabaseAdmin.from('transactions').insert({ account_id: a.id, type: 'INTEREST', amount: delta, status: 'posted', created_at: nowIso, memo: `Monthly interest ${fixed_rate_monthly}%` })
+      await supabaseAdmin.from('accounts').update({ balance: bal + delta }).eq('id', a.id)
+    }
+
+    try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}
     redirect('/admin?toast=rate_set')
   } catch (e) {
     console.error('setRate failed', e)
