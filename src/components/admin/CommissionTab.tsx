@@ -238,6 +238,8 @@ export default function CommissionTab() {
       <UserSelection balance={balance} setBalance={setBalance} setIsFounding={setIsFounding} setHasRef2={setHasRef2} totals={totals} />
     </div>
   )
+}
+
 
 
 function pickPrimaryAccount(accounts: { id: string; type: string; balance: number }[]): { id: string; type: string; balance: number } | null {
