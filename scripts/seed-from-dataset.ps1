@@ -1,34 +1,16 @@
 $ErrorActionPreference = "Stop"
-$datasetPath = "clubjet-app/Club Aereus Real Client Data Set.txt"
+$datasetPath = "scripts/seed-clubjet-payload.json"
 if (!(Test-Path $datasetPath)) {
   Write-Error "Dataset file not found: $datasetPath"
 }
 
-# Read and parse JSON
-$jsonText = Get-Content -Raw -Path $datasetPath
-# Strip any header text before the first JSON brace
-$startIdx = $jsonText.IndexOf('{')
-if ($startIdx -lt 0) { Write-Error "Could not find JSON in dataset file." }
-$jsonOnly = $jsonText.Substring($startIdx)
-$json = $jsonOnly | ConvertFrom-Json
+# Read and parse JSON (already well-formed)
+$json = Get-Content -Raw -Path $datasetPath | ConvertFrom-Json
 
-$records = @()
-foreach ($c in $json.clients) {
-  $stream = if ($c.stream_type -match 'Lender') { 'Lender' } elseif ($c.stream_type -match 'Network') { 'Network' } elseif ($c.stream_type -match 'Pilot') { 'Pilot' } else { 'Network' }
-  $rec = [ordered]@{
-    name         = $c.name
-    phone        = $c.phone
-    email        = $c.email
-    pin          = $c.password
-    investment   = [int]$c.investment
-    stream       = $stream
-    referrerCode = $(if ($c.referrer_code) { $c.referrer_code } else { $null })
-    ownCode      = $c.own_code
-    joinDate     = $c.join_date
-    status       = $c.status
-    level        = $c.level
-  }
-  $records += $rec
+# Use the provided records directly
+$records = $json.records
+if ($null -eq $records -or $records.Count -eq 0) {
+  Write-Error "No records found in $datasetPath"
 }
 
 $bodyObj = @{ records = $records }

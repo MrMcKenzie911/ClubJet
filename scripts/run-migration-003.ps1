@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 Write-Host "Running migration 003 on Supabase..."
-$envPath = "clubjet-app/.env.local"
+$envPath = ".env.local"
 if (!(Test-Path $envPath)) { throw ".env.local not found at $envPath" }
 
 # Parse env quickly
@@ -22,7 +22,7 @@ if (-not $proj -or $proj -eq '') {
 }
 if (-not $proj -or -not $pat) { throw "Missing SUPABASE_PROJECT_REF or SUPABASE_MGMT_PAT in env" }
 
-$sql = Get-Content -Raw -Path "clubjet-app/db/migrations/003_add_missing_columns_and_backfill.sql"
+$sql = Get-Content -Raw -Path "supabase/legacy_migrations/003_add_missing_columns_and_backfill.sql"
 
 # Use Supabase Management API to run a SQL query on the project
 $payload = '{ "query": ' + (ConvertTo-Json $sql -Compress) + ' }'

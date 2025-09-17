@@ -32,28 +32,51 @@ function deriveNames(fullName) {
 }
 
 async function main() {
-  const datasetArg = process.argv[2] || 'clubjet-app/Club Aereus Real Client Data Set.txt'
-  const envPath = 'clubjet-app/.env.local'
+  const datasetArg = process.argv[2] || 'scripts/seed-clubjet-payload.json'
+  const envPath = '.env.local'
 
   if (!fs.existsSync(datasetArg)) throw new Error('Dataset not found: ' + datasetArg)
-  if (!fs.existsSync(envPath)) throw new Error('Env file not found: ' + envPath)
 
-  // Parse env
-  const env = parseEnvFile(envPath)
-  const url = env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = env.SUPABASE_SERVICE_KEY
+  // Parse env from file if present; otherwise from process.env
+  let url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  let serviceKey = process.env.SUPABASE_SERVICE_KEY
+  if (fs.existsSync(envPath)) {
+    const env = parseEnvFile(envPath)
+    url = url || env.NEXT_PUBLIC_SUPABASE_URL
+    serviceKey = serviceKey || env.SUPABASE_SERVICE_KEY
+  }
   if (!url || !serviceKey) throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_KEY in env')
 
   const supabase = createClient(url, serviceKey)
 
-  // Read dataset JSON (strip header lines before first '{')
+  // Read dataset JSON supporting either {clients:[]} or {records:[]}
   const txt = fs.readFileSync(datasetArg, 'utf8')
-  const braceIdx = txt.indexOf('{')
-  if (braceIdx < 0) throw new Error('Dataset does not contain JSON object')
-  const jsonTxt = txt.slice(braceIdx)
-  const data = JSON.parse(jsonTxt)
-  const clients = data.clients
-  if (!Array.isArray(clients)) throw new Error('Invalid dataset: clients[] missing')
+  let data
+  try {
+    data = JSON.parse(txt)
+  } catch {
+    // fall back: strip any header before first '{'
+    const braceIdx = txt.indexOf('{')
+    if (braceIdx < 0) throw new Error('Dataset does not contain JSON object')
+    data = JSON.parse(txt.slice(braceIdx))
+  }
+  let clients = Array.isArray(data.clients) ? data.clients : null
+  if (!clients && Array.isArray(data.records)) {
+    clients = data.records.map(r => ({
+      name: r.name,
+      phone: r.phone,
+      email: r.email,
+      password: r.pin,
+      investment: r.investment,
+      stream_type: r.stream,
+      level: r.level,
+      status: r.status,
+      referrer_code: r.referrerCode,
+      own_code: r.ownCode,
+      join_date: r.joinDate,
+    }))
+  }
+  if (!Array.isArray(clients)) throw new Error('Invalid dataset: clients[] or records[] missing')
 
   // First pass: create users, profiles, accounts, deposit
   const codeToId = new Map()

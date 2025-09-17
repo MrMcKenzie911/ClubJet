@@ -23,3 +23,17 @@ Notes:
 - Admin sidebar links act as tabs (filtered views for queues and settings)
 - User dashboard is a single large container with inner components (KPIs, chart, quick actions, forms)
 - Build is clean and compiles successfully
+
+## 2025-09-17
+
+- chore(repo): Fully remove duplicate `clubjet-app/` app (legacy scaffold, node_modules, assets) to reduce size and speed up TS/IDE
+- chore(scripts): Repoint scripts off `clubjet-app` paths
+  - seed-from-dataset.ps1 now reads `scripts/seed-clubjet-payload.json`
+  - seed-direct.mjs now defaults to `scripts/seed-clubjet-payload.json`, uses `.env.local` at root or process env, and supports either `{clients:[]}` or `{records:[]}` formats
+  - run-migration-003.ps1 now reads SQL from `supabase/legacy_migrations/003_add_missing_columns_and_backfill.sql` and env from root `.env.local`
+- chore(db): Preserve the 003 backfill SQL in `supabase/legacy_migrations/` for safe replay; no functional change to app runtime
+
+Notes:
+
+- No changes to active app under `src/`.
+- Netlify builds from root remain unchanged; removing `clubjet-app` eliminates duplicate Next.js app and local node_modules.
