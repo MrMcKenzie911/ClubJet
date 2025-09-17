@@ -314,7 +314,8 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
       }
       toast.success(`Set ${selected.firstName}'s payout: $${payout.toLocaleString()}`)
     } catch (e: unknown) {
-      toast.error(e?.message || 'Failed to set payout')
+      const msg = e instanceof Error ? e.message : 'Failed to set payout'
+      toast.error(msg)
     }
   }
 
