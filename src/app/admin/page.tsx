@@ -2,7 +2,6 @@
 
 import { redirect } from 'next/navigation'
 import { getSupabaseServer } from '@/lib/supabaseServer'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { Button } from '@/components/ui/button'
 
 import ToastFromQuery from '@/components/ToastFromQuery'
@@ -14,9 +13,9 @@ import MultiLineChart, { type MultiLineDatum } from '@/components/charts/MultiLi
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { revalidatePath } from 'next/cache'
 import CommissionTab from '@/components/admin/CommissionTab'
-import { setRate } from './actions'
+
+import { setRate, approveUser, approveDeposit, decideWithdrawal } from './actions'
 
 
 async function getAdminData() {
@@ -82,7 +81,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: { [ke
       style={{
         "--sidebar-width": "calc(var(--spacing) * 72)",
         "--header-height": "calc(var(--spacing) * 12)",
-      } as React.CSSProperties}
+      } as any}
     >
       <AppSidebar variant="inset" role="admin" />
       <SidebarInset>
@@ -423,7 +422,9 @@ function UsersManagerSection() {
 }
 
 
-export async function approveUser(formData: FormData) {
+/* MOVED SERVER ACTIONS TO ./actions.ts. Keeping old implementations commented out to avoid unused locals during type check.
+
+async function approveUser_removed(formData: FormData) {
   'use server'
   const userId = String(formData.get('user_id'))
   const decision = String(formData.get('decision'))
@@ -461,7 +462,7 @@ export async function approveUser(formData: FormData) {
   }
 }
 
-export async function approveDeposit(formData: FormData) {
+async function approveDeposit_removed(formData: FormData) {
   'use server'
   const txId = String(formData.get('tx_id'))
   const decision = String(formData.get('decision'))
@@ -491,7 +492,7 @@ export async function approveDeposit(formData: FormData) {
   }
 }
 
-export async function verifyAccount(formData: FormData) {
+async function verifyAccount_removed(formData: FormData) {
   'use server'
   const accountId = String(formData.get('account_id'))
   if (!accountId) return
@@ -513,7 +514,7 @@ function nextReleaseDate(requestedAt: Date): string {
   return new Date(Date.UTC(y, m + 1, 10)).toISOString().slice(0, 10)
 }
 
-export async function decideWithdrawal(formData: FormData) {
+async function decideWithdrawal_removed(formData: FormData) {
   'use server'
   const wrId = String(formData.get('wr_id'))
   const decision = String(formData.get('decision'))
@@ -548,7 +549,7 @@ export async function decideWithdrawal(formData: FormData) {
 
 
 
-export async function updateAccount(formData: FormData) {
+async function updateAccount_removed(formData: FormData) {
   'use server'
   const accountId = String(formData.get('account_id'))
   const type = String(formData.get('type'))
@@ -569,7 +570,7 @@ export async function updateAccount(formData: FormData) {
   }
 }
 
-export async function deleteAccount(formData: FormData) {
+async function deleteAccount_removed(formData: FormData) {
   'use server'
   const accountId = String(formData.get('account_id'))
   if (!accountId) return
@@ -581,3 +582,5 @@ export async function deleteAccount(formData: FormData) {
     redirect('/admin?toast=error')
   }
 }
+
+*/
