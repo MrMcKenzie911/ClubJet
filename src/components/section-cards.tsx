@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-export function SectionCards({ totalAUM, newSignups, monthlyProfits, referralPayoutPct, rateAppliedPct }: { totalAUM: number; newSignups: number; monthlyProfits: number; referralPayoutPct: number; rateAppliedPct?: number }) {
+export function SectionCards({ totalAUM, newSignups, monthlyProfits, referralPayoutPct, rateAppliedPct, monthlyCommission }: { totalAUM: number; newSignups: number; monthlyProfits: number; referralPayoutPct: number; rateAppliedPct?: number; monthlyCommission?: number }) {
   const pct = (n: number) => `${n.toFixed(1)}%`
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
@@ -77,9 +77,9 @@ export function SectionCards({ totalAUM, newSignups, monthlyProfits, referralPay
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Referral Payouts</CardDescription>
+          <CardDescription>{typeof monthlyCommission === 'number' ? 'Commission (This Month)' : 'Referral Payouts'}</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {pct(Math.max(0, referralPayoutPct || 0))}
+            {typeof monthlyCommission === 'number' ? `$${Number(monthlyCommission || 0).toLocaleString()}` : pct(Math.max(0, referralPayoutPct || 0))}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
@@ -90,9 +90,9 @@ export function SectionCards({ totalAUM, newSignups, monthlyProfits, referralPay
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Commission share this month <IconTrendingUp className="size-4" />
+            {typeof monthlyCommission === 'number' ? 'Sum of COMMISSION incl. signup bonuses' : 'Commission share this month'} <IconTrendingUp className="size-4" />
           </div>
-          <div className="text-muted-foreground">COMMISSION / (INTEREST + COMMISSION)</div>
+          <div className="text-muted-foreground">{typeof monthlyCommission === 'number' ? 'Posted COMMISSION + any admin-set payout this month' : 'COMMISSION / (INTEREST + COMMISSION)'}</div>
         </CardFooter>
       </Card>
     </div>

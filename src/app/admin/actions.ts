@@ -229,7 +229,7 @@ export async function setRate(formData: FormData) {
       if (delta <= 0) continue
       await supabaseAdmin
         .from('transactions')
-        .insert({ account_id: a.id, type: 'INTEREST', amount: delta, status: 'posted', created_at: nowIso, memo: `Monthly interest ${fixed_rate_monthly}%` })
+        .insert({ account_id: a.id, type: 'INTEREST', amount: delta, status: 'posted', created_at: nowIso })
       await supabaseAdmin.from('accounts').update({ balance: bal + delta }).eq('id', a.id)
     }
 
@@ -237,6 +237,72 @@ export async function setRate(formData: FormData) {
     redirect('/admin?toast=rate_set')
   } catch (e) {
     console.error('setRate failed', e)
+    redirect('/admin?toast=error')
+  }
+}
+
+export async function undoLastRate(formData: FormData) {
+  const account_type = String(formData.get('account_type'))
+  try {
+    if (!account_type) {
+      redirect('/admin?toast=error')
+      return
+    }
+    // 1) Gather verified account IDs for this type
+    const { data: accts } = await supabaseAdmin
+      .from('accounts')
+      .select('id')
+      .eq('type', account_type)
+      .not('verified_at','is', null)
+    const ids = (accts || []).map((a: any) => a.id)
+    if (!ids.length) {
+      redirect('/admin?toast=undo_none')
+      return
+    }
+
+    // 2) Find the latest INTEREST batch created across these accounts
+    const { data: lastTx } = await supabaseAdmin
+      .from('transactions')
+      .select('created_at')
+      .in('account_id', ids)
+      .eq('type', 'INTEREST')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const created_at = lastTx?.created_at as string | undefined
+    if (!created_at) {
+      redirect('/admin?toast=undo_none')
+      return
+    }
+
+    // 3) Load the batch and reverse each by inserting a negative INTEREST and decrementing balances
+    const { data: batch } = await supabaseAdmin
+      .from('transactions')
+      .select('id, account_id, amount')
+      .in('account_id', ids)
+      .eq('type', 'INTEREST')
+      .eq('created_at', created_at)
+
+    for (const tx of (batch || []) as { id: string; account_id: string; amount: number }[]) {
+      const amt = Number(tx.amount || 0)
+      if (amt <= 0) continue
+      // Compensating entry
+      await supabaseAdmin.from('transactions').insert({
+        account_id: tx.account_id,
+        type: 'INTEREST',
+        amount: -amt,
+        status: 'posted',
+        created_at: new Date().toISOString(),
+      })
+      // Balance rollback
+      await supabaseAdmin.rpc('increment_balance', { account_id: tx.account_id, amount: -amt as unknown as number })
+    }
+
+    try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}
+    redirect('/admin?toast=rate_undone')
+  } catch (e) {
+    console.error('undoLastRate failed', e)
     redirect('/admin?toast=error')
   }
 }

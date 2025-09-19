@@ -193,12 +193,15 @@ end; $$ language plpgsql;
 -- Reserve funds (for pending withdrawal)
 create or replace function reserve_funds(account_id uuid, amount numeric)
 returns boolean as $$
-declare ok boolean := false; begin
+declare
+  ok boolean := false;
+begin
   update accounts
     set balance = balance - amount,
         reserved_amount = reserved_amount + amount
   where id = account_id and balance >= amount;
-  get diagnostics ok = row_count > 0;
+  -- FOUND is true if the previous SQL affected at least one row
+  ok := FOUND;
   return ok;
 end; $$ language plpgsql;
 

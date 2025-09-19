@@ -52,15 +52,15 @@ export default function UsersManager() {
 
 
   async function addUser() {
-    setEditing({ id: "", first_name: "", last_name: "", email: "", role: "user" });
+    setEditing({ id: "", first_name: "", last_name: "", email: "", phone: "", role: "user", account_type: 'LENDER', investment_amount: 0, referrer_code: '', referrer_email: '' });
   }
 
   async function createUser() {
     if (!editing) return;
-    const { first_name, last_name, email, role } = editing;
+    const { first_name, last_name, email, phone, role, account_type, investment_amount, referrer_code, referrer_email } = editing;
     const res = await fetch('/api/admin/users', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ first_name, last_name, email, role })
+      body: JSON.stringify({ first_name, last_name, email, phone, role, account_type, investment_amount: Number(investment_amount||0), referrerCode: referrer_code || null, referrerEmail: referrer_email || null })
     })
     if (!res.ok) {
       const j = await res.json().catch(()=>({}));
@@ -110,12 +110,13 @@ export default function UsersManager() {
 
       {/* Verified Users Table */}
       <div className="mt-4 rounded-2xl border border-gray-800 overflow-hidden">
-        <div className="bg-[#121821] px-4 py-3 text-gray-300 font-medium grid grid-cols-5">
+        <div className="bg-[#121821] px-4 py-3 text-gray-300 font-medium grid grid-cols-6">
           <div>First Name</div>
           <div>Last Name</div>
           <div>Email</div>
           <div>Account Type</div>
           <div className="text-right">Balance</div>
+          <div className="text-right">Actions</div>
         </div>
         <div className="divide-y divide-gray-800">
           {loading && <div className="p-4 text-sm text-gray-400">Loading...</div>}
@@ -180,20 +181,39 @@ export default function UsersManager() {
 
       {editing && !editing.id && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-md rounded-xl border border-gray-700 bg-gray-900 p-4 space-y-3">
+          <div className="w-full max-w-lg rounded-xl border border-gray-700 bg-gray-900 p-4 space-y-3">
             <h3 className="text-white font-semibold">Add User</h3>
-            <input className="w-full rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" placeholder="First Name" value={editing.first_name}
-              onChange={(e) => setEditing({ ...editing, first_name: e.target.value })} />
-            <input className="w-full rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" placeholder="Last Name" value={editing.last_name}
-              onChange={(e) => setEditing({ ...editing, last_name: e.target.value })} />
+            <div className="grid grid-cols-2 gap-2">
+              <input className="rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" placeholder="First Name" value={editing.first_name}
+                onChange={(e) => setEditing({ ...editing, first_name: e.target.value })} />
+              <input className="rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" placeholder="Last Name" value={editing.last_name}
+                onChange={(e) => setEditing({ ...editing, last_name: e.target.value })} />
+            </div>
             <input className="w-full rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" placeholder="Email" type="email" value={editing.email}
               onChange={(e) => setEditing({ ...editing, email: e.target.value })} />
-            <select className="w-full rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" value={editing.role}
-              onChange={(e) => setEditing({ ...editing, role: e.target.value })}>
-              <option value="pending">pending</option>
-              <option value="user">user</option>
-              <option value="admin">admin</option>
-            </select>
+            <input className="w-full rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" placeholder="Phone" value={editing.phone || ''}
+              onChange={(e) => setEditing({ ...editing, phone: e.target.value })} />
+            <div className="grid grid-cols-2 gap-2">
+              <select className="rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" value={editing.role}
+                onChange={(e) => setEditing({ ...editing, role: e.target.value })}>
+                <option value="pending">pending</option>
+                <option value="user">user</option>
+                <option value="admin">admin</option>
+              </select>
+              <select className="rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" value={editing.account_type}
+                onChange={(e) => setEditing({ ...editing, account_type: e.target.value })}>
+                <option value="LENDER">LENDER account</option>
+                <option value="NETWORK">NETWORK account</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <input className="rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" placeholder="Investment Amount" type="number" value={editing.investment_amount}
+                onChange={(e) => setEditing({ ...editing, investment_amount: Number(e.target.value||0) })} />
+              <input className="rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" placeholder="Referral Code (optional)" value={editing.referrer_code || ''}
+                onChange={(e) => setEditing({ ...editing, referrer_code: e.target.value })} />
+            </div>
+            <input className="w-full rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" placeholder="Referrer Email (optional)" type="email" value={editing.referrer_email || ''}
+              onChange={(e) => setEditing({ ...editing, referrer_email: e.target.value })} />
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setEditing(null)} className="rounded bg-gray-700 hover:bg-gray-600 px-3 py-1">Cancel</button>
               <button onClick={createUser} className="rounded bg-amber-500 hover:bg-amber-400 text-black px-3 py-1">Create</button>

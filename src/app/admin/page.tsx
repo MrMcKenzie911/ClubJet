@@ -15,7 +15,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import CommissionTab from '@/components/admin/CommissionTab'
 
-import { setRate, approveUser, approveDeposit, decideWithdrawal } from './actions'
+import { setRate, undoLastRate, approveUser, approveDeposit, decideWithdrawal } from './actions'
 
 
 async function getAdminData() {
@@ -64,7 +64,15 @@ async function getAdminData() {
     .gte('created_at', start.toISOString())
     .lt('created_at', end.toISOString())
 
-  return { user, pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [], profilesAll: profilesAll ?? [], verifiedAccounts: verifiedAccounts ?? [], monthTx: monthTx ?? [] }
+  // Admin personal balances
+  const { data: myAccts } = await supabase.from('accounts').select('balance').eq('user_id', user.id)
+  const adminPersonalBalance = (myAccts ?? []).reduce((s:number,a:{balance?:number})=> s + Number(a.balance||0), 0)
+
+  // Slush fund balance = deposits - payouts
+  const { data: sft } = await supabase.from('slush_fund_transactions').select('transaction_type, amount')
+  const slushFundBalance = (sft ?? []).reduce((s:number,t:{transaction_type:string, amount:number})=> s + (t.transaction_type==='deposit' ? Number(t.amount||0) : -Number(t.amount||0)), 0)
+
+  return { user, pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [], profilesAll: profilesAll ?? [], verifiedAccounts: verifiedAccounts ?? [], monthTx: monthTx ?? [], adminPersonalBalance, slushFundBalance }
 }
 export default async function AdminPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const res = await getAdminData()
@@ -121,12 +129,18 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
             <h2 className="mb-3 text-white font-semibold">Pending Users</h2>
             <div className="space-y-2">
               {pendingUsers.map((u: any) => (
-                <form key={u.id} action={approveUser} className="flex items-center justify-between rounded border border-gray-800 bg-gray-950 p-2">
+                <form key={u.id} action={approveUser} className="rounded border border-gray-800 bg-[#0E141C] p-3">
                   <input type="hidden" name="user_id" defaultValue={u.id} />
-                  <div className="text-sm text-gray-300">{u.email} • {u.first_name} {u.last_name}</div>
-                  <div className="flex gap-2">
-                    <Button name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
-                    <Button name="decision" value="reject" className="bg-red-600 text-white">Reject</Button>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="text-white font-medium">{u.first_name} {u.last_name}</div>
+                      <div className="text-xs text-gray-400">{u.email} • {u.phone ?? 'n/a'}</div>
+                      <div className="mt-2 text-xs text-gray-500">Requested: {u.created_at ? new Date(u.created_at).toLocaleString() : '—'}</div>
+                    </div>
+                    <div className="flex gap-2 items-start">
+                      <Button name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
+                      <Button name="decision" value="reject" className="bg-red-600 text-white">Reject</Button>
+                    </div>
                   </div>
                 </form>
               ))}
@@ -234,26 +248,46 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
 
       {tab === 'earnings-rate' && (
         <section className="mt-6">
-          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4">
-            <h2 className="mb-3 text-white font-semibold">Set Earnings Rate</h2>
-            <form action={setRate} className="flex flex-wrap gap-2 items-end">
-              <label className="text-xs text-gray-400">Account Type
-                <select name="account_type" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
-                  <option value="LENDER">LENDER</option>
-                  <option value="NETWORK">NETWORK</option>
-                </select>
-              </label>
-              <label className="text-xs text-gray-400">Monthly %
-                <input name="fixed_rate_monthly" type="number" step="0.001" placeholder="e.g., 1.25" className="mt-1 w-48 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
-              </label>
-              <button className="rounded bg-emerald-600 px-3 py-1 text-white">Set</button>
-            </form>
-            <div className="mt-3 text-sm text-gray-300">Recent:</div>
-            <ul className="text-sm text-gray-400">
-              {rates.map((r: any) => (
-                <li key={r.id}>{r.account_type} • {r.fixed_rate_monthly ?? 'n/a'}% • from {r.effective_from}</li>
-              ))}
-            </ul>
+          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 space-y-4">
+            <div>
+              <h2 className="mb-3 text-white font-semibold">Set Earnings Rate</h2>
+              <form action={setRate} className="flex flex-wrap gap-2 items-end">
+                <label className="text-xs text-gray-400">Account Type
+                  <select name="account_type" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
+                    <option value="LENDER">LENDER</option>
+                    <option value="NETWORK">NETWORK</option>
+                  </select>
+                </label>
+                <label className="text-xs text-gray-400">Monthly %
+                  <input name="fixed_rate_monthly" type="number" step="0.001" placeholder="e.g., 1.25" className="mt-1 w-48 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
+                </label>
+                <button className="rounded bg-emerald-600 px-3 py-1 text-white">Set</button>
+              </form>
+            </div>
+
+            <div className="rounded-lg border border-gray-800 bg-[#0B0F14] p-3">
+              <div className="flex flex-wrap items-end gap-2 justify-between">
+                <div className="text-sm text-gray-300">Need to undo the last apply? This reverses the last batch of INTEREST postings for the selected type.</div>
+                <form action={undoLastRate} className="flex flex-wrap gap-2 items-end">
+                  <label className="text-xs text-gray-400">Account Type
+                    <select name="account_type" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
+                      <option value="LENDER">LENDER</option>
+                      <option value="NETWORK">NETWORK</option>
+                    </select>
+                  </label>
+                  <button className="rounded bg-red-600 hover:bg-red-500 px-3 py-1 text-white">Undo Last Apply</button>
+                </form>
+              </div>
+            </div>
+
+            <div>
+              <div className="mt-1 text-sm text-gray-300">Recent:</div>
+              <ul className="text-sm text-gray-400">
+                {rates.map((r: any) => (
+                  <li key={r.id}>{r.account_type} • {r.fixed_rate_monthly ?? 'n/a'}% • from {r.effective_from}</li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
       )}
@@ -278,8 +312,17 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
       {tab === 'account-balances' && (
         <section className="mt-6">
           <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
-            <h2 className="text-white font-semibold mb-2">Account Balances</h2>
-            <p className="text-sm text-gray-400">Overview of all member balances across the platform. (Coming soon)</p>
+            <h2 className="text-white font-semibold mb-4">Account Balances</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl border border-amber-500/30 bg-[#221a0a] p-4">
+                <div className="text-xs text-amber-300/80">Admin Personal Balance</div>
+                <div className="mt-1 text-3xl font-semibold text-amber-100">${(res as any).adminPersonalBalance?.toLocaleString?.() ?? Number((res as any).adminPersonalBalance||0).toLocaleString()}</div>
+              </div>
+              <div className="rounded-xl border border-emerald-500/30 bg-[#0c1f19] p-4">
+                <div className="text-xs text-emerald-300/80">Slush Fund Balance</div>
+                <div className="mt-1 text-3xl font-semibold text-emerald-100">${(res as any).slushFundBalance?.toLocaleString?.() ?? Number((res as any).slushFundBalance||0).toLocaleString()}</div>
+              </div>
+            </div>
           </div>
         </section>
       )}

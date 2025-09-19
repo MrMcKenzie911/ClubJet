@@ -266,6 +266,7 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
   const [users, setUsers] = useState<AdminListUser[]>([])
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState<{ userId: string; firstName: string; accountId: string|null } | null>(null)
+  const [completed, setCompleted] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -312,9 +313,31 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
         const j = await res.json().catch(()=>({}))
         throw new Error(j.error || 'Failed to set payout')
       }
+      // mark completed locally for quick visual feedback
+      setCompleted(prev => {
+        const next = new Set(prev)
+        if (selected?.accountId) next.add(selected.accountId)
+        return next
+      })
       toast.success(`Set ${selected.firstName}'s payout: $${payout.toLocaleString()}`)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to set payout'
+      toast.error(msg)
+    }
+  }
+
+  async function finalizeNow() {
+    if (!selected?.accountId) { toast.error('Select a user with an account'); return }
+    try {
+      const res = await fetch('/api/admin/commissions/finalize', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_id: selected.accountId })
+      })
+      const j = await res.json().catch(()=>({}))
+      if (!res.ok) throw new Error(j.error || 'Finalize failed')
+      toast.success(`Finalized commission: $${Number(j.amount||0).toLocaleString()}`)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Finalize failed'
       toast.error(msg)
     }
   }
@@ -333,7 +356,8 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
               <th className="text-left px-3 py-2">Email</th>
               <th className="text-left px-3 py-2">Type(s)</th>
               <th className="text-right px-3 py-2">Balance</th>
-              <th className="px-3 py-2"></th>
+              <th className="text-left px-3 py-2">Status</th>
+              <th className="px-3 py-2">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
@@ -351,6 +375,13 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
                   <td className="px-3 py-2 text-gray-400">{u.email}</td>
                   <td className="px-3 py-2 text-gray-300">{types || '—'}</td>
                   <td className="px-3 py-2 text-right text-amber-300">{`$${Number(primary?.balance||0).toLocaleString()}`}</td>
+                  <td className="px-3 py-2 text-green-400">
+                    {(() => {
+                      const acctId = primary?.id || ''
+                      const hasReserved = (u.accounts || []).some((a:any)=> Number((a as any).reserved_amount || 0) > 0)
+                      return completed.has(acctId) || hasReserved ? '✓' : ''
+                    })()}
+                  </td>
                   <td className="px-3 py-2 text-right">
                     <button className="rounded-md border border-amber-500/40 px-3 py-1 text-amber-300 hover:bg-amber-500/10" onClick={() => onSelect(u)}>Select</button>
                   </td>
@@ -368,9 +399,14 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
             <span className="text-gray-500">No user selected</span>
           )}
         </div>
-        <Button disabled={!selected?.accountId} onClick={setPayoutNow} className="bg-amber-600 hover:bg-amber-500">
-          {selected ? `Set ${selected.firstName}'s Payout Now` : 'Set Payout Now'}
-        </Button>
+        <div className="flex gap-2">
+          <Button disabled={!selected?.accountId} onClick={setPayoutNow} className="bg-amber-600 hover:bg-amber-500">
+            {selected ? `Set ${selected.firstName}'s Payout Now` : 'Set Payout Now'}
+          </Button>
+          <Button disabled={!selected?.accountId} onClick={finalizeNow} className="bg-emerald-600 hover:bg-emerald-500">
+            {selected ? `Finalize ${selected.firstName}` : 'Finalize Commission'}
+          </Button>
+        </div>
       </div>
     </div>
   )
