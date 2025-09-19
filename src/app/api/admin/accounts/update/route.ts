@@ -7,25 +7,26 @@ export const runtime = 'nodejs'
 // Body: { account_id: string, balance?: number, monthly_payout?: number }
 export async function POST(req: Request) {
   try {
-    const bodyUnknown = await req.json().catch(() => ({})) as unknown
-    const body = (bodyUnknown && typeof bodyUnknown === 'object') ? bodyUnknown as Record<string, unknown> : {}
+    const parsed = await req.json().catch(() => ({})) as unknown
+    const body = (parsed && typeof parsed === 'object') ? parsed as Record<string, unknown> : {}
     const account_id = String(body.account_id ?? '')
     if (!account_id) return NextResponse.json({ error: 'account_id required' }, { status: 400 })
 
-    const patch: Record<string, unknown> = {}
+    type Patch = { balance?: number; reserved_amount?: number }
+    const patch: Patch = {}
     if (body.balance !== undefined) patch.balance = Number(body.balance)
 
     // Check if reserved_amount column exists in production; gracefully fallback if not
     let canSetReserved = false
     try {
-      const { data: hasCol } = await (supabaseAdmin as any).rpc('check_column_exists', { p_table: 'accounts', p_column: 'reserved_amount' })
+      const { data: hasCol } = await supabaseAdmin.rpc('check_column_exists', { p_table: 'accounts', p_column: 'reserved_amount' })
       canSetReserved = Boolean(hasCol)
     } catch {}
 
     if (body.monthly_payout !== undefined) {
       const monthlyVal = Number(body.monthly_payout)
       if (canSetReserved) {
-        ;(patch as any).reserved_amount = monthlyVal
+        patch.reserved_amount = monthlyVal
       } else {
         // Fallback: store admin preference as a zero-amount COMMISSION metadata record to avoid hard failure
         const nowIso = new Date().toISOString()

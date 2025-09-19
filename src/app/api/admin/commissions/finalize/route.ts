@@ -5,7 +5,8 @@ export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({} as any)) as { account_id?: string, amount?: number }
+    const parsed = await req.json().catch(() => ({})) as unknown
+    const body = (parsed && typeof parsed === 'object') ? parsed as { account_id?: string; amount?: number } : {}
     const account_id = String(body.account_id || '')
     const overrideAmount = typeof body.amount === 'number' ? Number(body.amount) : undefined
     if (!account_id) return NextResponse.json({ error: 'account_id required' }, { status: 400 })
@@ -14,21 +15,23 @@ export async function POST(req: Request) {
     let amount = 0
     let canUseReserved = false
     try {
-      const { data: hasCol } = await (supabaseAdmin as any).rpc('check_column_exists', { p_table: 'accounts', p_column: 'reserved_amount' })
+      const { data: hasCol } = await supabaseAdmin.rpc('check_column_exists', { p_table: 'accounts', p_column: 'reserved_amount' })
       canUseReserved = Boolean(hasCol)
     } catch {}
 
     if (overrideAmount !== undefined && isFinite(overrideAmount) && overrideAmount > 0) {
       amount = overrideAmount
     } else if (canUseReserved) {
+      type AcctRow = { id: string; balance?: number | null; reserved_amount?: number | null }
       const { data: acct } = await supabaseAdmin
         .from('accounts')
         .select('id, balance, reserved_amount')
         .eq('id', account_id)
         .maybeSingle()
-      amount = Number((acct as any)?.reserved_amount || 0)
+      amount = Number((acct as AcctRow | null)?.reserved_amount || 0)
     } else {
       // Fallback: read latest metadata preference
+      type PrefRow = { id: string; metadata: Record<string, unknown> | null }
       const { data: pref } = await supabaseAdmin
         .from('transactions')
         .select('id, metadata')
@@ -36,9 +39,10 @@ export async function POST(req: Request) {
         .eq('type', 'COMMISSION')
         .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle()
-      const m = (pref?.metadata || {}) as any
-      amount = Number(m?.monthly_payout_preference || 0)
+        .maybeSingle<PrefRow>()
+      const m = (pref?.metadata || {}) as Record<string, unknown>
+      const raw = m?.monthly_payout_preference as unknown
+      amount = typeof raw === 'number' ? raw : Number(raw || 0)
     }
 
     amount = Number(amount || 0)
@@ -56,14 +60,15 @@ export async function POST(req: Request) {
 
     const newBal = Number(acct2?.balance || 0) + amount
 
-    const ins = supabaseAdmin.from('transactions').insert({ account_id, type: 'COMMISSION', amount, status: 'completed', created_at: nowIso })
-    const upd = canUseReserved
-      ? supabaseAdmin.from('accounts').update({ balance: newBal, reserved_amount: 0 }).eq('id', account_id)
-      : supabaseAdmin.from('accounts').update({ balance: newBal }).eq('id', account_id)
+    const { error: insErr } = await supabaseAdmin
+      .from('transactions')
+      .insert({ account_id, type: 'COMMISSION', amount, status: 'completed', created_at: nowIso })
+    if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 })
 
-    const [insRes, updRes] = await Promise.all([ins, upd])
-    if ((insRes as any).error) return NextResponse.json({ error: (insRes as any).error.message }, { status: 500 })
-    if ((updRes as any).error) return NextResponse.json({ error: (updRes as any).error.message }, { status: 500 })
+    const { error: updErr } = canUseReserved
+      ? await supabaseAdmin.from('accounts').update({ balance: newBal, reserved_amount: 0 }).eq('id', account_id)
+      : await supabaseAdmin.from('accounts').update({ balance: newBal }).eq('id', account_id)
+    if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 })
 
     // Optionally tag the metadata preference as finalized to avoid reuse
     if (!canUseReserved) {

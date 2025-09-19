@@ -254,7 +254,8 @@ export async function undoLastRate(formData: FormData) {
       .select('id')
       .eq('type', account_type)
       .not('verified_at','is', null)
-    const ids = (accts || []).map((a: any) => a.id)
+    type IdOnly = { id: string }
+    const ids = ((accts || []) as IdOnly[]).map((a) => a.id)
     if (!ids.length) {
       redirect('/admin?toast=undo_none')
       return

@@ -10,7 +10,7 @@ function currency(n: number) {
 
 
 // Types for admin user listing and referrals
-type UserAccount = { id: string; type: 'LENDER' | 'NETWORK'; balance?: number | null }
+type UserAccount = { id: string; type: 'LENDER' | 'NETWORK'; balance?: number | null; reserved_amount?: number | null }
 type AdminListUser = { id: string; email: string; first_name?: string | null; last_name?: string | null; is_founding_member?: boolean | null; accounts?: UserAccount[] }
 type LevelsResp = { levels?: Array<{ level: number; users: Array<{ id: string }> }> }
 
@@ -342,11 +342,27 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
     }
   }
 
+  async function finalizeAll() {
+    try {
+      const res = await fetch('/api/admin/commissions/finalize-all', { method: 'POST' })
+      const j = await res.json().catch(()=>({})) as { ok?: boolean; finalized?: number; error?: string }
+      if (!res.ok || !j.ok) throw new Error(j.error || 'Finalize all failed')
+      toast.success(`Finalized ${j.finalized ?? 0} payout(s)`)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Finalize all failed'
+      toast.error(msg)
+    }
+  }
+
+
   return (
     <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-4">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-white font-semibold">Verified Users</h3>
-        <div className="text-xs text-gray-400">Select a user to populate commission inputs</div>
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-gray-400">Select a user to populate commission inputs</div>
+          <Button variant="secondary" className="bg-emerald-700 hover:bg-emerald-600" onClick={finalizeAll}>Finalize All</Button>
+        </div>
       </div>
       <div className="overflow-x-auto rounded-lg border border-gray-800">
         <table className="w-full text-sm">
@@ -378,7 +394,7 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
                   <td className="px-3 py-2 text-green-400">
                     {(() => {
                       const acctId = primary?.id || ''
-                      const hasReserved = (u.accounts || []).some((a:any)=> Number((a as any).reserved_amount || 0) > 0)
+                      const hasReserved = (u.accounts || []).some((a: UserAccount)=> Number(a.reserved_amount ?? 0) > 0)
                       return completed.has(acctId) || hasReserved ? '✓' : ''
                     })()}
                   </td>
