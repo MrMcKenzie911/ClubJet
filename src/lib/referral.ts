@@ -26,13 +26,28 @@ export async function ensureUserReferralCode(userId: string): Promise<string> {
 }
 
 export async function findReferrerIdByCodeOrEmail(args: { code?: string|null, email?: string|null }): Promise<string|null> {
-  const { code, email } = args
+  const rawCode = (args.code ?? '').toString().trim()
+  const rawEmail = (args.email ?? '').toString().trim()
+
+  // Normalize code: uppercase and strip spaces/hyphens
+  const code = rawCode ? rawCode.replace(/[^A-Za-z0-9]/g, '').toUpperCase() : ''
   if (code) {
-    const { data } = await supabaseAdmin.from('profiles').select('id').eq('referral_code', code).maybeSingle()
+    const { data } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .ilike('referral_code', code)
+      .maybeSingle()
     if (data?.id) return data.id
   }
+
+  // Normalize email: lowercase
+  const email = rawEmail ? rawEmail.toLowerCase() : ''
   if (email) {
-    const { data } = await supabaseAdmin.from('profiles').select('id').eq('email', email).maybeSingle()
+    const { data } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .ilike('email', email)
+      .maybeSingle()
     if (data?.id) return data.id
   }
   return null

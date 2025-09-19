@@ -1,5 +1,5 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 
 
 import { useState } from "react";
@@ -32,10 +32,13 @@ export default function SignupModal({ open, onClose }: Props) {
     e.preventDefault();
     setLoading(true);
     try {
+      const code = (form.referral_code || '').trim().replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      const refEmail = (form.referrer_email || '').trim().toLowerCase();
+
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        options: { data: { first_name: form.first_name, last_name: form.last_name, phone: form.phone, referral_code: form.referral_code } },
+        options: { data: { first_name: form.first_name, last_name: form.last_name, phone: form.phone, referral_code: code || undefined } },
       });
       if (signUpError) throw signUpError;
 
@@ -51,8 +54,8 @@ export default function SignupModal({ open, onClose }: Props) {
             first_name: form.first_name,
             last_name: form.last_name,
             phone: form.phone,
-            referral_code: form.referral_code,
-            referrer_email: form.referrer_email,
+            referral_code: code || undefined,
+            referrer_email: refEmail || undefined,
             account_type: form.account_type,
             investment_amount: Number(form.investment_amount || 0),
           }),
@@ -70,7 +73,7 @@ export default function SignupModal({ open, onClose }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             event: "signup",
-            payload: form,
+            payload: { ...form, referral_code: code, referrer_email: refEmail },
             user_id: userId,
           }),
         });
@@ -84,9 +87,10 @@ export default function SignupModal({ open, onClose }: Props) {
 
       toast.success("Signup submitted. Look out for approval call.");
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Signup failed';
       console.error(err);
-      toast.error(err.message ?? "Signup failed");
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -112,11 +116,11 @@ export default function SignupModal({ open, onClose }: Props) {
               <input name="referral_code" placeholder="Referrer code (or leave blank)" value={form.referral_code} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
               <input name="referrer_email" placeholder="Referrer email (if no code)" type="email" value={form.referrer_email} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
               <p className="text-xs text-gray-400">Provide either a referral code or a referrer email. If both provided, code takes precedence.</p>
-              <select name="account_type" value={form.account_type} onChange={(e) => setForm(f => ({ ...f, account_type: e.target.value as any }))} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60">
+              <select name="account_type" value={form.account_type} onChange={(e) => setForm(f => ({ ...f, account_type: e.target.value as 'LENDER' | 'NETWORK' }))} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60">
                 <option value="LENDER">Lender (Fixed)</option>
                 <option value="NETWORK">Network (Variable)</option>
               </select>
-              <input name="investment_amount" type="number" min="0" step="0.01" placeholder="Investment amount (initial)" value={form.investment_amount as any} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
+              <input name="investment_amount" type="number" min="0" step="0.01" placeholder="Investment amount (initial)" value={form.investment_amount} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
               <button disabled={loading} className="mt-2 rounded-md bg-amber-400 px-4 py-2 font-semibold text-black hover:bg-amber-300 disabled:opacity-50">{loading ? "Submitting..." : "Sign Up"}</button>
               <p className="text-xs text-gray-400">Look out for approval call.</p>
             </form>
