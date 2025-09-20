@@ -2,6 +2,15 @@
 
 All notable changes for Club Aureus app in this session.
 
+## 2025-09-20
+
+- fix(kpi): Monthly Profits and KPIs now compute from live transactions; user KPIs revalidate after admin actions
+- feat(admin-chart): Rewrite Total AUM chart to follow transaction history (deposits/interest/withdrawals), add second line for your referrals’ monthly deposit amount
+- feat(user-chart): Show Portfolio Balance vs Referral Payout (monthly) instead of New Signups
+- copy: Change 'Trending this month' to 'Increase this month' on AUM card
+- branding: Rename Network/Lender in UI to Variable Memberships / Fixed Memberships (no route or schema changes)
+- feat(slush): On first approved deposit < $5k, record signup fee breakdown and credit slush fund (signup_fees + slush_fund_transactions)
+
 ## 2025-09-09
 
 - style(admin): Match user dashboard container look (rounded, dark card stack) without changing admin names/tabs

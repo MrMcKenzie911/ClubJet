@@ -150,7 +150,7 @@ export default function UsersManager() {
                 <div className="text-gray-200">{u.first_name || '—'}</div>
                 <div className="text-gray-200">{u.last_name || '—'}</div>
                 <div className="text-gray-400">{u.email}</div>
-                <div className="text-gray-300">{(u.accounts?.map((a:any)=> a.type === 'LENDER' ? 'Lender' : 'Network').join(', ')) || '—'}</div>
+                <div className="text-gray-300">{(u.accounts?.map((a:any)=> a.type === 'LENDER' ? 'Fixed Memberships' : 'Variable Memberships').join(', ')) || '—'}</div>
                 <div className="text-right text-amber-300 font-medium">{`$${Number(totalBalance).toLocaleString()}`}</div>
                 <div className="flex justify-end gap-2">
                   <span onClick={(e)=> e.stopPropagation()}>

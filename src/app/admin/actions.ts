@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { calculateSignupFee } from '@/lib/fees'
 
 
 export async function approveUser(formData: FormData) {
@@ -92,6 +93,35 @@ export async function approveDeposit(formData: FormData) {
         if (acct) {
           const newBal = Number(acct.balance) + Number(tx.amount)
           await supabaseAdmin.from('accounts').update({ balance: newBal }).eq('id', acct.id)
+
+          // Apply one-time signup fee distribution + slush fund credit on first approved deposit (< $5000)
+          try {
+            const userId = (acct as any).user_id as string | undefined
+            if (userId && Number(tx.amount) > 0) {
+              const { data: existingFee } = await supabaseAdmin
+                .from('signup_fees')
+                .select('id')
+                .eq('user_id', userId)
+                .limit(1)
+                .maybeSingle()
+              if (!existingFee && Number(tx.amount) < 5000) {
+                const fees = calculateSignupFee(Number(tx.amount))
+                if (fees.fee > 0) {
+                  await supabaseAdmin.from('signup_fees').insert({
+                    user_id: userId,
+                    initial_deposit: Number(tx.amount),
+                    fee_amount: fees.fee,
+                    referrer1_share: fees.ref1,
+                    referrer2_share: fees.ref2,
+                    slush_fund_share: fees.slush,
+                  })
+                  await supabaseAdmin.from('slush_fund_transactions').insert({ transaction_type: 'deposit', amount: fees.slush, reference_account_id: acct.id, description: 'signup_fee' })
+                }
+              }
+            }
+          } catch (e) {
+            console.error('signup fee/slush processing failed', e)
+          }
         }
       }
       try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}

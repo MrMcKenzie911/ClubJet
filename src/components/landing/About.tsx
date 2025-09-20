@@ -16,7 +16,7 @@ export default function About() {
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
           <h3 className="text-white font-semibold">Key Highlights</h3>
           <ul className="mt-3 list-disc pl-5 text-gray-300 space-y-2">
-            <li>Two account types: Lender (1.00% / 1.125% / 1.25%) and Network (50% of gross monthly return).</li>
+            <li>Two membership types: Fixed Memberships (1.00% / 1.125% / 1.25%) and Variable Memberships (50% of gross monthly return).</li>
             <li>Structured withdrawal schedule: notice by the 1st, fund release by the 10th.</li>
             <li>Secure data with RLS and detailed audit trails; transparent admin approvals.</li>
           </ul>

@@ -79,7 +79,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
   if (tab === 'transactions') redirect('/dashboard/activity')
 
-  function UserPortfolioSignupsChart({ startDateISO, signups, txs }: { startDateISO: string; signups: { id: string; created_at: string|null }[]; txs: { type: string; amount: number; created_at: string; status?: string|null }[] }) {
+  function UserPortfolioPayoutChart({ startDateISO, txs }: { startDateISO: string; txs: { type: string; amount: number; created_at: string; status?: string|null }[] }) {
     const now = new Date()
     const months: string[] = Array.from({ length: 6 }).map((_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
@@ -90,36 +90,32 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
       return `${new Date(y, m - 1, 1).toLocaleString(undefined, { month: 'short' })}`
     }
     const start = new Date(startDateISO)
-    const endOfMonth = (y: number, m: number) => new Date(y, m, 0) // day 0 of next month = last day of month
+    const endOfMonth = (y: number, m: number) => new Date(y, m, 0)
     const postedTxs = (txs || [])
-    const hasTx = postedTxs.length > 0
-    const hasSignups = (signups || []).length > 0
 
     const data: MultiLineDatum[] = months.map((ym) => {
       const [y, m] = ym.split('-').map(Number)
       const monthEnd = endOfMonth(y, m)
-      const newSignups = (signups || []).filter(s => s.created_at && new Date(s.created_at).getFullYear() === y && new Date(s.created_at).getMonth() + 1 === m).length
 
-      // Cumulative transactions up to monthEnd (treat baseline as 0)
-      let portfolio = 0
-      if (!hasTx && !hasSignups) {
-        // Minimal fallback to show some line
-        const daysSinceStart = Math.max(0, Math.floor((monthEnd.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)))
-        portfolio = daysSinceStart * 0.0005
-      } else {
-        const cumulative = postedTxs
-          .filter(t => new Date(t.created_at) <= monthEnd)
-          .reduce((sum, t) => {
-            const amt = Number(t.amount || 0)
-            if (t.type === 'WITHDRAWAL') return sum - amt
-            return sum + amt
-          }, 0)
-        portfolio = cumulative
-      }
+      // Cumulative portfolio up to monthEnd
+      const portfolio = postedTxs
+        .filter(t => new Date(t.created_at) <= monthEnd)
+        .reduce((sum, t) => {
+          const amt = Number(t.amount || 0)
+          if (t.type === 'WITHDRAWAL') return sum - amt
+          return sum + amt
+        }, 0)
 
-      return { label: monthLabel(ym), newSignups, portfolio }
+      // Referral payout this month
+      const referral = postedTxs
+        .filter(t => t.type === 'COMMISSION')
+        .filter(t => new Date(t.created_at).getFullYear() === y && new Date(t.created_at).getMonth() + 1 === m)
+        .reduce((s, t) => s + Number(t.amount || 0), 0)
+
+      return { label: monthLabel(ym), portfolio, referral }
     })
-    return <MultiLineChart data={data} series={[{ key: 'newSignups', label: 'New Signups' }, { key: 'portfolio', label: 'Portfolio Balance' }]} />
+
+    return <MultiLineChart data={data} series={[{ key: 'portfolio', label: 'Portfolio Balance' }, { key: 'referral', label: 'Referral Payout (Monthly)' }]} />
   }
 
   return (
@@ -146,7 +142,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
                     <SectionCards totalAUM={(accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)} newSignups={(l1 ?? []).filter(s=>{ const d=s.created_at? new Date(s.created_at):null; const now=new Date(); return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(txs||[]).filter(t=>t.type==='INTEREST').filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0)} referralPayoutPct={(function(){ const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }); const comm=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=> s+Number(t.amount||0),0); const int=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100 : 0; })()} rateAppliedPct={rateAppliedPct} monthlyCommission={(function(){ const now=new Date(); const comm=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return t.type==='COMMISSION' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0); const reserved=(accounts||[]).reduce((s, a: { reserved_amount?: number | null })=> s + Number(a.reserved_amount ?? 0), 0); return comm + reserved; })()} />
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2">
-                        <UserPortfolioSignupsChart startDateISO={startDateISO} signups={l1 ?? []} txs={txs} />
+                        <UserPortfolioPayoutChart startDateISO={startDateISO} txs={txs} />
                       </div>
                       <div className="space-y-3">
                         <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} />

@@ -29,7 +29,7 @@ export function SectionCards({ totalAUM, newSignups, monthlyProfits, referralPay
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Trending this month <IconTrendingUp className="size-4" />
+            Increase this month <IconTrendingUp className="size-4" />
           </div>
           <div className="text-muted-foreground">Balances across relevant accounts</div>
         </CardFooter>

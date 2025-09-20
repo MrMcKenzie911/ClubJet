@@ -383,7 +383,7 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
             {!loading && users.map((u: AdminListUser) => {
               const accounts = (u.accounts || []).map(a => ({ id: a.id, type: a.type, balance: Number(a.balance || 0) }))
               const primary = pickPrimaryAccount(accounts)
-              const types = (u.accounts || []).map((a: UserAccount) => a.type === 'LENDER' ? 'Lender' : 'Network').join(', ')
+              const types = (u.accounts || []).map((a: UserAccount) => a.type === 'LENDER' ? 'Fixed Memberships' : 'Variable Memberships').join(', ')
               const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || '—'
               return (
                 <tr key={u.id} className="hover:bg-[#0F141B]">

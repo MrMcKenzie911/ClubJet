@@ -27,7 +27,7 @@ export default function InvestmentOptions({ onOpenSignup }: { onOpenSignup: () =
       <div className="grid gap-6 sm:grid-cols-2 items-stretch">
         <Card>
           <div className="flex items-start justify-between">
-            <h3 className="text-xl font-semibold text-white">Lender Account</h3>
+            <h3 className="text-xl font-semibold text-white">Fixed Memberships</h3>
             <span className="rounded-full bg-amber-400/15 text-amber-300 text-xs px-2 py-1 border border-amber-400/30">Fixed Returns</span>
           </div>
           <div className="flex flex-col flex-1">
@@ -54,7 +54,7 @@ export default function InvestmentOptions({ onOpenSignup }: { onOpenSignup: () =
 
         <Card>
           <div className="flex items-start justify-between">
-            <h3 className="text-xl font-semibold text-white">Network Account</h3>
+            <h3 className="text-xl font-semibold text-white">Variable Memberships</h3>
             <span className="rounded-full bg-amber-400/15 text-amber-300 text-xs px-2 py-1 border border-amber-400/30">Variable Returns</span>
           </div>
           <div className="flex flex-col flex-1">

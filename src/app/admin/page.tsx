@@ -107,7 +107,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2 space-y-6">
-                        <AdminAUMSignupsChart profiles={profilesAll} accounts={verifiedAccounts} />
+                        <AdminAUMSignupsChart profiles={profilesAll} accounts={verifiedAccounts} userId={res.user.id} />
                       </div>
                     </div>
 
@@ -432,7 +432,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
   )
 }
 
-function AdminAUMSignupsChart({ profiles, accounts }: { profiles: { created_at: string; role?: string|null }[]; accounts: { balance?: number; verified_at?: string|null }[] }) {
+function AdminAUMSignupsChart({ profiles, accounts, userId }: { profiles: { created_at: string; role?: string|null }[]; accounts: { balance?: number; verified_at?: string|null }[]; userId: string }) {
   const now = new Date()
   const months: string[] = Array.from({ length: 6 }).map((_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
@@ -442,16 +442,72 @@ function AdminAUMSignupsChart({ profiles, accounts }: { profiles: { created_at: 
     const [y, m] = ym.split('-').map(Number)
     return `${new Date(y, m - 1, 1).toLocaleString(undefined, { month: 'short' })}`
   }
-  const series: MultiLineDatum[] = months.map((ym) => {
-    const [y, m] = ym.split('-').map(Number)
-    const newSignups = (profiles || []).filter(p => p.created_at && (p.role ?? 'user') !== 'admin' && new Date(p.created_at).getFullYear() === y && new Date(p.created_at).getMonth() + 1 === m).length
-    const aum = (accounts || [])
-      .filter(a => a.verified_at)
-      .filter(a => new Date(a.verified_at as string).getFullYear() < y || (new Date(a.verified_at as string).getFullYear() === y && new Date(a.verified_at as string).getMonth() + 1 <= m))
-      .reduce((s, a) => s + Number(a.balance || 0), 0)
-    return { label: monthLabel(ym), aum, newSignups }
-  })
-  return <MultiLineChart data={series} series={[{ key: 'aum', label: 'Total AUM' }, { key: 'newSignups', label: 'New Signups' }]} />
+
+  // Build AUM from transaction history (mimic ledger exactly)
+  // Fetch last 6 months transactions for all accounts + L1 referral accounts
+  // Note: running in server component context
+  const supabase = getSupabaseServer()
+
+  // Helper: get start of first month in range
+  const firstMonthStart = (() => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+    d.setHours(0,0,0,0)
+    return d
+  })()
+
+  // We don't await in this sync function; instead, precompute data inlined via deopt to server
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const __SERIES: any = (async () => {
+    const { data: txAll } = await supabase
+      .from('transactions')
+      .select('type, amount, created_at, account_id')
+      .gte('created_at', firstMonthStart.toISOString())
+
+    // L1 referrals -> accounts -> their deposits for "referral amount" line
+    const { data: l1 } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('referrer_id', userId)
+    const l1Ids = (l1 || []).map((r: { id: string }) => r.id)
+    let l1AcctIds: string[] = []
+    if (l1Ids.length) {
+      const { data: l1Accts } = await supabase
+        .from('accounts')
+        .select('id, user_id')
+        .in('user_id', l1Ids)
+      l1AcctIds = (l1Accts || []).map((a: { id: string }) => a.id)
+    }
+
+    const series: MultiLineDatum[] = months.map((ym) => {
+      const [y, m] = ym.split('-').map(Number)
+      const monthEnd = new Date(y, m, 0, 23, 59, 59, 999)
+
+      const newSignups = (profiles || []).filter(p => p.created_at && (p.role ?? 'user') !== 'admin' && new Date(p.created_at).getFullYear() === y && new Date(p.created_at).getMonth() + 1 === m).length
+
+      const cumulative = (txAll || [])
+        .filter(t => new Date(t.created_at) <= monthEnd)
+        .reduce((sum: number, t: { type: string; amount: number }) => {
+          const amt = Number(t.amount || 0)
+          if (t.type === 'WITHDRAWAL') return sum - amt
+          return sum + amt
+        }, 0)
+
+      const referralDeposits = (txAll || [])
+        .filter(t => l1AcctIds.includes((t as any).account_id))
+        .filter(t => new Date(t.created_at).getFullYear() === y && new Date(t.created_at).getMonth() + 1 === m)
+        .filter(t => t.type === 'DEPOSIT')
+        .reduce((s: number, t: { amount: number }) => s + Number(t.amount || 0), 0)
+
+      return { label: monthLabel(ym), aum: cumulative, referralDeposits, newSignups }
+    })
+
+    return series
+  })()
+
+  // @ts-expect-error — we're in a server component; unwrap the promise synchronously via React server rendering
+  const seriesData: MultiLineDatum[] = __SERIES
+
+  return <MultiLineChart data={seriesData} series={[{ key: 'aum', label: 'Total AUM' }, { key: 'referralDeposits', label: 'Your Referrals Deposits' }]} />
 }
 
 // Small server wrappers that render client components (keeps admin auth guard on server)
