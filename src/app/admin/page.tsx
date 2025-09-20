@@ -504,7 +504,7 @@ function AdminAUMSignupsChart({ profiles, userId }: { profiles: { created_at: st
     return series
   })()
 
-  // @ts-expect-error — we're in a server component; unwrap the promise synchronously via React server rendering
+
   const seriesData: MultiLineDatum[] = __SERIES
 
   return <MultiLineChart data={seriesData} series={[{ key: 'aum', label: 'Total AUM' }, { key: 'referralDeposits', label: 'Your Referrals Deposits' }]} />
