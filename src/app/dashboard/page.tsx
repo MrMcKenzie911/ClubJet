@@ -79,7 +79,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
   if (tab === 'transactions') redirect('/dashboard/activity')
 
-  function UserPortfolioPayoutChart({ txs }: { txs: { type: string; amount: number; created_at: string; status?: string|null }[] }) {
+  function UserPortfolioPayoutChart({ startDateISO, initialBalance, txs }: { startDateISO: string; initialBalance: number; txs: { type: string; amount: number; created_at: string; status?: string|null }[] }) {
     const now = new Date()
     const months: string[] = Array.from({ length: 6 }).map((_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
@@ -91,20 +91,24 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
     }
 
     const endOfMonth = (y: number, m: number) => new Date(y, m, 0)
+    const start = new Date(startDateISO)
+    const startMonth = new Date(start.getFullYear(), start.getMonth(), 1)
     const postedTxs = (txs || [])
 
     const data: MultiLineDatum[] = months.map((ym) => {
       const [y, m] = ym.split('-').map(Number)
       const monthEnd = endOfMonth(y, m)
 
-      // Cumulative portfolio up to monthEnd
-      const portfolio = postedTxs
+      // Cumulative + baseline initial balance from account open (previous month shows $0)
+      const cumulative = postedTxs
         .filter(t => new Date(t.created_at) <= monthEnd)
         .reduce((sum, t) => {
           const amt = Number(t.amount || 0)
           if (t.type === 'WITHDRAWAL') return sum - amt
           return sum + amt
         }, 0)
+      const base = monthEnd < startMonth ? 0 : Number(initialBalance || 0)
+      const portfolio = base + cumulative
 
       // Referral payout this month
       const referral = postedTxs
@@ -139,10 +143,10 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
 
                 {(!tab || tab === 'dashboard') && (
                   <>
-                    <SectionCards totalAUM={(accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)} newSignups={(l1 ?? []).filter(s=>{ const d=s.created_at? new Date(s.created_at):null; const now=new Date(); return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(txs||[]).filter(t=>t.type==='INTEREST').filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0)} referralPayoutPct={(function(){ const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }); const comm=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=> s+Number(t.amount||0),0); const int=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100 : 0; })()} rateAppliedPct={rateAppliedPct} monthlyCommission={(function(){ const now=new Date(); const comm=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return t.type==='COMMISSION' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0); const reserved=(accounts||[]).reduce((s, a: { reserved_amount?: number | null })=> s + Number(a.reserved_amount ?? 0), 0); return comm + reserved; })()} />
+                    <SectionCards totalAUM={(accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)} newSignups={(l1 ?? []).filter(s=>{ const d=s.created_at? new Date(s.created_at):null; const now=new Date(); return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(function(){ const now=new Date(); const comm=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return t.type==='COMMISSION' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0); const reserved=(accounts||[]).reduce((s, a: { reserved_amount?: number | null })=> s + Number(a.reserved_amount ?? 0), 0); return comm + reserved; })()} referralPayoutPct={(function(){ const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }); const comm=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=> s+Number(t.amount||0),0); const int=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100 : 0; })()} rateAppliedPct={rateAppliedPct} monthlyCommission={(function(){ const now=new Date(); const comm=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return t.type==='COMMISSION' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0); const reserved=(accounts||[]).reduce((s, a: { reserved_amount?: number | null })=> s + Number(a.reserved_amount ?? 0), 0); return comm + reserved; })()} routes={{ aum: '/dashboard?tab=accounts', signups: '/dashboard?tab=referrals', monthly: '/dashboard?tab=activity', commission: '/dashboard?tab=referrals' }} />
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2">
-                        <UserPortfolioPayoutChart txs={txs} />
+                        <UserPortfolioPayoutChart startDateISO={startDateISO} initialBalance={initialBalance} txs={txs} />
                       </div>
                       <div className="space-y-3">
                         <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} />

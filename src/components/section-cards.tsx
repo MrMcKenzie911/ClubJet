@@ -1,3 +1,5 @@
+'use client'
+
 import { IconTrendingDown, IconTrendingUp } from "@tabler/icons-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -10,11 +12,11 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-export function SectionCards({ totalAUM, newSignups, monthlyProfits, referralPayoutPct, rateAppliedPct, monthlyCommission }: { totalAUM: number; newSignups: number; monthlyProfits: number; referralPayoutPct: number; rateAppliedPct?: number; monthlyCommission?: number }) {
+export function SectionCards({ totalAUM, newSignups, monthlyProfits, referralPayoutPct, rateAppliedPct, monthlyCommission, routes }: { totalAUM: number; newSignups: number; monthlyProfits: number; referralPayoutPct: number; rateAppliedPct?: number; monthlyCommission?: number; routes?: { aum?: string; signups?: string; monthly?: string; commission?: string } }) {
   const pct = (n: number) => `${n.toFixed(1)}%`
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-      <Card className="@container/card">
+      <Card className="@container/card" onClick={() => { if (routes?.aum) window.location.href = routes.aum }} role={routes?.aum ? 'link' : undefined}>
         <CardHeader>
           <CardDescription>Total Money In (AUM)</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
@@ -34,7 +36,7 @@ export function SectionCards({ totalAUM, newSignups, monthlyProfits, referralPay
           <div className="text-muted-foreground">Balances across relevant accounts</div>
         </CardFooter>
       </Card>
-      <Card className="@container/card">
+      <Card className="@container/card" onClick={() => { if (routes?.signups) window.location.href = routes.signups }} role={routes?.signups ? 'link' : undefined}>
         <CardHeader>
           <CardDescription>New Sign Ups (This month)</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
@@ -55,7 +57,7 @@ export function SectionCards({ totalAUM, newSignups, monthlyProfits, referralPay
           <div className="text-muted-foreground">Based on profile creation date</div>
         </CardFooter>
       </Card>
-      <Card className="@container/card">
+      <Card className="@container/card" onClick={() => { if (routes?.monthly) window.location.href = routes.monthly }} role={routes?.monthly ? 'link' : undefined}>
         <CardHeader>
           <CardDescription>Monthly Profits</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
@@ -70,12 +72,12 @@ export function SectionCards({ totalAUM, newSignups, monthlyProfits, referralPay
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Sum of INTEREST this month <IconTrendingUp className="size-4" />
+            New signups + commissions this month <IconTrendingUp className="size-4" />
           </div>
-          <div className="text-muted-foreground">Accrued across included accounts</div>
+          <div className="text-muted-foreground">Includes referral signup fees and commissions</div>
         </CardFooter>
       </Card>
-      <Card className="@container/card">
+      <Card className="@container/card" onClick={() => { if (routes?.commission) window.location.href = routes.commission }} role={routes?.commission ? 'link' : undefined}>
         <CardHeader>
           <CardDescription>{typeof monthlyCommission === 'number' ? 'Commission (This Month)' : 'Referral Payouts'}</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">

@@ -64,6 +64,12 @@ async function getAdminData() {
     .gte('created_at', start.toISOString())
     .lt('created_at', end.toISOString())
 
+  const { data: signupFees } = await supabase
+    .from('signup_fees')
+    .select('fee_amount, created_at')
+    .gte('created_at', start.toISOString())
+    .lt('created_at', end.toISOString())
+
   // Admin personal balances
   const { data: myAccts } = await supabase.from('accounts').select('balance').eq('user_id', user.id)
   const adminPersonalBalance = (myAccts ?? []).reduce((s:number,a:{balance?:number})=> s + Number(a.balance||0), 0)
@@ -72,7 +78,7 @@ async function getAdminData() {
   const { data: sft } = await supabase.from('slush_fund_transactions').select('transaction_type, amount')
   const slushFundBalance = (sft ?? []).reduce((s:number,t:{transaction_type:string, amount:number})=> s + (t.transaction_type==='deposit' ? Number(t.amount||0) : -Number(t.amount||0)), 0)
 
-  return { user, pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [], profilesAll: profilesAll ?? [], verifiedAccounts: verifiedAccounts ?? [], monthTx: monthTx ?? [], adminPersonalBalance, slushFundBalance }
+  return { user, pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [], profilesAll: profilesAll ?? [], verifiedAccounts: verifiedAccounts ?? [], monthTx: monthTx ?? [], signupFees: signupFees ?? [], adminPersonalBalance, slushFundBalance }
 }
 export default async function AdminPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const res = await getAdminData()
@@ -103,7 +109,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
 
                 {!tab && (
                   <>
-                    <SectionCards totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)} newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{ const d=p.created_at? new Date(p.created_at):null; const now=new Date(); return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0)} referralPayoutPct={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100:0 })()} rateAppliedPct={Number((rates?.[0] as any)?.fixed_rate_monthly ?? 0)} />
+                    <SectionCards totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)} newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{ const d=p.created_at? new Date(p.created_at):null; const now=new Date(); return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const fees=(res as any).signupFees?.reduce((s:number,f:any)=> s + Number(f.fee_amount||0),0) || 0; return comm + fees; })()} referralPayoutPct={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100:0 })()} rateAppliedPct={Number((rates?.[0] as any)?.fixed_rate_monthly ?? 0)} routes={{ aum: '/admin?tab=account-balances', signups: '/admin?tab=verified-users', monthly: '/admin?tab=commission-reports', commission: '/admin?tab=commission' }} />
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2 space-y-6">
@@ -138,8 +144,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                       <div className="mt-2 text-xs text-gray-500">Requested: {u.created_at ? new Date(u.created_at).toLocaleString() : '—'}</div>
                     </div>
                     <div className="flex gap-2 items-start">
-                      <Button name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
-                      <Button name="decision" value="reject" className="bg-red-600 text-white">Reject</Button>
+                      <Button type="submit" name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
+                      <Button type="submit" name="decision" value="reject" className="bg-red-600 text-white">Reject</Button>
                     </div>
                   </div>
                 </form>
@@ -162,8 +168,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                   <div className="mt-1 text-sm text-gray-300">Deposit • ${Number(t.amount).toLocaleString()} • {new Date(t.created_at).toLocaleString()}</div>
                 </div>
                 <div className="flex gap-2">
-                  <Button name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
-                  <Button name="decision" value="deny" className="bg-red-600 text-white">Deny</Button>
+                  <Button type="submit" name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
+                  <Button type="submit" name="decision" value="deny" className="bg-red-600 text-white">Deny</Button>
                 </div>
               </div>
             </form>
@@ -187,8 +193,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                   <div className="text-xs text-gray-500">Requested: {new Date(w.requested_at).toLocaleString()}</div>
                 </div>
                 <div className="flex gap-2">
-                  <Button name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
-                  <Button name="decision" value="deny" className="bg-red-600 text-white">Deny</Button>
+                  <Button type="submit" name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
+                  <Button type="submit" name="decision" value="deny" className="bg-red-600 text-white">Deny</Button>
                 </div>
               </div>
             </form>
@@ -432,7 +438,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
   )
 }
 
-function AdminAUMSignupsChart({ profiles, userId }: { profiles: { created_at: string; role?: string|null }[]; userId: string }) {
+async function AdminAUMSignupsChart({ profiles, userId }: { profiles: { created_at: string; role?: string|null }[]; userId: string }) {
   const now = new Date()
   const months: string[] = Array.from({ length: 6 }).map((_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
@@ -443,71 +449,62 @@ function AdminAUMSignupsChart({ profiles, userId }: { profiles: { created_at: st
     return `${new Date(y, m - 1, 1).toLocaleString(undefined, { month: 'short' })}`
   }
 
-  // Build AUM from transaction history (mimic ledger exactly)
-  // Fetch last 6 months transactions for all accounts + L1 referral accounts
-  // Note: running in server component context
   const supabase = getSupabaseServer()
+  const firstMonthStart = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+  firstMonthStart.setHours(0,0,0,0)
 
-  // Helper: get start of first month in range
-  const firstMonthStart = (() => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5, 1)
-    d.setHours(0,0,0,0)
-    return d
-  })()
+  const { data: txAll } = await supabase
+    .from('transactions')
+    .select('type, amount, created_at, account_id')
+    .gte('created_at', firstMonthStart.toISOString())
 
-  // We don't await in this sync function; instead, precompute data inlined via deopt to server
+  const { data: acctsAll } = await supabase
+    .from('accounts')
+    .select('id, initial_balance, verified_at')
 
-  const __SERIES: any = (async () => {
-    const { data: txAll } = await supabase
-      .from('transactions')
-      .select('type, amount, created_at, account_id')
-      .gte('created_at', firstMonthStart.toISOString())
+  const { data: l1 } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('referrer_id', userId)
+  const l1Ids = (l1 || []).map((r: { id: string }) => r.id)
+  let l1AcctIds: string[] = []
+  if (l1Ids.length) {
+    const { data: l1Accts } = await supabase
+      .from('accounts')
+      .select('id, user_id')
+      .in('user_id', l1Ids)
+    l1AcctIds = (l1Accts || []).map((a: { id: string }) => a.id)
+  }
 
-    // L1 referrals -> accounts -> their deposits for "referral amount" line
-    const { data: l1 } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('referrer_id', userId)
-    const l1Ids = (l1 || []).map((r: { id: string }) => r.id)
-    let l1AcctIds: string[] = []
-    if (l1Ids.length) {
-      const { data: l1Accts } = await supabase
-        .from('accounts')
-        .select('id, user_id')
-        .in('user_id', l1Ids)
-      l1AcctIds = (l1Accts || []).map((a: { id: string }) => a.id)
-    }
+  const initialBalances = (acctsAll || []).map(a => ({
+    initial: Number((a as any).initial_balance || 0),
+    verified_at: (a as any).verified_at as string | null,
+  }))
 
-    const series: MultiLineDatum[] = months.map((ym) => {
-      const [y, m] = ym.split('-').map(Number)
-      const monthEnd = new Date(y, m, 0, 23, 59, 59, 999)
+  const series: MultiLineDatum[] = months.map((ym) => {
+    const [y, m] = ym.split('-').map(Number)
+    const monthEnd = new Date(y, m, 0, 23, 59, 59, 999)
 
-      const newSignups = (profiles || []).filter(p => p.created_at && (p.role ?? 'user') !== 'admin' && new Date(p.created_at).getFullYear() === y && new Date(p.created_at).getMonth() + 1 === m).length
+    const base = initialBalances.reduce((s, a) => s + (a.verified_at && new Date(a.verified_at) <= monthEnd ? a.initial : 0), 0)
 
-      const cumulative = (txAll || [])
-        .filter(t => new Date(t.created_at) <= monthEnd)
-        .reduce((sum: number, t: { type: string; amount: number }) => {
-          const amt = Number(t.amount || 0)
-          if (t.type === 'WITHDRAWAL') return sum - amt
-          return sum + amt
-        }, 0)
+    const cumulative = (txAll || [])
+      .filter(t => new Date((t as any).created_at) <= monthEnd)
+      .reduce((sum: number, t: { type: string; amount: number }) => {
+        const amt = Number(t.amount || 0)
+        if (t.type === 'WITHDRAWAL') return sum - amt
+        return sum + amt
+      }, 0)
 
-      const referralDeposits = (txAll || [])
-        .filter(t => l1AcctIds.includes((t as any).account_id))
-        .filter(t => new Date(t.created_at).getFullYear() === y && new Date(t.created_at).getMonth() + 1 === m)
-        .filter(t => t.type === 'DEPOSIT')
-        .reduce((s: number, t: { amount: number }) => s + Number(t.amount || 0), 0)
+    const referralDeposits = (txAll || [])
+      .filter(t => l1AcctIds.includes((t as any).account_id))
+      .filter(t => new Date((t as any).created_at).getFullYear() === y && new Date((t as any).created_at).getMonth() + 1 === m)
+      .filter(t => (t as any).type === 'DEPOSIT')
+      .reduce((s: number, t: { amount: number }) => s + Number(t.amount || 0), 0)
 
-      return { label: monthLabel(ym), aum: cumulative, referralDeposits, newSignups }
-    })
+    return { label: monthLabel(ym), aum: base + cumulative, referralDeposits }
+  })
 
-    return series
-  })()
-
-
-  const seriesData: MultiLineDatum[] = __SERIES
-
-  return <MultiLineChart data={seriesData} series={[{ key: 'aum', label: 'Total AUM' }, { key: 'referralDeposits', label: 'Your Referrals Deposits' }]} />
+  return <MultiLineChart data={series} series={[{ key: 'aum', label: 'Total AUM' }, { key: 'referralDeposits', label: 'Your Referrals Deposits' }]} />
 }
 
 // Small server wrappers that render client components (keeps admin auth guard on server)
