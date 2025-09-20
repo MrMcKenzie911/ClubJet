@@ -89,7 +89,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
       const [y, m] = ym.split('-').map(Number)
       return `${new Date(y, m - 1, 1).toLocaleString(undefined, { month: 'short' })}`
     }
-    const start = new Date(startDateISO)
+
     const endOfMonth = (y: number, m: number) => new Date(y, m, 0)
     const postedTxs = (txs || [])
 

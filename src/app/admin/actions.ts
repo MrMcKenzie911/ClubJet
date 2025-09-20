@@ -88,7 +88,7 @@ export async function approveDeposit(formData: FormData) {
       if (txErr) throw txErr
       if (tx) {
         await supabaseAdmin.from('transactions').update({ status: 'posted' }).eq('id', txId)
-        const { data: acct, error: acctErr } = await supabaseAdmin.from('accounts').select('*').eq('id', tx.account_id).maybeSingle()
+        const { data: acct, error: acctErr } = await supabaseAdmin.from('accounts').select('id, user_id, balance').eq('id', tx.account_id).maybeSingle()
         if (acctErr) throw acctErr
         if (acct) {
           const newBal = Number(acct.balance) + Number(tx.amount)
@@ -96,7 +96,7 @@ export async function approveDeposit(formData: FormData) {
 
           // Apply one-time signup fee distribution + slush fund credit on first approved deposit (< $5000)
           try {
-            const userId = (acct as any).user_id as string | undefined
+            const userId: string | undefined = acct?.user_id ?? undefined
             if (userId && Number(tx.amount) > 0) {
               const { data: existingFee } = await supabaseAdmin
                 .from('signup_fees')

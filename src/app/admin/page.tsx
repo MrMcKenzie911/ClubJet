@@ -107,7 +107,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2 space-y-6">
-                        <AdminAUMSignupsChart profiles={profilesAll} accounts={verifiedAccounts} userId={res.user.id} />
+                        <AdminAUMSignupsChart profiles={profilesAll} userId={res.user.id} />
                       </div>
                     </div>
 
@@ -432,7 +432,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
   )
 }
 
-function AdminAUMSignupsChart({ profiles, accounts, userId }: { profiles: { created_at: string; role?: string|null }[]; accounts: { balance?: number; verified_at?: string|null }[]; userId: string }) {
+function AdminAUMSignupsChart({ profiles, userId }: { profiles: { created_at: string; role?: string|null }[]; userId: string }) {
   const now = new Date()
   const months: string[] = Array.from({ length: 6 }).map((_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
@@ -456,7 +456,7 @@ function AdminAUMSignupsChart({ profiles, accounts, userId }: { profiles: { crea
   })()
 
   // We don't await in this sync function; instead, precompute data inlined via deopt to server
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const __SERIES: any = (async () => {
     const { data: txAll } = await supabase
       .from('transactions')
