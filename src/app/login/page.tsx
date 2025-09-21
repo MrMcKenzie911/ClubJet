@@ -95,15 +95,16 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: em, pin: pw })
       })
-      if (resp.status === 401) {
+      if (!resp.ok) {
         const j = await resp.json().catch(() => ({} as PinLoginResp))
-        setError(j.error || 'Invalid credentials')
+        setError(j.error || (resp.status === 403 ? 'Account pending approval' : 'Login failed'))
         setLoading(false)
         return
       }
-      // proceed regardless of resp.ok to set client session reliably below
-    } catch {
-      // if server temporarily unavailable, still proceed to client sign-in below
+    } catch (e) {
+      setError('Login service unavailable. Please try again.')
+      setLoading(false)
+      return
     }
 
     // Ensure browser session exists: try PIN, then seeded fallback

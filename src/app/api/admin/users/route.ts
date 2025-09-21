@@ -71,17 +71,26 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, id: authUser.id });
 }
 
-// Edit user profile (admin)
+// Edit user profile (admin) and optionally set a new PIN/password
 export async function PATCH(req: Request) {
   const { error } = await ensureAdminJSON();
   if (error) return error;
   const body = await req.json().catch(()=>({}));
-  const { id, first_name, last_name, email, role } = body || {};
+  const { id, first_name, last_name, email, role, new_pin } = body || {} as { id?: string; first_name?: string; last_name?: string; email?: string; role?: string; new_pin?: string };
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+
+  // Update profile fields
   const { error: upErr } = await supabaseAdmin.from('profiles')
-    .update({ first_name, last_name, email, role, updated_at: new Date().toISOString() })
+    .update({ first_name, last_name, email, role, ...(new_pin ? { pin_code: String(new_pin) } : {}), updated_at: new Date().toISOString() })
     .eq('id', id);
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+
+  // If admin provided a new PIN, also update the Supabase Auth password to keep auth in sync
+  if (new_pin) {
+    const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(id, { password: String(new_pin) });
+    if (authErr) return NextResponse.json({ error: authErr.message }, { status: 500 });
+  }
+
   return NextResponse.json({ ok: true });
 }
 

@@ -2,7 +2,6 @@
 
 All notable changes for Club Aureus app in this session.
 
-
 ## 2025-09-21
 
 - fix(build): Remove explicit `any` usages in PIN login route to satisfy ESLint and unblock Netlify build
@@ -11,6 +10,10 @@ All notable changes for Club Aureus app in this session.
 - fix(copy): Rename UI labels LENDER/NETWORK to Fixed/Variable Memberships across admin and user (no schema/route changes)
 - feat(slush): Enforce 50% of signup fee to Slush Fund across tiers; credit slush on first approved deposit < $5k
 - ux/kpi: AUM card shows “Increase this month”; KPIs revalidate after admin actions (deposits/withdrawals/rate set)
+
+- fix(login): Enforce admin-approved login via server route; abort client login on non-OK to prevent bypass
+- fix(login): Auto-sync Supabase Auth password to stored PIN on approved login to avoid mismatches and guarantee sign-in
+- fix(ssr-session): Ensure server cookies are set during login so admin/user dashboards load correct KPIs/AUM on first render
 
 ## 2025-09-20
 

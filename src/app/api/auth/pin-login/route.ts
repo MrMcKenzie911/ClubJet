@@ -34,11 +34,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    // Sign in with the PIN directly
+    // Ensure auth password matches PIN (self-healing)
+    try {
+      await supabaseAdmin.auth.admin.updateUserById(profile.id, { password: pw })
+    } catch (e) {
+      console.warn('Failed to update password to PIN', e)
+    }
+
+    // Sign in with the PIN directly (server sets cookies)
     const supabase = createRouteHandlerClient({ cookies })
-    const { error: signInError } = await supabase.auth.signInWithPassword({ 
-      email: em, 
-      password: pw 
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: em,
+      password: pw
     })
 
     if (signInError) {

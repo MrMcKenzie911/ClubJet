@@ -87,7 +87,30 @@ export default function UserDrawer({ userId, onClose }: { userId: string; onClos
                   View Detailed Referral Tree
                 </button>
 
-                <button onClick={async ()=>{ const res = await fetch('/api/admin/generate-reset-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: profile.email })}); const j:any = await res.json().catch(()=>({})); if (j.link) { window.open(j.link, '_blank'); } }} className="rounded bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 text-sm">Reset Password</button>
+                <button onClick={async ()=>{ const res = await fetch('/api/admin/generate-reset-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: profile.email })}); const j:any = await res.json().catch(()=>({})); if (j.link) { window.open(j.link, '_blank'); } }} className="rounded bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 text-sm">Reset Password Link</button>
+
+                {/* Directly set PIN/Password */}
+                <form className="ml-auto flex items-center gap-2" onSubmit={async (e)=>{
+                  e.preventDefault();
+                  const f = e.currentTarget as HTMLFormElement;
+                  const nv = (f.elements.namedItem('new_pin') as HTMLInputElement)?.value || '';
+                  if (!nv) return;
+                  try {
+                    const res = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: userId, new_pin: nv }) });
+                    const j = await res.json().catch(()=>({}));
+                    if (!res.ok) throw new Error(j.error || 'Failed to set PIN');
+                    toast.success('PIN/Password updated');
+                    // refresh profile
+                    const { data: p2 } = await supabase.from('profiles').select('*').eq('id', userId).single();
+                    setProfile(p2);
+                    (f.elements.namedItem('new_pin') as HTMLInputElement).value = '';
+                  } catch(err:any) {
+                    toast.error(err?.message || 'Failed to set PIN');
+                  }
+                }}>
+                  <input name="new_pin" placeholder="New PIN" className="w-28 rounded bg-black/40 border border-gray-700 px-2 py-1 text-white text-sm" />
+                  <button className="rounded bg-amber-500 hover:bg-amber-400 text-black px-2 py-1 text-sm">Set PIN</button>
+                </form>
               </div>
             </div>
             <div className="rounded border border-gray-800 p-3">

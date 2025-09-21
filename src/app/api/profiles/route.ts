@@ -22,6 +22,9 @@ export async function POST(req: Request) {
       last_name,
       phone,
       pin_code: pin_code || null, // Store the PIN for login
+      // Persist what the user selected so Admin Pending Users shows correct info
+      account_type: (account_type === 'NETWORK' || account_type === 'LENDER') ? account_type : null,
+      investment_amount: Number(investment_amount || 0),
       // Do NOT set referral_code here; this value in the payload represents the REFERRER code.
       // We will generate a unique referral_code for the new user below.
       referrer_id: referrer_id ?? null,
