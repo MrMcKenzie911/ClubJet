@@ -456,6 +456,14 @@ async function AdminAUMSignupsChart({ userId }: { userId: string }) {
   }
 
   const supabase = getSupabaseServer()
+  
+  // Get all verified accounts to match the KPI calculation
+  const { data: verifiedAccounts } = await supabase
+    .from('accounts')
+    .select('id, balance, verified_at')
+    .not('verified_at', 'is', null)
+
+  // Get all transactions for historical chart data
   const firstMonthStart = new Date(now.getFullYear(), now.getMonth() - 5, 1)
   firstMonthStart.setHours(0,0,0,0)
 
@@ -466,7 +474,7 @@ async function AdminAUMSignupsChart({ userId }: { userId: string }) {
 
   const { data: acctsAll } = await supabase
     .from('accounts')
-    .select('id, initial_balance, verified_at')
+    .select('id, initial_balance, verified_at, balance')
 
   const { data: l1 } = await supabase
     .from('profiles')
@@ -487,19 +495,40 @@ async function AdminAUMSignupsChart({ userId }: { userId: string }) {
     verified_at: (a as any).verified_at as string | null,
   }))
 
-  const series: MultiLineDatum[] = months.map((ym) => {
+  const series: MultiLineDatum[] = months.map((ym, idx) => {
     const [y, m] = ym.split('-').map(Number)
     const monthEnd = new Date(y, m, 0, 23, 59, 59, 999)
+    
+    // For the current month (last in array), use the actual current AUM from verified accounts
+    if (idx === months.length - 1) {
+      const currentAUM = (verifiedAccounts ?? []).reduce((s: number, a: {balance?: number}) => s + Number(a.balance || 0), 0)
+      
+      // Calculate referral deposits for this month
+      const referralDeposits = (txAll || [])
+        .filter(t => l1AcctIds.includes((t as any).account_id))
+        .filter(t => {
+          const txDate = new Date((t as any).created_at)
+          return txDate.getFullYear() === y && txDate.getMonth() + 1 === m
+        })
+        .filter(t => (t as any).type === 'DEPOSIT')
+        .reduce((s: number, t: { amount: number }) => s + Number(t.amount || 0), 0)
+      
+      return { label: monthLabel(ym), aum: currentAUM, referralDeposits }
+    }
 
-    // Calculate base from all verified accounts up to this month
-    const base = initialBalances.reduce((s, a) => s + (a.verified_at && new Date(a.verified_at) <= monthEnd ? a.initial : 0), 0)
+    // For historical months, calculate based on transactions up to that point
+    const accountsVerifiedByMonth = (acctsAll || []).filter(a =>
+      (a as any).verified_at && new Date((a as any).verified_at) <= monthEnd
+    )
+    
+    // Start with initial balances of accounts verified by this month
+    const base = accountsVerifiedByMonth.reduce((s, a) => s + Number((a as any).initial_balance || 0), 0)
 
-    // Calculate cumulative changes from all transaction types
+    // Add all transactions up to this month
     const cumulative = (txAll || [])
       .filter(t => new Date((t as any).created_at) <= monthEnd)
       .reduce((sum: number, t: { type: string; amount: number }) => {
         const amt = Number(t.amount || 0)
-        // Handle all transaction types properly
         if (t.type === 'WITHDRAWAL') return sum - amt
         if (t.type === 'DEPOSIT') return sum + amt
         if (t.type === 'INTEREST') return sum + amt

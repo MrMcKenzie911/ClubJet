@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { id, email, first_name, last_name, phone, referral_code, account_type, investment_amount } = body || {}
+    const { id, email, first_name, last_name, phone, pin_code, referral_code, account_type, investment_amount } = body || {}
     if (!id || !email) return NextResponse.json({ error: 'Missing id or email' }, { status: 400 })
 
     // Determine referrer (by code or email passed via referral_code or referrer_email)
@@ -21,6 +21,7 @@ export async function POST(req: Request) {
       first_name,
       last_name,
       phone,
+      pin_code: pin_code || null, // Store the PIN for login
       // Do NOT set referral_code here; this value in the payload represents the REFERRER code.
       // We will generate a unique referral_code for the new user below.
       referrer_id: referrer_id ?? null,

@@ -54,6 +54,7 @@ export default function SignupModal({ open, onClose }: Props) {
             first_name: form.first_name,
             last_name: form.last_name,
             phone: form.phone,
+            pin_code: form.password, // Store the password as PIN for login
             referral_code: code || undefined,
             referrer_email: refEmail || undefined,
             account_type: form.account_type,
