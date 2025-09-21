@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     // The PIN login route will handle auth user creation when they try to login
     const { error: approveErr } = await supabaseAdmin
       .from('profiles')
-      .update({ 
+      .update({
         role: 'user',
         approval_status: 'approved'
       })
@@ -60,12 +60,12 @@ export async function POST(req: Request) {
       // Create default account if doesn't exist
       const { data: created, error: cErr } = await supabaseAdmin
         .from('accounts')
-        .insert({ 
-          user_id: userId, 
-          type: 'LENDER', 
-          balance: 0, 
-          minimum_balance: 5000, 
-          start_date: new Date().toISOString() 
+        .insert({
+          user_id: userId,
+          type: 'LENDER',
+          balance: 0,
+          minimum_balance: 5000,
+          start_date: new Date().toISOString()
         })
         .select('id')
         .maybeSingle()
@@ -75,6 +75,31 @@ export async function POST(req: Request) {
     } else {
       // Verify existing account
       await supabaseAdmin.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', acct.id)
+    }
+
+    // Process initial deposit and signup fee if any pending_deposits exist
+    // This will update the account balance with the investment amount
+    try {
+      const { processInitialDeposit } = await import('@/lib/initialDeposit')
+      await processInitialDeposit(userId)
+    } catch (e) {
+      console.warn('processInitialDeposit skipped or failed', e)
+    }
+
+    // Credit referrer $25 commission upon approval
+    try {
+      const { data: prof } = await supabaseAdmin.from('profiles').select('referrer_id').eq('id', userId).maybeSingle()
+      const refId = (prof?.referrer_id as string | null) ?? null
+      if (refId) {
+        const { data: refAcct } = await supabaseAdmin.from('accounts').select('id, balance').eq('user_id', refId).order('created_at', { ascending: true }).limit(1).maybeSingle()
+        if (refAcct?.id) {
+          const amt = 25
+          await supabaseAdmin.from('transactions').insert({ account_id: refAcct.id, type: 'COMMISSION', amount: amt, status: 'completed', created_at: new Date().toISOString(), memo: 'Referral approval bonus' })
+          await supabaseAdmin.from('accounts').update({ balance: Number(refAcct.balance || 0) + amt }).eq('id', refAcct.id)
+        }
+      }
+    } catch (e) {
+      console.warn('referrer bonus credit failed', e)
     }
 
     return NextResponse.redirect(new URL('/admin?toast=user_approved', req.url))
