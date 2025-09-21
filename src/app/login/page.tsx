@@ -48,25 +48,34 @@ export default function LoginPage() {
     return () => subscription.unsubscribe()
   }, [supabase])
 
-  // Auto-redirect if already authenticated (guarded)
+  // Auto-redirect if already authenticated (guarded) - only check once on mount
   useEffect(() => {
     let cancelled = false;
+    let hasRedirected = false;
+    
     (async () => {
+      // Prevent multiple redirects
+      if (hasRedirected) return;
+      
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session || cancelled) return;
+      
       const user = session.user;
       const { data: profile } = await supabase
         .from('profiles')
         .select('role, is_founding_member')
         .eq('id', user.id)
         .maybeSingle();
-      if (!cancelled) {
+        
+      if (!cancelled && !hasRedirected) {
+        hasRedirected = true;
         const toAdmin = profile?.role === 'admin' || profile?.is_founding_member === true
         router.replace(toAdmin ? '/admin' : '/dashboard');
       }
     })();
+    
     return () => { cancelled = true };
-  }, [router, supabase]);
+  }, []); // Empty deps - only run once on mount
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
