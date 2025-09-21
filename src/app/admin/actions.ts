@@ -178,6 +178,19 @@ export async function decideWithdrawal(formData: FormData) {
         const { data: acct, error: acctErr } = await supabaseAdmin.from('accounts').select('id, balance').eq('id', wr.account_id).maybeSingle()
         if (acctErr) throw acctErr
         if (acct) {
+          // Create withdrawal transaction record for audit trail
+          await supabaseAdmin.from('transactions').insert({
+            account_id: acct.id,
+            type: 'WITHDRAWAL',
+            amount: -Number(wr.amount || 0), // Negative for withdrawal
+            status: 'completed',
+            metadata: {
+              withdrawal_id: wrId,
+              admin_approved: true,
+              scheduled_release: schedule
+            }
+          })
+
           const newBal = Math.max(0, Number(acct.balance || 0) - Number(wr.amount || 0))
           await supabaseAdmin.from('accounts').update({ balance: newBal }).eq('id', acct.id)
         }
@@ -244,23 +257,25 @@ export async function setRate(formData: FormData) {
       .from('earnings_rates')
       .insert({ account_type, fixed_rate_monthly, effective_from: new Date().toISOString().slice(0, 10) })
 
-    // 2) Immediately apply interest to all verified accounts of this type
+    // 2) Apply interest atomically to all verified accounts of this type
     const { data: accts } = await supabaseAdmin
       .from('accounts')
-      .select('id, balance')
+      .select('id')
       .eq('type', account_type)
       .not('verified_at','is', null)
 
-    const pct = fixed_rate_monthly / 100
-    const nowIso = new Date().toISOString()
-    for (const a of (accts || []) as { id: string; balance: number | null }[]) {
-      const bal = Number(a.balance || 0)
-      const delta = +(bal * pct).toFixed(2)
-      if (delta <= 0) continue
-      await supabaseAdmin
-        .from('transactions')
-        .insert({ account_id: a.id, type: 'INTEREST', amount: delta, status: 'posted', created_at: nowIso })
-      await supabaseAdmin.from('accounts').update({ balance: bal + delta }).eq('id', a.id)
+    // Use atomic earnings application for each account
+    for (const a of (accts || []) as { id: string }[]) {
+      try {
+        await supabaseAdmin.rpc('apply_earnings_atomic', {
+          p_account_id: a.id,
+          p_rate_pct: fixed_rate_monthly,
+          p_admin_id: 'system' // TODO: Get actual admin ID from session
+        })
+      } catch (e) {
+        console.error(`Failed to apply earnings to account ${a.id}:`, e)
+        // Continue with other accounts but log the error
+      }
     }
 
     try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}

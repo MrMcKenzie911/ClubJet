@@ -1,10 +1,21 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { finalizeCommissionAtomic } from '@/lib/dataIntegrity'
+import { cookies } from 'next/headers'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   try {
+    // Get admin user for audit trail
+    const supabase = createRouteHandlerClient({ cookies })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { data: adminProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (adminProfile?.role !== 'admin') return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+
     const parsed = await req.json().catch(() => ({})) as unknown
     const body = (parsed && typeof parsed === 'object') ? parsed as { account_id?: string; amount?: number } : {}
     const account_id = String(body.account_id || '')
@@ -50,28 +61,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No amount to finalize' }, { status: 400 })
     }
 
-    // Post commission and update account
-    const nowIso = new Date().toISOString()
-    const { data: acct2 } = await supabaseAdmin
-      .from('accounts')
-      .select('id, balance')
-      .eq('id', account_id)
-      .maybeSingle()
+    // Use atomic commission finalization for data integrity
+    const result = await finalizeCommissionAtomic(account_id, amount, user.id)
 
-    const newBal = Number(acct2?.balance || 0) + amount
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 500 })
+    }
 
-    const { error: insErr } = await supabaseAdmin
-      .from('transactions')
-      .insert({ account_id, type: 'COMMISSION', amount, status: 'completed', created_at: nowIso })
-    if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 })
-
-    const { error: updErr } = canUseReserved
-      ? await supabaseAdmin.from('accounts').update({ balance: newBal, reserved_amount: 0 }).eq('id', account_id)
-      : await supabaseAdmin.from('accounts').update({ balance: newBal }).eq('id', account_id)
-    if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 })
-
-    // Optionally tag the metadata preference as finalized to avoid reuse
-    if (!canUseReserved) {
+    // Clear reserved amount if using reserved system
+    if (canUseReserved) {
+      await supabaseAdmin.from('accounts').update({ reserved_amount: 0 }).eq('id', account_id)
+    } else {
+      // Tag the metadata preference as finalized to avoid reuse
       await supabaseAdmin.from('transactions')
         .update({ metadata: { finalized: true } })
         .eq('account_id', account_id)
@@ -80,7 +81,13 @@ export async function POST(req: Request) {
         .limit(1)
     }
 
-    return NextResponse.json({ ok: true, amount })
+    return NextResponse.json({
+      ok: true,
+      amount,
+      oldBalance: result.oldBalance,
+      newBalance: result.newBalance,
+      transactionId: result.transactionId
+    })
   } catch (e) {
     console.error('finalize commission failed', e)
     return NextResponse.json({ error: 'failed' }, { status: 500 })

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { adminUpdateBalance } from '@/lib/dataIntegrity'
+import { cookies } from 'next/headers'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 
 export const runtime = 'nodejs'
 
@@ -7,14 +10,33 @@ export const runtime = 'nodejs'
 // Body: { account_id: string, balance?: number, monthly_payout?: number }
 export async function POST(req: Request) {
   try {
+    // Get admin user for audit trail
+    const supabase = createRouteHandlerClient({ cookies })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { data: adminProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (adminProfile?.role !== 'admin') return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+
     const parsed = await req.json().catch(() => ({})) as unknown
     const body = (parsed && typeof parsed === 'object') ? parsed as Record<string, unknown> : {}
     const account_id = String(body.account_id ?? '')
     if (!account_id) return NextResponse.json({ error: 'account_id required' }, { status: 400 })
 
-    type Patch = { balance?: number; reserved_amount?: number }
+    // Handle balance update with full audit trail
+    if (body.balance !== undefined) {
+      const newBalance = Number(body.balance)
+      const reason = String(body.reason || 'Admin balance adjustment')
+
+      const result = await adminUpdateBalance(account_id, newBalance, user.id, reason)
+
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 500 })
+      }
+    }
+
+    type Patch = { reserved_amount?: number }
     const patch: Patch = {}
-    if (body.balance !== undefined) patch.balance = Number(body.balance)
 
     // Check if reserved_amount column exists in production; gracefully fallback if not
     let canSetReserved = false
