@@ -1,22 +1,16 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 
 export async function POST(req: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-  const { event, session } = await req.json();
-
-  if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-    if (session) {
-      await supabase.auth.setSession({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-      });
-    }
-  } else if (event === "SIGNED_OUT") {
-    await supabase.auth.signOut();
-  }
-
+  // Simply acknowledge the auth state change
+  // The client already handles the session, and cookies are automatically synced
+  // We don't need to call setSession on the server as it causes infinite loops
+  
+  const { event } = await req.json();
+  
+  // Log for debugging but don't manipulate session
+  console.log(`Auth event: ${event}`);
+  
   return NextResponse.json({ ok: true });
 }
 

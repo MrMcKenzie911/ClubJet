@@ -20,12 +20,21 @@ export default function LoginPage() {
 
   // Sync auth to server cookies so middleware/server can see the session
   useEffect(() => {
+    let lastEvent: string | null = null;
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      await fetch('/auth/callback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event, session }),
-      })
+      // Prevent duplicate events from firing
+      if (event === lastEvent) return;
+      lastEvent = event;
+      
+      // Only sync on actual auth changes, not every state update
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        await fetch('/auth/callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event, session }),
+        })
+      }
+      
       // If signed_out, also call server signout to clear cookies
       if (event === 'SIGNED_OUT') {
         await fetch('/api/auth/signout', { method: 'POST' })
