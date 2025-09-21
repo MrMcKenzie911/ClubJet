@@ -34,8 +34,56 @@ export async function POST(req: Request) {
       return NextResponse.redirect(new URL('/admin?toast=user_rejected', req.url))
     }
 
-    // For approval, simply update the profile status
-    // The PIN login route will handle auth user creation when they try to login
+    // Get profile to get PIN for auth user creation
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('email, pin_code')
+      .eq('id', userId)
+      .single()
+    
+    if (!profile?.email || !profile?.pin_code) {
+      throw new Error('Profile missing email or PIN')
+    }
+
+    // Create auth user with PIN as password
+    try {
+      // First check if auth user already exists
+      const { data: existingList } = await supabaseAdmin.auth.admin.listUsers()
+      const existingUser = existingList?.users?.find(u => u.email === profile.email)
+      
+      if (!existingUser) {
+        // Create new auth user with PIN as password
+        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email: profile.email,
+          password: profile.pin_code,
+          email_confirm: true
+        })
+        
+        if (authError) {
+          console.error('Failed to create auth user:', authError)
+          // Try with fallback format
+          const fallback = `Cj${profile.pin_code}!${profile.pin_code}`
+          const { error: fallbackError } = await supabaseAdmin.auth.admin.createUser({
+            email: profile.email,
+            password: fallback,
+            email_confirm: true
+          })
+          if (fallbackError) {
+            throw new Error(`Auth user creation failed: ${fallbackError.message}`)
+          }
+        }
+      } else {
+        // Update existing auth user's password to PIN
+        await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+          password: profile.pin_code
+        })
+      }
+    } catch (authErr) {
+      console.error('Auth user handling error:', authErr)
+      // Continue with approval even if auth user creation fails - PIN login will try to handle it
+    }
+
+    // Update profile status to approved
     const { error: approveErr } = await supabaseAdmin
       .from('profiles')
       .update({
