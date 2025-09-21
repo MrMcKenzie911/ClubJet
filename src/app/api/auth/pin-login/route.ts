@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     try {
       // Try to get existing auth user
       const { data: authList } = await supabaseAdmin.auth.admin.listUsers()
-      const existingAuth = authList?.users?.find((u: any) => u.email === em)
+      const existingAuth = authList?.users?.find((u: { email?: string }) => u.email === em)
 
       if (existingAuth) {
         // Update password to PIN

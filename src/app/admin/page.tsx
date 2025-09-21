@@ -497,11 +497,6 @@ async function AdminAUMSignupsChart({ userId }: { userId: string }) {
     l1AcctIds = (l1Accts || []).map((a: { id: string }) => a.id)
   }
 
-  const initialBalances = (acctsAll || []).map(a => ({
-    initial: Number((a as any).initial_balance || 0),
-    verified_at: (a as any).verified_at as string | null,
-  }))
-
   const series: MultiLineDatum[] = months.map((ym, idx) => {
     const [y, m] = ym.split('-').map(Number)
     const monthEnd = new Date(y, m, 0, 23, 59, 59, 999)
