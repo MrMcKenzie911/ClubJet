@@ -7,121 +7,79 @@ export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   try {
-  // Ensure admin guard (direct)
-  const supa = createRouteHandlerClient({ cookies })
-  const { data: { user } } = await supa.auth.getUser()
-  if (!user) return NextResponse.redirect(new URL('/login', req.url))
-  const { data: me } = await supa.from('profiles').select('role').eq('id', user.id).single()
-  if (me?.role !== 'admin') return NextResponse.redirect(new URL('/login', req.url))
+    // Verify admin access (same as verify-account)
+    const supa = createRouteHandlerClient({ cookies })
+    const { data: { user } } = await supa.auth.getUser()
+    if (!user) return NextResponse.redirect(new URL('/login', req.url))
+    const { data: me } = await supa.from('profiles').select('role').eq('id', user.id).single()
+    if (me?.role !== 'admin') return NextResponse.redirect(new URL('/login', req.url))
 
     const form = await req.formData()
     const userId = String(form.get('user_id') || '')
-    const decision = String(form.get('decision') || '')
-    if (!userId || !decision) {
-      return NextResponse.redirect(new URL('/admin?toast=error', req.url))
-    }
+    const action = String(form.get('action') || '') // Changed from 'decision' to 'action'
+    
+    if (!userId) return NextResponse.redirect(new URL('/admin?toast=error', req.url))
 
-    if (decision === 'approve') {
-      // Get user profile to access PIN and email
-      const { data: profile } = await supabaseAdmin
+    if (action === 'reject') {
+      // Update profile to rejected status (don't delete)
+      const { error: rejectErr } = await supabaseAdmin
         .from('profiles')
-        .select('email, pin_code, first_name, last_name')
+        .update({ 
+          role: 'rejected',
+          approval_status: 'rejected' 
+        })
         .eq('id', userId)
-        .single()
       
-      if (!profile) throw new Error('Profile not found')
-      
-      // Create auth user with PIN as password if doesn't exist
-      try {
-        const { data: { users } } = await supabaseAdmin.auth.admin.listUsers()
-        const authUserExists = users.some(u => u.id === userId)
-        
-        if (!authUserExists && profile.email && profile.pin_code) {
-          // Create auth user with PIN as password
-          await supabaseAdmin.auth.admin.createUser({
-            email: profile.email,
-            password: profile.pin_code,
-            email_confirm: true,
-            user_metadata: {
-              first_name: profile.first_name,
-              last_name: profile.last_name
-            }
-          })
-        } else if (authUserExists && profile.pin_code) {
-          // Update existing auth user's password to PIN
-          await supabaseAdmin.auth.admin.updateUserById(userId, {
-            password: profile.pin_code
-          })
-        }
-      } catch (authErr) {
-        console.warn('Auth user creation/update warning:', authErr)
-      }
-      
-      // Update profile to approved status
-      const { error: upErr } = await supabaseAdmin.from('profiles').update({
-        role: 'user',
-        approval_status: 'approved',
-        approved_by: user.id,
-        approved_at: new Date().toISOString()
-      }).eq('id', userId)
-      if (upErr) throw upErr
-      // Ensure user has an account and verify the earliest one
-      let { data: acct } = await supabaseAdmin
-        .from('accounts')
-        .select('id')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle()
-      if (!acct?.id) {
-        const { data: created, error: cErr } = await supabaseAdmin
-          .from('accounts')
-          .insert({ user_id: userId, type: 'LENDER', balance: 0, minimum_balance: 5000, start_date: new Date().toISOString() })
-          .select('id')
-          .maybeSingle()
-        if (cErr) throw cErr
-        acct = created
-      }
-      if (acct?.id) {
-        const { error: vErr } = await supabaseAdmin.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', acct.id)
-        if (vErr) throw vErr
-      }
-
-      // Process initial deposit and signup fee if any pending_deposits exist
-      try {
-        const { processInitialDeposit } = await import('@/lib/initialDeposit')
-        await processInitialDeposit(userId)
-      } catch (e) {
-        console.warn('processInitialDeposit skipped or failed', e)
-      }
-
-      // Credit referrer $25 commission upon approval
-      try {
-        const { data: prof } = await supabaseAdmin.from('profiles').select('referrer_id').eq('id', userId).maybeSingle()
-        const refId = (prof?.referrer_id as string | null) ?? null
-        if (refId) {
-          const { data: refAcct } = await supabaseAdmin.from('accounts').select('id, balance').eq('user_id', refId).order('created_at', { ascending: true }).limit(1).maybeSingle()
-          if (refAcct?.id) {
-            const amt = 25
-            await supabaseAdmin.from('transactions').insert({ account_id: refAcct.id, type: 'COMMISSION', amount: amt, status: 'posted', created_at: new Date().toISOString(), memo: 'Referral approval bonus' })
-            await supabaseAdmin.from('accounts').update({ balance: Number(refAcct.balance || 0) + amt }).eq('id', refAcct.id)
-          }
-        }
-      } catch (e) {
-        console.warn('referrer bonus credit failed', e)
-      }
-
-      return NextResponse.redirect(new URL('/admin?toast=user_approved', req.url))
-    } else if (decision === 'reject') {
-      const { error: delErr } = await supabaseAdmin.from('profiles').delete().eq('id', userId)
-      if (delErr) throw delErr
+      if (rejectErr) throw rejectErr
       return NextResponse.redirect(new URL('/admin?toast=user_rejected', req.url))
     }
 
-    return NextResponse.redirect(new URL('/admin?toast=error', req.url))
+    // For approval, simply update the profile status
+    // The PIN login route will handle auth user creation when they try to login
+    const { error: approveErr } = await supabaseAdmin
+      .from('profiles')
+      .update({ 
+        role: 'user',
+        approval_status: 'approved'
+      })
+      .eq('id', userId)
+    
+    if (approveErr) throw approveErr
+
+    // Also mark them as verified user to remove from pending lists
+    // This matches what verify-account does
+    const { data: acct } = await supabaseAdmin
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (!acct?.id) {
+      // Create default account if doesn't exist
+      const { data: created, error: cErr } = await supabaseAdmin
+        .from('accounts')
+        .insert({ 
+          user_id: userId, 
+          type: 'LENDER', 
+          balance: 0, 
+          minimum_balance: 5000, 
+          start_date: new Date().toISOString() 
+        })
+        .select('id')
+        .maybeSingle()
+      if (!cErr && created) {
+        await supabaseAdmin.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', created.id)
+      }
+    } else {
+      // Verify existing account
+      await supabaseAdmin.from('accounts').update({ verified_at: new Date().toISOString() }).eq('id', acct.id)
+    }
+
+    return NextResponse.redirect(new URL('/admin?toast=user_approved', req.url))
   } catch (e) {
     console.error('api approve-user failed', e)
     return NextResponse.redirect(new URL('/admin?toast=error', req.url))
   }
 }
-

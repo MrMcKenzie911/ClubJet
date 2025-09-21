@@ -132,7 +132,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
 
 
       {tab === 'pending-users' && (
-        <section className="mt-6">
+        <section className="mt-6 space-y-2">
           <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
             <h2 className="mb-3 text-white font-semibold">Pending Users</h2>
             <div className="space-y-2">
@@ -143,11 +143,18 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                     <div className="flex-1">
                       <div className="text-white font-medium">{u.first_name} {u.last_name}</div>
                       <div className="text-xs text-gray-400">{u.email} • {u.phone ?? 'n/a'}</div>
-                      <div className="mt-2 text-xs text-gray-500">Requested: {u.created_at ? new Date(u.created_at).toLocaleString() : '—'}</div>
+                      <div className="mt-2 text-sm text-gray-300">
+                        Account: <span className="text-amber-400">{u.account_type === 'LENDER' ? 'Fixed Memberships' : u.account_type === 'NETWORK' ? 'Variable Memberships' : u.account_type || 'Not specified'}</span>
+                        • Investment: ${Number(u.investment_amount || 0).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        PIN: {u.pin_code || 'Not set'} • Referrer: {u.referrer_code || u.referrer_email || 'None'}
+                      </div>
+                      <div className="text-xs text-gray-500">Requested: {u.created_at ? new Date(u.created_at).toLocaleString() : '—'}</div>
                     </div>
                     <div className="flex gap-2 items-start">
-                      <button type="submit" name="decision" value="approve" className="rounded bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1">Approve</button>
-                      <button type="submit" name="decision" value="reject" className="rounded bg-red-600 hover:bg-red-500 text-white px-3 py-1">Reject</button>
+                      <button type="submit" name="action" value="approve" className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Approve</button>
+                      <button type="submit" name="action" value="reject" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1 text-white">Reject</button>
                     </div>
                   </div>
                 </form>
