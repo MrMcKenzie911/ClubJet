@@ -135,7 +135,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
             <h2 className="mb-3 text-white font-semibold">Pending Users</h2>
             <div className="space-y-2">
               {pendingUsers.map((u: any) => (
-                <form key={u.id} action={approveUser} className="rounded border border-gray-800 bg-[#0E141C] p-3">
+                <form key={u.id} action="/api/admin/approve-user" method="post" className="rounded border border-gray-800 bg-[#0E141C] p-3">
                   <input type="hidden" name="user_id" defaultValue={u.id} />
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
@@ -159,7 +159,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
       {tab === 'pending-deposits' && (
         <section className="mt-6 space-y-2">
           {pendingDeposits.map((t: any) => (
-            <form key={`dep-${t.id}`} action={approveDeposit} className="rounded-lg border border-gray-700 bg-[#1e1e1e] p-4 shadow">
+            <form key={`dep-${t.id}`} action="/api/admin/approve-deposit" method="post" className="rounded-lg border border-gray-700 bg-[#1e1e1e] p-4 shadow">
               <input type="hidden" name="tx_id" defaultValue={t.id} />
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -181,7 +181,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
       {tab === 'pending-withdrawals' && (
         <section className="mt-6 space-y-2">
           {pendingWithdrawals.map((w: any) => (
-            <form key={`wr-${w.id}`} action={decideWithdrawal} className="rounded-lg border border-gray-700 bg-[#1e1e1e] p-4 shadow">
+            <form key={`wr-${w.id}`} action="/api/admin/decide-withdrawal" method="post" className="rounded-lg border border-gray-700 bg-[#1e1e1e] p-4 shadow">
               <input type="hidden" name="wr_id" defaultValue={w.id} />
               <input type="hidden" name="account_id" defaultValue={w.account_id} />
               <input type="hidden" name="amount" defaultValue={w.amount} />

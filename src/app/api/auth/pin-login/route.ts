@@ -58,7 +58,45 @@ export async function POST(req: NextRequest) {
         } catch {}
       }
 
-      if (!authId) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+      if (!authId) {
+        // Attempt to provision an auth user if profile exists and is approved
+        const { data: profFull } = await supabaseAdmin
+          .from('profiles')
+          .select('id, email, pin_code, role, approval_status')
+          .eq('email', em)
+          .maybeSingle()
+        if (!profFull) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+        const approved = (profFull as any).approval_status === 'approved' || (profFull as any).role === 'user'
+        if (!approved) return NextResponse.json({ error: 'Pending approval' }, { status: 403 })
+
+        // Create auth user for this email
+        let createdId: string | null = null
+        try {
+          const created = await supabaseAdmin.auth.admin.createUser({ email: em, password: pw, email_confirm: true })
+          createdId = created?.data?.user?.id ?? null
+        } catch {}
+        if (!createdId) {
+          try {
+            const created2 = await supabaseAdmin.auth.admin.createUser({ email: em, password: fallback, email_confirm: true })
+            createdId = created2?.data?.user?.id ?? null
+          } catch {}
+        }
+        if (!createdId) return NextResponse.json({ error: 'Provisioning failed' }, { status: 500 })
+
+        // Migrate related rows from old profile id to new auth id
+        const oldId = (profFull as any).id as string
+        const newId = createdId
+        try {
+          await supabaseAdmin.from('accounts').update({ user_id: newId }).eq('user_id', oldId)
+          await supabaseAdmin.from('signup_fees').update({ user_id: newId }).eq('user_id', oldId)
+          await supabaseAdmin.from('profiles').update({ referrer_id: newId }).eq('referrer_id', oldId)
+          await supabaseAdmin.from('profiles').update({ id: newId }).eq('id', oldId)
+        } catch (e) {
+          console.error('migration failed', e)
+          // Continue; the login should still work even if some relations need manual fix
+        }
+        authId = newId
+      }
 
       // Determine canonical login email for this auth user id
       let loginEmail = em
