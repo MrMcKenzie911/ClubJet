@@ -29,23 +29,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Account pending approval' }, { status: 403 })
     }
 
-    // Verify PIN matches
-    if (profile.pin_code !== pw) {
+    // Verify PIN matches - handle both 4-digit and 6-digit PINs
+    const storedPin = profile.pin_code || ''
+    let pinMatches = false
+
+    if (storedPin === pw) {
+      pinMatches = true
+    } else if (pw.length === 4 && storedPin === pw + '00') {
+      // Handle case where user enters 4-digit PIN but stored PIN is 6-digit (e.g., 5629 vs 562900)
+      pinMatches = true
+    } else if (pw.length === 6 && storedPin.length === 4 && pw === storedPin + '00') {
+      // Handle case where user enters 6-digit PIN but stored PIN is 4-digit
+      pinMatches = true
+    }
+
+    if (!pinMatches) {
+      console.log(`PIN mismatch for ${em}: entered="${pw}", stored="${storedPin}"`)
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    // Ensure auth password matches PIN (self-healing)
+    // Ensure auth password matches PIN (self-healing) - use 6-digit version for Supabase
+    const authPassword = pw.length === 4 ? pw + '00' : pw
     try {
-      await supabaseAdmin.auth.admin.updateUserById(profile.id, { password: pw })
+      await supabaseAdmin.auth.admin.updateUserById(profile.id, { password: authPassword })
     } catch (e) {
       console.warn('Failed to update password to PIN', e)
     }
 
-    // Sign in with the PIN directly (server sets cookies)
+    // Sign in with the PIN directly (server sets cookies) - use 6-digit version
     const supabase = createRouteHandlerClient({ cookies })
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: em,
-      password: pw
+      password: authPassword
     })
 
     if (signInError) {

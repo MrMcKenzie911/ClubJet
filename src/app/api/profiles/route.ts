@@ -15,44 +15,30 @@ export async function POST(req: Request) {
       referrer_id = await findReferrerIdByCodeOrEmail({ code: referral_code, email: referrer_email })
     }
 
-    // Try to insert with all columns, fall back to basic columns if some don't exist
-    let profileData: Record<string, unknown> = {
+    console.log('Creating profile with signup data:', {
+      email,
+      account_type,
+      investment_amount: Number(investment_amount || 0),
+      pin_code: pin_code ? 'SET' : 'NOT_SET'
+    })
+
+    const { error } = await supabaseAdmin.from('profiles').upsert({
       id,
       email,
       first_name,
       last_name,
       phone,
+      pin_code: pin_code || null, // Store the PIN for login
+      account_type: (account_type === 'NETWORK' || account_type === 'LENDER') ? account_type : null, // Store signup choice
+      investment_amount: Number(investment_amount || 0), // Store investment amount
+      // Do NOT set referral_code here; this value in the payload represents the REFERRER code.
+      // We will generate a unique referral_code for the new user below.
       referrer_id: referrer_id ?? null,
       role: 'pending',
       approval_status: 'pending',
       updated_at: new Date().toISOString(),
-    }
-
-    // Try to add optional columns that may not exist yet
-    try {
-      if (pin_code) profileData.pin_code = pin_code
-      if (account_type === 'NETWORK' || account_type === 'LENDER') profileData.account_type = account_type
-      if (investment_amount) profileData.investment_amount = Number(investment_amount || 0)
-
-      const { error } = await supabaseAdmin.from('profiles').upsert(profileData)
-      if (error) throw error
-    } catch (firstError) {
-      // If that fails, try with just basic columns
-      console.log('Full profile insert failed, trying basic columns:', firstError)
-      profileData = {
-        id,
-        email,
-        first_name,
-        last_name,
-        phone,
-        referrer_id: referrer_id ?? null,
-        role: 'pending',
-        approval_status: 'pending',
-        updated_at: new Date().toISOString(),
-      }
-      const { error: basicError } = await supabaseAdmin.from('profiles').upsert(profileData)
-      if (basicError) return NextResponse.json({ error: basicError.message }, { status: 500 })
-    }
+    })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     // Ensure the new user has their OWN unique referral_code (avoid duplicate key violations)
     try {

@@ -89,7 +89,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
   const tabParam = sp?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
 
-  const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts, monthTx } = res
+  const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts, monthTx, signupFees } = res
 
   const referralCode = await ensureUserReferralCode(res.user.id)
 
@@ -111,7 +111,32 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
 
                 {!tab && (
                   <>
-                    <SectionCards totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)} newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{ const d=p.created_at? new Date(p.created_at):null; const now=new Date(); return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(function(){ const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); return int; })()} referralPayoutPct={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100:0 })()} rateAppliedPct={Number((rates?.[0] as any)?.fixed_rate_monthly ?? 0)} monthlyCommission={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); return comm; })()} routes={{ aum: '/admin?tab=account-balances', signups: '/admin?tab=verified-users', monthly: '/admin?tab=commission-reports', commission: '/admin?tab=commission' }} />
+                    <SectionCards
+                      totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)}
+                      newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{
+                        const d=p.created_at? new Date(p.created_at):null;
+                        const now=new Date();
+                        return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+                      }).length}
+                      monthlyProfits={(function(){
+                        // Include both commissions and signup fees for monthly profits
+                        const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0);
+                        const fees=(signupFees||[]).reduce((s:number,f:any)=> s+Number(f.fee_amount||0),0);
+                        return comm + fees;
+                      })()}
+                      referralPayoutPct={(function(){
+                        const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0);
+                        const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0);
+                        const denom=int+comm;
+                        return denom>0? (comm/denom)*100:0
+                      })()}
+                      rateAppliedPct={Number((rates?.[0] as any)?.fixed_rate_monthly ?? 0)}
+                      monthlyCommission={(function(){
+                        const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0);
+                        return comm;
+                      })()}
+                      routes={{ aum: '/admin?tab=account-balances', signups: '/admin?tab=verified-users', monthly: '/admin?tab=commission-reports', commission: '/admin?tab=commission' }}
+                    />
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2 space-y-6">
