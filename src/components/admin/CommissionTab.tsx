@@ -11,7 +11,7 @@ function currency(n: number) {
 
 // Types for admin user listing and referrals
 type UserAccount = { id: string; type: 'LENDER' | 'NETWORK'; balance?: number | null; reserved_amount?: number | null }
-type AdminListUser = { id: string; email: string; first_name?: string | null; last_name?: string | null; is_founding_member?: boolean | null; accounts?: UserAccount[] }
+type AdminListUser = { id: string; email: string; first_name?: string | null; last_name?: string | null; is_founding_member?: boolean | null; role?: string | null; approval_status?: string | null; accounts?: UserAccount[] }
 type LevelsResp = { levels?: Array<{ level: number; users: Array<{ id: string }> }> }
 
 export default function CommissionTab() {
@@ -264,9 +264,13 @@ type SelectionProps = {
 
 function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals }: SelectionProps) {
   const [users, setUsers] = useState<AdminListUser[]>([])
+  const [filteredUsers, setFilteredUsers] = useState<AdminListUser[]>([])
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState<{ userId: string; firstName: string; accountId: string|null } | null>(null)
   const [completed, setCompleted] = useState<Set<string>>(new Set())
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterType, setFilterType] = useState<'all' | 'LENDER' | 'NETWORK'>('all')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'completed' | 'pending'>('all')
 
   useEffect(() => {
     let cancelled = false
@@ -276,7 +280,17 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
         const r = await fetch('/api/admin/users/list', { cache: 'no-store' })
         if (!cancelled && r.ok) {
           const j = await r.json()
-          setUsers(j.users || [])
+          const userList = j.users || []
+          setUsers(userList)
+
+          // Load persisted commission states from localStorage
+          const savedCompleted = localStorage.getItem('commission-completed')
+          if (savedCompleted) {
+            try {
+              const completedSet = new Set(JSON.parse(savedCompleted) as string[])
+              setCompleted(completedSet)
+            } catch {}
+          }
         }
       } finally {
         setLoading(false)
@@ -284,6 +298,46 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
     })()
     return () => { cancelled = true }
   }, [])
+
+  // Filter users based on search and filters
+  useEffect(() => {
+    const filtered = users.filter(u => {
+      // Search filter
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase()
+        const matchesName = (u.first_name || '').toLowerCase().includes(term) ||
+                           (u.last_name || '').toLowerCase().includes(term)
+        const matchesEmail = (u.email || '').toLowerCase().includes(term)
+        if (!matchesName && !matchesEmail) return false
+      }
+
+      // Type filter
+      if (filterType !== 'all') {
+        const hasType = (u.accounts || []).some((a: UserAccount) => a.type === filterType)
+        if (!hasType) return false
+      }
+
+      // Status filter
+      if (filterStatus !== 'all') {
+        const primary = pickPrimaryAccount((u.accounts||[]) as {id:string; type:string; balance:number}[])
+        const acctId = primary?.id || ''
+        const hasReserved = (u.accounts || []).some((a: UserAccount)=> Number(a.reserved_amount ?? 0) > 0)
+        const isCompleted = completed.has(acctId) || hasReserved
+
+        if (filterStatus === 'completed' && !isCompleted) return false
+        if (filterStatus === 'pending' && isCompleted) return false
+      }
+
+      return true
+    })
+
+    setFilteredUsers(filtered)
+  }, [users, searchTerm, filterType, filterStatus, completed])
+
+  // Persist completed state to localStorage
+  useEffect(() => {
+    localStorage.setItem('commission-completed', JSON.stringify([...completed]))
+  }, [completed])
 
   async function onSelect(u: AdminListUser) {
     const primary = pickPrimaryAccount((u.accounts||[]) as {id:string; type:string; balance:number}[])
@@ -326,6 +380,12 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
     }
   }
 
+  function clearAllCompleted() {
+    setCompleted(new Set())
+    localStorage.removeItem('commission-completed')
+    toast.success('Cleared all commission checkmarks')
+  }
+
   async function finalizeNow() {
     if (!selected?.accountId) { toast.error('Select a user with an account'); return }
     try {
@@ -357,11 +417,46 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
 
   return (
     <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-white font-semibold">Verified Users</h3>
-        <div className="flex items-center gap-3">
-          <div className="text-xs text-gray-400">Select a user to populate commission inputs</div>
-          <Button variant="secondary" className="bg-emerald-700 hover:bg-emerald-600" onClick={finalizeAll}>Finalize All</Button>
+      <div className="mb-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-white font-semibold">Verified Users</h3>
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-gray-400">Select a user to populate commission inputs</div>
+            <Button variant="secondary" className="bg-red-700 hover:bg-red-600 text-xs px-2 py-1" onClick={clearAllCompleted}>Clear Checkmarks</Button>
+            <Button variant="secondary" className="bg-emerald-700 hover:bg-emerald-600" onClick={finalizeAll}>Finalize All</Button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-3 items-center">
+          <input
+            type="text"
+            placeholder="Search by name or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-3 py-1 rounded bg-black/40 border border-gray-700 text-white text-sm w-64"
+          />
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value as 'all' | 'LENDER' | 'NETWORK')}
+            className="px-3 py-1 rounded bg-black/40 border border-gray-700 text-white text-sm"
+          >
+            <option value="all">All Types</option>
+            <option value="LENDER">Fixed Memberships</option>
+            <option value="NETWORK">Variable Memberships</option>
+          </select>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as 'all' | 'completed' | 'pending')}
+            className="px-3 py-1 rounded bg-black/40 border border-gray-700 text-white text-sm"
+          >
+            <option value="all">All Status</option>
+            <option value="completed">Completed ✓</option>
+            <option value="pending">Pending</option>
+          </select>
+          <div className="text-xs text-gray-400">
+            Showing {filteredUsers.length} of {users.length} users
+          </div>
         </div>
       </div>
       <div className="overflow-x-auto rounded-lg border border-gray-800">
@@ -380,7 +475,7 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
             {loading && (
               <tr><td className="px-3 py-3 text-gray-400" colSpan={5}>Loading...</td></tr>
             )}
-            {!loading && users.map((u: AdminListUser) => {
+            {!loading && filteredUsers.filter(u => u.approval_status === 'approved').map((u: AdminListUser) => {
               const accounts = (u.accounts || []).map(a => ({ id: a.id, type: a.type, balance: Number(a.balance || 0) }))
               const primary = pickPrimaryAccount(accounts)
               const types = (u.accounts || []).map((a: UserAccount) => a.type === 'LENDER' ? 'Fixed Memberships' : 'Variable Memberships').join(', ')
