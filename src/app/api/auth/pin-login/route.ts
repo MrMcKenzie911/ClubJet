@@ -34,29 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    // SIMPLE AUTH: Always update/create auth user with the PIN
-    try {
-      // Try to get existing auth user
-      const { data: authList } = await supabaseAdmin.auth.admin.listUsers()
-      const existingAuth = authList?.users?.find((u: { email?: string }) => u.email === em)
-
-      if (existingAuth) {
-        // Update password to PIN
-        await supabaseAdmin.auth.admin.updateUserById(existingAuth.id, { password: pw })
-      } else {
-        // Create new auth user with PIN
-        await supabaseAdmin.auth.admin.createUser({
-          email: em,
-          password: pw,
-          email_confirm: true
-        })
-      }
-    } catch (authError) {
-      console.error('Auth user update/create error:', authError)
-      // Continue - will try to login anyway
-    }
-
-    // Now sign in with the PIN
+    // Sign in with the PIN directly
     const supabase = createRouteHandlerClient({ cookies })
     const { error: signInError } = await supabase.auth.signInWithPassword({ 
       email: em, 
@@ -64,16 +42,8 @@ export async function POST(req: NextRequest) {
     })
 
     if (signInError) {
-      // Try fallback format if direct PIN fails
-      const fallback = `Cj${pw}!${pw}`
-      const { error: fallbackError } = await supabase.auth.signInWithPassword({ 
-        email: em, 
-        password: fallback 
-      })
-      
-      if (fallbackError) {
-        return NextResponse.json({ error: 'Login failed' }, { status: 401 })
-      }
+      console.error('Sign-in error:', signInError)
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
     // Get user role for redirect

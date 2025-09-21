@@ -28,8 +28,41 @@ export async function POST(req: Request) {
       return NextResponse.redirect(new URL('/admin?toast=user_rejected', req.url))
     }
 
-    // SIMPLE APPROVAL - Just update profile status
-    await supabaseAdmin.from('profiles').update({ 
+    // Get profile to get email and PIN for auth user creation
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('email, pin_code')
+      .eq('id', userId)
+      .single()
+    
+    if (!profile?.email || !profile?.pin_code) {
+      return NextResponse.redirect(new URL('/admin?toast=error', req.url))
+    }
+
+    // Create auth user with PIN as password if doesn't exist
+    try {
+      const { data: authList } = await supabaseAdmin.auth.admin.listUsers()
+      const existingAuth = authList?.users?.find((u: any) => u.email === profile.email)
+      
+      if (!existingAuth) {
+        await supabaseAdmin.auth.admin.createUser({
+          email: profile.email,
+          password: profile.pin_code,
+          email_confirm: true
+        })
+      } else {
+        // Update existing auth user's password to PIN
+        await supabaseAdmin.auth.admin.updateUserById(existingAuth.id, {
+          password: profile.pin_code
+        })
+      }
+    } catch (authError) {
+      console.error('Auth user creation error:', authError)
+      // Continue with approval even if auth creation fails
+    }
+
+    // Update profile status
+    await supabaseAdmin.from('profiles').update({
       role: 'user',
       approval_status: 'approved'
     }).eq('id', userId)
