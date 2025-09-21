@@ -98,8 +98,9 @@ export async function adminUpdateBalance(
       newBalance,
       transactionId: transaction.id
     }
-  } catch (e: any) {
-    return { success: false, error: e.message, oldBalance: 0, newBalance: 0 }
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error'
+    return { success: false, error: errorMessage, oldBalance: 0, newBalance: 0 }
   }
 }
 
@@ -149,8 +150,9 @@ export async function validateAccountBalance(accountId: string): Promise<{ valid
     }
 
     return { valid: true, calculatedBalance, recordedBalance }
-  } catch (e: any) {
-    return { valid: false, error: e.message }
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error'
+    return { valid: false, error: errorMessage }
   }
 }
 
@@ -175,7 +177,6 @@ export async function finalizeCommissionAtomic(
     }
 
     const oldBalance = Number(account.balance || 0)
-    const reservedAmount = Number(account.reserved_amount || 0)
     const newBalance = oldBalance + amount
 
     // Use atomic RPC function for commission finalization
@@ -196,8 +197,9 @@ export async function finalizeCommissionAtomic(
     }
 
     return { success: true, oldBalance, newBalance }
-  } catch (e: any) {
-    return { success: false, error: e.message, oldBalance: 0, newBalance: 0 }
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error'
+    return { success: false, error: errorMessage, oldBalance: 0, newBalance: 0 }
   }
 }
 
@@ -246,10 +248,11 @@ export async function checkSystemIntegrity(): Promise<IntegrityCheckResult> {
       issues,
       accountsChecked
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error'
     return {
       healthy: false,
-      issues: [`System integrity check failed: ${e.message}`],
+      issues: [`System integrity check failed: ${errorMessage}`],
       accountsChecked
     }
   }
@@ -285,7 +288,8 @@ export async function reconcileAccount(
       adminId,
       `${reason} - Correcting balance from ${validation.recordedBalance} to ${validation.calculatedBalance}`
     )
-  } catch (e: any) {
-    return { success: false, error: e.message, oldBalance: 0, newBalance: 0 }
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error'
+    return { success: false, error: errorMessage, oldBalance: 0, newBalance: 0 }
   }
 }

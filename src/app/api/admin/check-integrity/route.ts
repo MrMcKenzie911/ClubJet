@@ -30,11 +30,12 @@ export async function GET() {
         status: result.healthy ? 'HEALTHY' : 'ISSUES_DETECTED'
       }
     })
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error'
     console.error('Integrity check failed:', e)
-    return NextResponse.json({ 
-      error: 'Integrity check failed', 
-      details: e.message,
+    return NextResponse.json({
+      error: 'Integrity check failed',
+      details: errorMessage,
       timestamp: new Date().toISOString(),
       healthy: false
     }, { status: 500 })
@@ -68,11 +69,12 @@ export async function POST(req: Request) {
       calculatedBalance: result.calculatedBalance,
       error: result.error
     })
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error'
     console.error('Account validation failed:', e)
-    return NextResponse.json({ 
-      error: 'Account validation failed', 
-      details: e.message,
+    return NextResponse.json({
+      error: 'Account validation failed',
+      details: errorMessage,
       timestamp: new Date().toISOString()
     }, { status: 500 })
   }
