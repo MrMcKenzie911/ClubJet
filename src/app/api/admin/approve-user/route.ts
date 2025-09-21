@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     // Create auth user with PIN as password if doesn't exist
     try {
       const { data: authList } = await supabaseAdmin.auth.admin.listUsers()
-      const existingAuth = authList?.users?.find((u: any) => u.email === profile.email)
+      const existingAuth = authList?.users?.find((u: { email?: string; id: string }) => u.email === profile.email)
       
       if (!existingAuth) {
         await supabaseAdmin.auth.admin.createUser({
