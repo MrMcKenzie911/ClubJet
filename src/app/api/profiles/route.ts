@@ -15,11 +15,17 @@ export async function POST(req: Request) {
       referrer_id = await findReferrerIdByCodeOrEmail({ code: referral_code, email: referrer_email })
     }
 
+    // Ensure PIN is 6-digit format for consistency
+    let finalPin = pin_code
+    if (pin_code && pin_code.length === 4) {
+      finalPin = pin_code + '00'  // Convert 1234 -> 123400
+    }
+
     console.log('Creating profile with signup data:', {
       email,
       account_type,
       investment_amount: Number(investment_amount || 0),
-      pin_code: pin_code ? 'SET' : 'NOT_SET'
+      pin_code: finalPin ? 'SET_6_DIGIT' : 'NOT_SET'
     })
 
     const { error } = await supabaseAdmin.from('profiles').upsert({
@@ -28,7 +34,7 @@ export async function POST(req: Request) {
       first_name,
       last_name,
       phone,
-      pin_code: pin_code || null, // Store the PIN for login
+      pin_code: finalPin || null, // Store 6-digit PIN for login
       account_type: (account_type === 'NETWORK' || account_type === 'LENDER') ? account_type : null, // Store signup choice
       investment_amount: Number(investment_amount || 0), // Store investment amount
       // Do NOT set referral_code here; this value in the payload represents the REFERRER code.

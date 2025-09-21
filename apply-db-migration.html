@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Apply Database Migration</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        .button:hover { background: #0056b3; }
+        .success { color: green; }
+        .error { color: red; }
+        .log { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Database Migration Tool</h1>
+    <p><strong>CRITICAL:</strong> This will add the missing columns to fix account creation:</p>
+    <ul>
+        <li><code>profiles.account_type</code> - Stores LENDER/NETWORK choice</li>
+        <li><code>profiles.investment_amount</code> - Stores initial investment</li>
+        <li><code>profiles.pin_code</code> - Stores user PIN</li>
+        <li><code>accounts.reserved_amount</code> - For commission system</li>
+    </ul>
+
+    <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #ffc107;">
+        <strong>⚠️ IMPORTANT:</strong> You must be logged in as admin for this to work!<br>
+        If not logged in, <a href="https://clubjet.netlify.app/login" target="_blank">login first</a> with:<br>
+        Email: <code>richard.nuffer@live.com</code> | PIN: <code>5629</code>
+    </div>
+
+    <button class="button" onclick="applyMigration()">Apply Migration Now</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function applyMigration() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="log">🔄 Applying migration...</div>';
+            
+            try {
+                const response = await fetch('https://clubjet.netlify.app/api/admin/apply-migrations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Migration Applied Successfully!</div>
+                        <div class="log">${JSON.stringify(data, null, 2)}</div>
+                        <p><strong>Next steps:</strong></p>
+                        <ol>
+                            <li>Test account creation - should work without errors</li>
+                            <li>Check Pending Users - should show actual signup data</li>
+                            <li>Verify Monthly Profits KPI is accurate</li>
+                        </ol>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">❌ Migration Failed</div>
+                        <div class="log">${JSON.stringify(data, null, 2)}</div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ Network Error</div>
+                    <div class="log">${error.message}</div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
