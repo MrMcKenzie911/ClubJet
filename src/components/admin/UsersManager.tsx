@@ -93,8 +93,8 @@ export default function UsersManager() {
         </select>
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="rounded bg-black/40 border border-gray-700 px-2 py-2 text-white">
           <option value="all">Account: All</option>
-          <option value="LENDER">Lender</option>
-          <option value="NETWORK">Network</option>
+          <option value="LENDER">Fixed Memberships</option>
+          <option value="NETWORK">Variable Memberships</option>
         </select>
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded bg-black/40 border border-gray-700 px-2 py-2 text-white">
           <option value="name">Sort: Name</option>
@@ -202,8 +202,8 @@ export default function UsersManager() {
               </select>
               <select className="rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" value={editing.account_type}
                 onChange={(e) => setEditing({ ...editing, account_type: e.target.value })}>
-                <option value="LENDER">LENDER account</option>
-                <option value="NETWORK">NETWORK account</option>
+                <option value="LENDER">Fixed Memberships</option>
+                <option value="NETWORK">Variable Memberships</option>
               </select>
             </div>
             <div className="grid grid-cols-2 gap-2">

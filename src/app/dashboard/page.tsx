@@ -79,7 +79,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
   if (tab === 'transactions') redirect('/dashboard/activity')
 
-  function UserPortfolioPayoutChart({ startDateISO, initialBalance, txs }: { startDateISO: string; initialBalance: number; txs: { type: string; amount: number; created_at: string; status?: string|null }[] }) {
+  async function UserPortfolioPayoutChart({ startDateISO, initialBalance, txs }: { startDateISO: string; initialBalance: number; txs: { type: string; amount: number; created_at: string; status?: string|null }[] }) {
     const now = new Date()
     const months: string[] = Array.from({ length: 6 }).map((_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
@@ -94,6 +94,30 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
     const start = new Date(startDateISO)
     const startMonth = new Date(start.getFullYear(), start.getMonth(), 1)
     const postedTxs = (txs || [])
+
+    // Prepare referral deposits by Level 1 network (your direct signups)
+    const supabase = getSupabaseServer()
+    const firstMonthStart = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+    firstMonthStart.setHours(0,0,0,0)
+
+    let l1AcctIds: string[] = []
+    try {
+      const { data: l1Accts } = await supabase
+        .from('accounts')
+        .select('id, user_id')
+        .in('user_id', (l1 || []).map(r => r.id))
+      l1AcctIds = (l1Accts || []).map(a => a.id)
+    } catch {}
+
+    let l1Tx: { type: string; amount: number; created_at: string; account_id: string }[] = []
+    if (l1AcctIds.length) {
+      const { data: txL1 } = await supabase
+        .from('transactions')
+        .select('type, amount, created_at, account_id')
+        .in('account_id', l1AcctIds)
+        .gte('created_at', firstMonthStart.toISOString())
+      l1Tx = txL1 || []
+    }
 
     const data: MultiLineDatum[] = months.map((ym) => {
       const [y, m] = ym.split('-').map(Number)
@@ -110,16 +134,16 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
       const base = monthEnd < startMonth ? 0 : Number(initialBalance || 0)
       const portfolio = base + cumulative
 
-      // Referral payout this month
-      const referral = postedTxs
-        .filter(t => t.type === 'COMMISSION')
+      // Your referrals' deposits this month
+      const referralDeposits = l1Tx
+        .filter(t => t.type === 'DEPOSIT')
         .filter(t => new Date(t.created_at).getFullYear() === y && new Date(t.created_at).getMonth() + 1 === m)
         .reduce((s, t) => s + Number(t.amount || 0), 0)
 
-      return { label: monthLabel(ym), portfolio, referral }
+      return { label: monthLabel(ym), portfolio, referralDeposits }
     })
 
-    return <MultiLineChart data={data} series={[{ key: 'portfolio', label: 'Portfolio Balance' }, { key: 'referral', label: 'Referral Payout (Monthly)' }]} />
+    return <MultiLineChart data={data} series={[{ key: 'portfolio', label: 'Portfolio Balance' }, { key: 'referralDeposits', label: 'Your Referrals Deposits' }]} />
   }
 
   return (
@@ -143,7 +167,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
 
                 {(!tab || tab === 'dashboard') && (
                   <>
-                    <SectionCards totalAUM={(accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)} newSignups={(l1 ?? []).filter(s=>{ const d=s.created_at? new Date(s.created_at):null; const now=new Date(); return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(function(){ const now=new Date(); const comm=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return t.type==='COMMISSION' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0); const reserved=(accounts||[]).reduce((s, a: { reserved_amount?: number | null })=> s + Number(a.reserved_amount ?? 0), 0); return comm + reserved; })()} referralPayoutPct={(function(){ const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }); const comm=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=> s+Number(t.amount||0),0); const int=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100 : 0; })()} rateAppliedPct={rateAppliedPct} monthlyCommission={(function(){ const now=new Date(); const comm=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return t.type==='COMMISSION' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0); const reserved=(accounts||[]).reduce((s, a: { reserved_amount?: number | null })=> s + Number(a.reserved_amount ?? 0), 0); return comm + reserved; })()} routes={{ aum: '/dashboard?tab=accounts', signups: '/dashboard?tab=referrals', monthly: '/dashboard?tab=activity', commission: '/dashboard?tab=referrals' }} />
+                    <SectionCards totalAUM={(accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)} newSignups={(l1 ?? []).filter(s=>{ const d=s.created_at? new Date(s.created_at):null; const now=new Date(); return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(function(){ const now=new Date(); const int=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return t.type==='INTEREST' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0); return int; })()} referralPayoutPct={(function(){ const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }); const comm=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=> s+Number(t.amount||0),0); const int=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100 : 0; })()} rateAppliedPct={rateAppliedPct} monthlyCommission={(function(){ const now=new Date(); const comm=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return t.type==='COMMISSION' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0); return comm; })()} routes={{ aum: '/dashboard?tab=account-balance', signups: '/dashboard?tab=my-network', monthly: '/dashboard?tab=investment-history', commission: '/dashboard?tab=my-network' }} />
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2">
                         <UserPortfolioPayoutChart startDateISO={startDateISO} initialBalance={initialBalance} txs={txs} />
@@ -186,7 +210,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
                         <tbody>
                           {(accounts ?? []).map((a: { id: string; type: string; verified_at: string | null; balance: number | null; initial_balance: number | null; start_date: string | null }) => (
                             <tr key={a.id} className="border-t border-gray-800">
-                              <td className="py-1 pr-4 text-amber-300">{a.type}</td>
+                              <td className="py-1 pr-4 text-amber-300">{a.type === 'LENDER' ? 'Fixed Memberships' : a.type === 'NETWORK' ? 'Variable Memberships' : a.type}</td>
                               <td className="py-1 pr-4">{a.verified_at ? new Date(a.verified_at).toLocaleDateString() : 'Pending'}</td>
                               <td className="py-1 pr-4">${Number(a.balance||0).toLocaleString()}</td>
                               <td className="py-1 pr-4">${Number(a.initial_balance||0).toLocaleString()}</td>
@@ -259,8 +283,8 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
                       </label>
                       <label className="text-xs text-gray-400">Account Type
                         <select name="account_type" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
-                          <option value="LENDER">LENDER</option>
-                          <option value="NETWORK">NETWORK</option>
+                          <option value="LENDER">Fixed Memberships</option>
+                          <option value="NETWORK">Variable Memberships</option>
                         </select>
                       </label>
                       <button className="rounded bg-emerald-600 px-3 py-1 text-white">Submit</button>

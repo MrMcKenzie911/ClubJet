@@ -2,6 +2,16 @@
 
 All notable changes for Club Aureus app in this session.
 
+
+## 2025-09-21
+
+- fix(build): Remove explicit `any` usages in PIN login route to satisfy ESLint and unblock Netlify build
+- feat(referrals): Add Detailed Referral Tree launcher to admin dashboard; ensures downline modal works for the logged-in admin/user
+- feat(charts): User chart now shows “Your Referrals Deposits” as second line (monthly); admin chart already shows referrals deposits
+- fix(copy): Rename UI labels LENDER/NETWORK to Fixed/Variable Memberships across admin and user (no schema/route changes)
+- feat(slush): Enforce 50% of signup fee to Slush Fund across tiers; credit slush on first approved deposit < $5k
+- ux/kpi: AUM card shows “Increase this month”; KPIs revalidate after admin actions (deposits/withdrawals/rate set)
+
 ## 2025-09-20
 
 - fix(kpi): Monthly Profits and KPIs now compute from live transactions; user KPIs revalidate after admin actions

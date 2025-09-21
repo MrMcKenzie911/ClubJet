@@ -14,8 +14,10 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import CommissionTab from '@/components/admin/CommissionTab'
+import ReferralDetailedModalLauncher from '@/components/referrals/ReferralDetailedModalLauncher'
 
-import { setRate, undoLastRate, approveUser, approveDeposit, decideWithdrawal } from './actions'
+
+import { setRate, undoLastRate } from './actions'
 
 
 async function getAdminData() {
@@ -109,11 +111,11 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
 
                 {!tab && (
                   <>
-                    <SectionCards totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)} newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{ const d=p.created_at? new Date(p.created_at):null; const now=new Date(); return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const fees=(res as any).signupFees?.reduce((s:number,f:any)=> s + Number(f.fee_amount||0),0) || 0; return comm + fees; })()} referralPayoutPct={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100:0 })()} rateAppliedPct={Number((rates?.[0] as any)?.fixed_rate_monthly ?? 0)} routes={{ aum: '/admin?tab=account-balances', signups: '/admin?tab=verified-users', monthly: '/admin?tab=commission-reports', commission: '/admin?tab=commission' }} />
+                    <SectionCards totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)} newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{ const d=p.created_at? new Date(p.created_at):null; const now=new Date(); return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(function(){ const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); return int; })()} referralPayoutPct={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100:0 })()} rateAppliedPct={Number((rates?.[0] as any)?.fixed_rate_monthly ?? 0)} monthlyCommission={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); return comm; })()} routes={{ aum: '/admin?tab=account-balances', signups: '/admin?tab=verified-users', monthly: '/admin?tab=commission-reports', commission: '/admin?tab=commission' }} />
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2 space-y-6">
-                        <AdminAUMSignupsChart profiles={profilesAll} userId={res.user.id} />
+                        <AdminAUMSignupsChart userId={res.user.id} />
                       </div>
                     </div>
 
@@ -215,7 +217,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                     <div className="flex-1">
                       <div className="text-white font-medium">{a.user?.first_name} {a.user?.last_name}</div>
                       <div className="text-xs text-gray-400">{a.user?.email} • {a.user?.phone ?? 'n/a'}</div>
-                      <div className="mt-2 text-sm text-gray-300">Type: <span className="text-amber-400">{a.type}</span> • Balance: ${Number(a.balance).toLocaleString()} • Min: ${Number(a.minimum_balance).toLocaleString()}</div>
+                      <div className="mt-2 text-sm text-gray-300">Type: <span className="text-amber-400">{a.type === 'LENDER' ? 'Fixed Memberships' : a.type === 'NETWORK' ? 'Variable Memberships' : a.type}</span> • Balance: ${Number(a.balance).toLocaleString()} • Min: ${Number(a.minimum_balance).toLocaleString()}</div>
                       <div className="text-xs text-gray-500">Start: {a.start_date ?? '—'}</div>
                     </div>
                     <div className="flex gap-2 items-start">
@@ -227,8 +229,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                   <div className="mt-2 grid grid-cols-5 gap-2">
                     <label className="text-xs text-gray-400">Type
                       <select name="type" defaultValue={a.type} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white">
-                        <option value="LENDER">LENDER</option>
-                        <option value="NETWORK">NETWORK</option>
+                        <option value="LENDER">Fixed Memberships</option>
+                        <option value="NETWORK">Variable Memberships</option>
                       </select>
                     </label>
                     <label className="text-xs text-gray-400">Min Balance
@@ -260,8 +262,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
               <form action={setRate} className="flex flex-wrap gap-2 items-end">
                 <label className="text-xs text-gray-400">Account Type
                   <select name="account_type" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
-                    <option value="LENDER">LENDER</option>
-                    <option value="NETWORK">NETWORK</option>
+                    <option value="LENDER">Fixed Memberships</option>
+                    <option value="NETWORK">Variable Memberships</option>
                   </select>
                 </label>
                 <label className="text-xs text-gray-400">Monthly %
@@ -277,8 +279,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                 <form action={undoLastRate} className="flex flex-wrap gap-2 items-end">
                   <label className="text-xs text-gray-400">Account Type
                     <select name="account_type" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
-                      <option value="LENDER">LENDER</option>
-                      <option value="NETWORK">NETWORK</option>
+                      <option value="LENDER">Fixed Memberships</option>
+                      <option value="NETWORK">Variable Memberships</option>
                     </select>
                   </label>
                   <button className="rounded bg-red-600 hover:bg-red-500 px-3 py-1 text-white">Undo Last Apply</button>
@@ -430,6 +432,10 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
       )}
 
                 </div>
+            <div className="pt-2">
+              <ReferralDetailedModalLauncher />
+            </div>
+
               </div>
             </div>
           </div>
@@ -438,7 +444,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
   )
 }
 
-async function AdminAUMSignupsChart({ profiles, userId }: { profiles: { created_at: string; role?: string|null }[]; userId: string }) {
+async function AdminAUMSignupsChart({ userId }: { userId: string }) {
   const now = new Date()
   const months: string[] = Array.from({ length: 6 }).map((_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
@@ -485,19 +491,29 @@ async function AdminAUMSignupsChart({ profiles, userId }: { profiles: { created_
     const [y, m] = ym.split('-').map(Number)
     const monthEnd = new Date(y, m, 0, 23, 59, 59, 999)
 
+    // Calculate base from all verified accounts up to this month
     const base = initialBalances.reduce((s, a) => s + (a.verified_at && new Date(a.verified_at) <= monthEnd ? a.initial : 0), 0)
 
+    // Calculate cumulative changes from all transaction types
     const cumulative = (txAll || [])
       .filter(t => new Date((t as any).created_at) <= monthEnd)
       .reduce((sum: number, t: { type: string; amount: number }) => {
         const amt = Number(t.amount || 0)
+        // Handle all transaction types properly
         if (t.type === 'WITHDRAWAL') return sum - amt
-        return sum + amt
+        if (t.type === 'DEPOSIT') return sum + amt
+        if (t.type === 'INTEREST') return sum + amt
+        if (t.type === 'COMMISSION') return sum + amt
+        return sum
       }, 0)
 
+    // Calculate referral deposits for this specific month
     const referralDeposits = (txAll || [])
       .filter(t => l1AcctIds.includes((t as any).account_id))
-      .filter(t => new Date((t as any).created_at).getFullYear() === y && new Date((t as any).created_at).getMonth() + 1 === m)
+      .filter(t => {
+        const txDate = new Date((t as any).created_at)
+        return txDate.getFullYear() === y && txDate.getMonth() + 1 === m
+      })
       .filter(t => (t as any).type === 'DEPOSIT')
       .reduce((s: number, t: { amount: number }) => s + Number(t.amount || 0), 0)
 

@@ -117,8 +117,8 @@ export default function SignupModal({ open, onClose }: Props) {
               <input name="referrer_email" placeholder="Referrer email (if no code)" type="email" value={form.referrer_email} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
               <p className="text-xs text-gray-400">Provide either a referral code or a referrer email. If both provided, code takes precedence.</p>
               <select name="account_type" value={form.account_type} onChange={(e) => setForm(f => ({ ...f, account_type: e.target.value as 'LENDER' | 'NETWORK' }))} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60">
-                <option value="LENDER">Lender (Fixed)</option>
-                <option value="NETWORK">Network (Variable)</option>
+                <option value="LENDER">Fixed Memberships</option>
+                <option value="NETWORK">Variable Memberships</option>
               </select>
               <input name="investment_amount" type="number" min="0" step="0.01" placeholder="Investment amount (initial)" value={form.investment_amount} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
               <button disabled={loading} className="mt-2 rounded-md bg-amber-400 px-4 py-2 font-semibold text-black hover:bg-amber-300 disabled:opacity-50">{loading ? "Submitting..." : "Sign Up"}</button>

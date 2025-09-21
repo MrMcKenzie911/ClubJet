@@ -64,9 +64,9 @@ export async function POST(req: NextRequest) {
           .from('profiles')
           .select('id, email, pin_code, role, approval_status')
           .eq('email', em)
-          .maybeSingle()
+          .maybeSingle<{ id: string; email: string | null; pin_code: string | null; role: string | null; approval_status: string | null }>()
         if (!profFull) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
-        const approved = (profFull as any).approval_status === 'approved' || (profFull as any).role === 'user'
+        const approved = (profFull.approval_status === 'approved') || (profFull.role === 'user')
         if (!approved) return NextResponse.json({ error: 'Pending approval' }, { status: 403 })
 
         // Create auth user for this email
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
         if (!createdId) return NextResponse.json({ error: 'Provisioning failed' }, { status: 500 })
 
         // Migrate related rows from old profile id to new auth id
-        const oldId = (profFull as any).id as string
+        const oldId = String(profFull.id)
         const newId = createdId
         try {
           await supabaseAdmin.from('accounts').update({ user_id: newId }).eq('user_id', oldId)
