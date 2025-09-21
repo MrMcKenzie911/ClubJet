@@ -22,7 +22,48 @@ export async function POST(req: Request) {
     }
 
     if (decision === 'approve') {
-      const { error: upErr } = await supabaseAdmin.from('profiles').update({ role: 'user', approval_status: 'approved', approved_by: user.id, approved_at: new Date().toISOString() }).eq('id', userId)
+      // Get user profile to access PIN and email
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('email, pin_code, first_name, last_name')
+        .eq('id', userId)
+        .single()
+      
+      if (!profile) throw new Error('Profile not found')
+      
+      // Create auth user with PIN as password if doesn't exist
+      try {
+        const { data: { users } } = await supabaseAdmin.auth.admin.listUsers()
+        const authUserExists = users.some(u => u.id === userId)
+        
+        if (!authUserExists && profile.email && profile.pin_code) {
+          // Create auth user with PIN as password
+          await supabaseAdmin.auth.admin.createUser({
+            email: profile.email,
+            password: profile.pin_code,
+            email_confirm: true,
+            user_metadata: {
+              first_name: profile.first_name,
+              last_name: profile.last_name
+            }
+          })
+        } else if (authUserExists && profile.pin_code) {
+          // Update existing auth user's password to PIN
+          await supabaseAdmin.auth.admin.updateUserById(userId, {
+            password: profile.pin_code
+          })
+        }
+      } catch (authErr) {
+        console.warn('Auth user creation/update warning:', authErr)
+      }
+      
+      // Update profile to approved status
+      const { error: upErr } = await supabaseAdmin.from('profiles').update({
+        role: 'user',
+        approval_status: 'approved',
+        approved_by: user.id,
+        approved_at: new Date().toISOString()
+      }).eq('id', userId)
       if (upErr) throw upErr
       // Ensure user has an account and verify the earliest one
       let { data: acct } = await supabaseAdmin

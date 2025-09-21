@@ -146,8 +146,8 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                       <div className="mt-2 text-xs text-gray-500">Requested: {u.created_at ? new Date(u.created_at).toLocaleString() : '—'}</div>
                     </div>
                     <div className="flex gap-2 items-start">
-                      <Button type="submit" name="decision" value="approve" className="bg-emerald-600 text-white">Approve</Button>
-                      <Button type="submit" name="decision" value="reject" className="bg-red-600 text-white">Reject</Button>
+                      <button type="submit" name="decision" value="approve" className="rounded bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1">Approve</button>
+                      <button type="submit" name="decision" value="reject" className="rounded bg-red-600 hover:bg-red-500 text-white px-3 py-1">Reject</button>
                     </div>
                   </div>
                 </form>
