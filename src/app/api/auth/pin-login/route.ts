@@ -96,12 +96,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Always create fresh auth user with confirmed email
-    console.log(`🆕 CREATING fresh auth user with confirmed email...`)
+    // Always create fresh auth user
+    console.log(`🆕 CREATING fresh auth user...`)
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: em,
       password: authPassword,
-      email_confirm: true,
       user_metadata: {
         profile_id: profile.id,
         role: profile.role
@@ -114,10 +113,23 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('✅ Fresh auth user created successfully:', newUser.user?.id)
-    console.log('   Email confirmed:', newUser.user?.email_confirmed_at ? 'YES' : 'NO')
 
-    // Wait a moment for the user to be fully created
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // EXPLICITLY CONFIRM EMAIL using correct parameter
+    console.log('📧 EXPLICITLY CONFIRMING EMAIL...')
+    const { error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(newUser.user!.id, {
+      email_confirm: true
+    })
+
+    if (confirmError) {
+      console.error('❌ Failed to confirm email:', confirmError)
+      return NextResponse.json({ error: 'Email confirmation failed' }, { status: 500 })
+    }
+
+    console.log('✅ Email explicitly confirmed with timestamp')
+
+    // Wait longer for the user to be fully ready
+    console.log('⏱️ Waiting 5 seconds for user to be fully ready...')
+    await new Promise(resolve => setTimeout(resolve, 5000))
 
     // STEP 4: Sign in with Supabase (this creates the session)
     console.log('🔍 STEP 4: Signing in to create session...')
