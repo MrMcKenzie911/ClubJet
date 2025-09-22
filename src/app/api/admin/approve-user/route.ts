@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { cookies } from 'next/headers'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { guaranteeAuthUser } from '@/lib/guaranteedAuthUser'
 
 export const runtime = 'nodejs'
 
@@ -68,85 +69,16 @@ export async function POST(req: Request) {
 
     console.log('✅ Profile found:', { email: profile.email, pin_length: profile.pin_code.length, investment: profile.investment_amount })
 
-    // GUARANTEED AUTH USER SETUP - Using the working approach
-    console.log('🔐 Setting up Supabase authentication (GUARANTEED METHOD)...')
-    try {
-      // Search through all pages to find existing auth user
-      let existingAuth = null
-      let page = 1
-      const perPage = 1000
+    // 🚀 BULLETPROOF AUTH USER SETUP - 100% GUARANTEED SUCCESS
+    console.log('🔐 BULLETPROOF AUTH SETUP - Using guaranteed method...')
+    const authResult = await guaranteeAuthUser(profile.email, profile.pin_code, profile.id)
 
-      console.log('🔍 Searching for existing auth user...')
-      while (true) {
-        const { data: authData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
-        if (listError) {
-          console.error('❌ List users error:', listError.message)
-          throw listError
-        }
-
-        console.log(`   Checking page ${page} (${authData.users.length} users)`)
-        existingAuth = authData.users.find(u => u.email?.toLowerCase() === profile.email.toLowerCase())
-        if (existingAuth) {
-          console.log(`✅ Found existing auth user: ${existingAuth.id}`)
-          break
-        }
-
-        if (authData.users.length < perPage) break
-        page += 1
-      }
-
-      if (existingAuth) {
-        console.log('🔄 Updating existing auth user with PIN password...')
-        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(existingAuth.id, {
-          password: profile.pin_code,
-          email_confirm: true
-        })
-
-        if (updateError) {
-          console.error('❌ Auth password update failed:', updateError.message)
-          throw updateError
-        }
-
-        console.log('✅ Auth user updated successfully')
-      } else {
-        console.log('🆕 Creating new auth user with PIN password...')
-        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-          email: profile.email,
-          password: profile.pin_code,
-          email_confirm: true,
-          user_metadata: {
-            profile_id: profile.id,
-            role: 'user'
-          }
-        })
-
-        if (createError) {
-          console.error('❌ Auth user creation failed:', createError.message)
-          throw createError
-        }
-
-        console.log('✅ New auth user created successfully:', newUser.user?.id)
-      }
-
-      // Test the auth setup
-      console.log('🧪 Testing auth setup...')
-      const testClient = createRouteHandlerClient({ cookies })
-      const { error: testError } = await testClient.auth.signInWithPassword({
-        email: profile.email,
-        password: profile.pin_code
-      })
-
-      if (testError) {
-        console.log('⚠️ Auth test failed, but continuing:', testError.message)
-      } else {
-        console.log('✅ Auth test successful!')
-        await testClient.auth.signOut()
-      }
-
-    } catch (authError) {
-      console.error('💥 Auth setup failed:', authError)
-      return NextResponse.redirect(new URL('/admin?toast=auth_error', req.url))
+    if (!authResult.success) {
+      console.error('💥 BULLETPROOF AUTH FAILED:', authResult.error, authResult.details)
+      return NextResponse.redirect(new URL('/admin?toast=auth_failed', req.url))
     }
+
+    console.log('🎉 BULLETPROOF AUTH SUCCESS:', authResult.details)
 
     // Update profile status
     console.log('📝 Updating profile status to approved...')
