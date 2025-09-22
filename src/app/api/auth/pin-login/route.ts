@@ -85,15 +85,16 @@ export async function POST(req: NextRequest) {
     const existingAuthUser = authUsers?.users?.find(u => u.email === em)
 
     if (existingAuthUser) {
-      console.log(`🔄 UPDATING existing auth user password... (ID: ${existingAuthUser.id})`)
+      console.log(`🔄 UPDATING existing auth user... (ID: ${existingAuthUser.id})`)
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(existingAuthUser.id, {
-        password: authPassword
+        password: authPassword,
+        email_confirm: true
       })
       if (updateError) {
-        console.error('❌ Failed to update auth user password:', updateError)
+        console.error('❌ Failed to update auth user:', updateError)
         return NextResponse.json({ error: 'Auth update failed' }, { status: 500 })
       }
-      console.log('✅ Auth user password updated successfully')
+      console.log('✅ Auth user updated successfully (password + email confirmed)')
     } else {
       console.log(`🆕 CREATING new auth user...`)
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
