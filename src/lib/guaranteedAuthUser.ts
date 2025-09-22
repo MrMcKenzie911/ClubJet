@@ -4,7 +4,7 @@ export interface AuthUserResult {
   success: boolean
   authUserId?: string
   error?: string
-  details?: any
+  details?: unknown
 }
 
 /**
