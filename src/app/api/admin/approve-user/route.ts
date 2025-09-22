@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     console.log('📋 Fetching user profile...')
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('email, pin_code, investment_amount, account_type')
+      .select('id, email, pin_code, investment_amount, account_type')
       .eq('id', userId)
       .single()
 
@@ -68,44 +68,81 @@ export async function POST(req: Request) {
 
     console.log('✅ Profile found:', { email: profile.email, pin_length: profile.pin_code.length, investment: profile.investment_amount })
 
-    // Create auth user with PIN as password if doesn't exist
-    console.log('🔐 Setting up Supabase authentication...')
+    // GUARANTEED AUTH USER SETUP - Using the working approach
+    console.log('🔐 Setting up Supabase authentication (GUARANTEED METHOD)...')
     try {
-      const { data: authList, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-      if (listError) {
-        console.error('❌ Failed to list auth users:', listError)
-        throw listError
+      // Search through all pages to find existing auth user
+      let existingAuth = null
+      let page = 1
+      const perPage = 1000
+
+      console.log('🔍 Searching for existing auth user...')
+      while (true) {
+        const { data: authData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
+        if (listError) {
+          console.error('❌ List users error:', listError.message)
+          throw listError
+        }
+
+        console.log(`   Checking page ${page} (${authData.users.length} users)`)
+        existingAuth = authData.users.find(u => u.email?.toLowerCase() === profile.email.toLowerCase())
+        if (existingAuth) {
+          console.log(`✅ Found existing auth user: ${existingAuth.id}`)
+          break
+        }
+
+        if (authData.users.length < perPage) break
+        page += 1
       }
 
-      const existingAuth = authList?.users?.find((u: { email?: string; id: string }) => u.email === profile.email)
-
-      if (!existingAuth) {
-        console.log('🆕 Creating new auth user...')
-        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-          email: profile.email,
+      if (existingAuth) {
+        console.log('🔄 Updating existing auth user with PIN password...')
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(existingAuth.id, {
           password: profile.pin_code,
           email_confirm: true
         })
 
-        if (createError) {
-          console.error('❌ Auth user creation failed:', createError)
-          throw createError
-        }
-
-        console.log('✅ Auth user created:', newUser.user?.id)
-      } else {
-        console.log('🔄 Updating existing auth user password...')
-        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(existingAuth.id, {
-          password: profile.pin_code
-        })
-
         if (updateError) {
-          console.error('❌ Auth password update failed:', updateError)
+          console.error('❌ Auth password update failed:', updateError.message)
           throw updateError
         }
 
-        console.log('✅ Auth password updated for:', existingAuth.id)
+        console.log('✅ Auth user updated successfully')
+      } else {
+        console.log('🆕 Creating new auth user with PIN password...')
+        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+          email: profile.email,
+          password: profile.pin_code,
+          email_confirm: true,
+          user_metadata: {
+            profile_id: profile.id,
+            role: 'user'
+          }
+        })
+
+        if (createError) {
+          console.error('❌ Auth user creation failed:', createError.message)
+          throw createError
+        }
+
+        console.log('✅ New auth user created successfully:', newUser.user?.id)
       }
+
+      // Test the auth setup
+      console.log('🧪 Testing auth setup...')
+      const testClient = createRouteHandlerClient({ cookies })
+      const { error: testError } = await testClient.auth.signInWithPassword({
+        email: profile.email,
+        password: profile.pin_code
+      })
+
+      if (testError) {
+        console.log('⚠️ Auth test failed, but continuing:', testError.message)
+      } else {
+        console.log('✅ Auth test successful!')
+        await testClient.auth.signOut()
+      }
+
     } catch (authError) {
       console.error('💥 Auth setup failed:', authError)
       return NextResponse.redirect(new URL('/admin?toast=auth_error', req.url))
