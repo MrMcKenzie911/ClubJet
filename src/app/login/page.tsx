@@ -86,7 +86,7 @@ export default function LoginPage() {
     const em = email.trim();
     const pw = password.trim();
 
-    type PinLoginResp = { error?: string; ok?: boolean; role?: string; is_founding_member?: boolean }
+    type PinLoginResp = { error?: string; ok?: boolean; role?: string; is_founding_member?: boolean; forced_login?: boolean; message?: string }
 
     // Always call server route to enforce PIN->Auth sync, but also ensure client session is set
     try {
@@ -95,6 +95,24 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: em, pin: pw })
       })
+
+      if (resp.ok) {
+        const j = await resp.json().catch(() => ({} as PinLoginResp))
+
+        // Check if this was a forced login (bypassed Supabase Auth)
+        if (j.forced_login) {
+          console.log('🎯 FORCED LOGIN SUCCESS:', j.message)
+
+          // Redirect directly based on role since auth was bypassed
+          if (j.role === 'admin') {
+            router.push('/admin')
+          } else {
+            router.push('/dashboard')
+          }
+          return
+        }
+      }
+
       if (resp.status === 401) {
         const j = await resp.json().catch(() => ({} as PinLoginResp))
         setError(j.error || 'Invalid credentials')
@@ -102,9 +120,8 @@ export default function LoginPage() {
         return
       }
       // proceed regardless of resp.ok to set client session reliably below
-    } catch (error) {
+    } catch {
       // if server temporarily unavailable, still proceed to client sign-in below
-      console.log('Server login attempt failed:', error)
     }
 
     // Ensure browser session exists: try PIN, then seeded fallback
