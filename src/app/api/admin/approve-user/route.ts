@@ -24,9 +24,20 @@ export async function POST(req: Request) {
       return NextResponse.redirect(new URL('/login', req.url))
     }
 
-    const form = await req.formData()
-    const userId = String(form.get('user_id') || '')
-    const action = String(form.get('action') || '')
+    // Handle both form data and JSON requests
+    let userId = ''
+    let action = ''
+
+    const contentType = req.headers.get('content-type') || ''
+    if (contentType.includes('application/json')) {
+      const body = await req.json()
+      userId = String(body.user_id || '')
+      action = String(body.action || '')
+    } else {
+      const form = await req.formData()
+      userId = String(form.get('user_id') || '')
+      action = String(form.get('action') || '')
+    }
 
     console.log(`📋 Processing action: ${action} for user: ${userId}`)
 
