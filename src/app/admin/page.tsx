@@ -46,7 +46,7 @@ async function getAdminData() {
   const pendingOwnerIds = (pendingUsers ?? []).map((u: any) => u.id)
   const { data: pendingAccounts } = await supabase
     .from('accounts')
-    .select('id, user_id, type, balance, minimum_balance, start_date, lockup_end_date, verified_at, user:profiles(id, email, first_name, last_name, phone)')
+    .select('id, user_id, type, balance, minimum_balance, start_date, lockup_end_date, verified_at, user:profiles(id, email, first_name, last_name, phone, investment_amount)')
     .is('verified_at', null)
     .in('user_id', pendingOwnerIds)
 
@@ -89,7 +89,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
   const tabParam = sp?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
 
-  const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts, monthTx, signupFees } = res
+  const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts, monthTx } = res
 
   const referralCode = await ensureUserReferralCode(res.user.id)
 
@@ -111,32 +111,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
 
                 {!tab && (
                   <>
-                    <SectionCards
-                      totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)}
-                      newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{
-                        const d=p.created_at? new Date(p.created_at):null;
-                        const now=new Date();
-                        return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
-                      }).length}
-                      monthlyProfits={(function(){
-                        // Include both commissions and signup fees for monthly profits
-                        const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0);
-                        const fees=(signupFees||[]).reduce((s:number,f:any)=> s+Number(f.fee_amount||0),0);
-                        return comm + fees;
-                      })()}
-                      referralPayoutPct={(function(){
-                        const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0);
-                        const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0);
-                        const denom=int+comm;
-                        return denom>0? (comm/denom)*100:0
-                      })()}
-                      rateAppliedPct={Number((rates?.[0] as any)?.fixed_rate_monthly ?? 0)}
-                      monthlyCommission={(function(){
-                        const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0);
-                        return comm;
-                      })()}
-                      routes={{ aum: '/admin?tab=account-balances', signups: '/admin?tab=verified-users', monthly: '/admin?tab=commission-reports', commission: '/admin?tab=commission' }}
-                    />
+                    <SectionCards totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)} newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{ const d=p.created_at? new Date(p.created_at):null; const now=new Date(); return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(function(){ const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); return int; })()} referralPayoutPct={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100:0 })()} rateAppliedPct={Number((rates?.[0] as any)?.fixed_rate_monthly ?? 0)} monthlyCommission={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); return comm; })()} routes={{ aum: '/admin?tab=account-balances', signups: '/admin?tab=verified-users', monthly: '/admin?tab=commission-reports', commission: '/admin?tab=commission' }} />
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2 space-y-6">
@@ -249,7 +224,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                     <div className="flex-1">
                       <div className="text-white font-medium">{a.user?.first_name} {a.user?.last_name}</div>
                       <div className="text-xs text-gray-400">{a.user?.email} • {a.user?.phone ?? 'n/a'}</div>
-                      <div className="mt-2 text-sm text-gray-300">Type: <span className="text-amber-400">{a.type === 'LENDER' ? 'Fixed Memberships' : a.type === 'NETWORK' ? 'Variable Memberships' : a.type}</span> • Balance: ${Number(a.balance).toLocaleString()} • Min: ${Number(a.minimum_balance).toLocaleString()}</div>
+                      <div className="mt-2 text-sm text-gray-300">Type: <span className="text-amber-400">{a.type === 'LENDER' ? 'Fixed Memberships' : a.type === 'NETWORK' ? 'Variable Memberships' : a.type}</span> • Balance: ${Number(a.user?.investment_amount || a.balance || 0).toLocaleString()} • Min: ${Number(a.minimum_balance).toLocaleString()}</div>
                       <div className="text-xs text-gray-500">Start: {a.start_date ?? '—'}</div>
                     </div>
                     <div className="flex gap-2 items-start">
@@ -269,7 +244,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                       <input name="minimum_balance" defaultValue={a.minimum_balance} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
                     </label>
                     <label className="text-xs text-gray-400">Balance
-                      <input name="balance" defaultValue={a.balance} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
+                      <input name="balance" defaultValue={a.user?.investment_amount || a.balance} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
                     </label>
                     <label className="text-xs text-gray-400">Start Date
                       <input name="start_date" type="date" defaultValue={a.start_date ?? ''} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" />
