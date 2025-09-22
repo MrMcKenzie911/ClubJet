@@ -163,19 +163,20 @@ export async function POST(req: NextRequest) {
       is_founding_member: false
     })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('💥 CRITICAL LOGIN ERROR:', error)
-    console.error('💥 Error name:', error?.name)
-    console.error('💥 Error message:', error?.message)
-    console.error('💥 Error stack:', error?.stack)
+    const errorObj = error as Error
+    console.error('💥 Error name:', errorObj?.name)
+    console.error('💥 Error message:', errorObj?.message)
+    console.error('💥 Error stack:', errorObj?.stack)
 
     // Return detailed error for debugging
     return NextResponse.json({
       error: 'Login failed',
       debug: {
-        name: error?.name || 'Unknown',
-        message: error?.message || 'No message',
-        stack: error?.stack?.split('\n').slice(0, 5) || ['No stack trace']
+        name: errorObj?.name || 'Unknown',
+        message: errorObj?.message || 'No message',
+        stack: errorObj?.stack?.split('\n').slice(0, 5) || ['No stack trace']
       }
     }, { status: 500 })
   }
