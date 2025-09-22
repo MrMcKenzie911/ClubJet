@@ -20,15 +20,25 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Environment variables present')
 
-    const { email, pin } = await req.json()
+    // Parse request body with error handling
+    let requestBody
+    try {
+      requestBody = await req.json()
+      console.log('📦 Request body parsed:', requestBody)
+    } catch (parseError) {
+      console.error('❌ JSON parsing failed:', parseError)
+      return NextResponse.json({ error: 'Invalid request format' }, { status: 400 })
+    }
+
+    const { email, pin } = requestBody
     const em = (email || '').trim().toLowerCase()
     const pw = (pin || '').trim()
 
-    console.log(`📧 Login attempt for: ${em}`)
-    console.log(`🔢 PIN length: ${pw.length}`)
+    console.log(`📧 Login attempt for: "${em}"`)
+    console.log(`🔢 PIN: "${pw}" (length: ${pw.length})`)
 
     if (!em || !pw) {
-      console.log('❌ Missing credentials')
+      console.log('❌ Missing credentials - email or pin is empty')
       return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
     }
 
