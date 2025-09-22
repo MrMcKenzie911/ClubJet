@@ -6,9 +6,10 @@ type Props = {
   initialBalance: number; // starting principal
   startDateISO: string; // account start date
   monthlyTargetPct?: number; // default 1.5%
+  currentBalance?: number; // actual current balance from accounts
 };
 
-export default function ProgressTarget({ initialBalance, startDateISO, monthlyTargetPct = 1.5 }: Props) {
+export default function ProgressTarget({ initialBalance, startDateISO, monthlyTargetPct = 1.5, currentBalance }: Props) {
   const [now, setNow] = useState<Date>(new Date());
 
   useEffect(() => {
@@ -16,27 +17,24 @@ export default function ProgressTarget({ initialBalance, startDateISO, monthlyTa
     return () => clearInterval(t);
   }, []);
 
-  const { currentBalance, progressPct, goalThisCycle } = useMemo(() => {
+  const { actualCurrentBalance, progressPct, goalThisCycle } = useMemo(() => {
     const startDate = new Date(startDateISO);
     const msPerDay = 86_400_000;
     const daysSinceStart = Math.max(0, Math.floor((now.getTime() - startDate.getTime()) / msPerDay));
 
-    // approximate daily rate from monthly target
-    const dailyRate = monthlyTargetPct / 100 / 30; // e.g., 1.5% / 30
-
-    const currentBalance = initialBalance * Math.pow(1 + dailyRate, daysSinceStart);
+    // Use actual current balance if provided, otherwise calculate theoretical
+    const actualCurrentBalance = currentBalance ?? (initialBalance * Math.pow(1 + (monthlyTargetPct / 100 / 30), daysSinceStart));
 
     const cycleDays = 30;
     const daysIntoCurrentCycle = daysSinceStart % cycleDays;
     const progressPct = (daysIntoCurrentCycle / cycleDays) * 100;
 
-    const daysAtCycleStart = daysSinceStart - daysIntoCurrentCycle;
-    const balanceAtCycleStart = initialBalance * Math.pow(1 + dailyRate, daysAtCycleStart);
-    const balanceAtCycleEnd = balanceAtCycleStart * Math.pow(1 + dailyRate, cycleDays);
-    const goalThisCycle = balanceAtCycleEnd - balanceAtCycleStart;
+    // Calculate this month's target growth
+    const monthlyGrowthTarget = actualCurrentBalance * (monthlyTargetPct / 100);
+    const goalThisCycle = monthlyGrowthTarget;
 
-    return { currentBalance, progressPct, goalThisCycle };
-  }, [initialBalance, startDateISO, monthlyTargetPct, now]);
+    return { actualCurrentBalance, progressPct, goalThisCycle };
+  }, [initialBalance, startDateISO, monthlyTargetPct, now, currentBalance]);
 
   return (
     <div className="rounded-xl border border-gray-800 bg-gray-900 p-4">
@@ -49,7 +47,7 @@ export default function ProgressTarget({ initialBalance, startDateISO, monthlyTa
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
         <div className="text-gray-400">Current Balance</div>
-        <div className="text-right text-white">${currentBalance.toFixed(2)}</div>
+        <div className="text-right text-white">${actualCurrentBalance.toFixed(2)}</div>
         <div className="text-gray-400">This 30-Day Goal</div>
         <div className="text-right text-emerald-400">+${goalThisCycle.toFixed(2)}</div>
       </div>
