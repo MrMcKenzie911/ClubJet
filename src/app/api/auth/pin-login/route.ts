@@ -101,23 +101,91 @@ export async function POST(req: NextRequest) {
 
     console.log('🔐 Attempting Supabase auth...')
 
-    // Ensure auth password matches PIN (self-healing)
-    try {
-      await supabaseAdmin.auth.admin.updateUserById(profile.id, { password: authPassword })
-      console.log('✅ Auth password updated')
-    } catch (e) {
-      console.warn('⚠️ Failed to update password to PIN', e)
-    }
-
-    // Sign in with the PIN (server sets cookies)
+    // First, try to sign in with the PIN directly
     const supabase = createRouteHandlerClient({ cookies })
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    let signInError = null
+
+    // Try signing in with the entered PIN
+    console.log(`🔑 Trying sign-in with PIN: "${authPassword}"`)
+    const { error: initialSignInError } = await supabase.auth.signInWithPassword({
       email: em,
       password: authPassword
     })
 
+    signInError = initialSignInError
+
+    // If sign-in failed, try to find and update the auth user
     if (signInError) {
-      console.error('❌ Supabase sign-in error:', signInError)
+      console.log('⚠️ Initial sign-in failed, attempting to fix auth user...')
+      console.error('Sign-in error details:', signInError)
+
+      try {
+        // Find the auth user by email
+        const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+        if (listError) {
+          console.error('❌ Failed to list auth users:', listError)
+        } else {
+          const authUser = authUsers?.users?.find(u => u.email === em)
+
+          if (authUser) {
+            console.log(`🔄 Found auth user, updating password: ${authUser.id}`)
+            const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, {
+              password: authPassword
+            })
+
+            if (updateError) {
+              console.error('❌ Failed to update auth password:', updateError)
+            } else {
+              console.log('✅ Auth password updated, retrying sign-in...')
+
+              // Retry sign-in after password update
+              const { error: retrySignInError } = await supabase.auth.signInWithPassword({
+                email: em,
+                password: authPassword
+              })
+
+              signInError = retrySignInError
+
+              if (!retrySignInError) {
+                console.log('✅ Sign-in successful after password update!')
+              }
+            }
+          } else {
+            console.log('❌ No auth user found for email, creating new one...')
+
+            // Create new auth user
+            const { error: createError } = await supabaseAdmin.auth.admin.createUser({
+              email: em,
+              password: authPassword,
+              email_confirm: true
+            })
+
+            if (createError) {
+              console.error('❌ Failed to create auth user:', createError)
+            } else {
+              console.log('✅ New auth user created, retrying sign-in...')
+
+              // Retry sign-in after user creation
+              const { error: retrySignInError } = await supabase.auth.signInWithPassword({
+                email: em,
+                password: authPassword
+              })
+
+              signInError = retrySignInError
+
+              if (!retrySignInError) {
+                console.log('✅ Sign-in successful after user creation!')
+              }
+            }
+          }
+        }
+      } catch (fixError) {
+        console.error('💥 Error while fixing auth user:', fixError)
+      }
+    }
+
+    if (signInError) {
+      console.error('❌ Final Supabase sign-in error:', signInError)
       return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
     }
 
