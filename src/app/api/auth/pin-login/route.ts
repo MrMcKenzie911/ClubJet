@@ -7,13 +7,18 @@ export async function POST(req: NextRequest) {
   console.log('🔐 BULLETPROOF LOGIN - STARTING FRESH')
 
   try {
-    const { email, pin } = await req.json()
+    console.log('📥 Parsing request body...')
+    const body = await req.json()
+    console.log('📥 Request body parsed:', body)
+
+    const { email, pin } = body
     const em = (email || '').trim().toLowerCase()
     const pw = (pin || '').trim()
 
     console.log(`📧 LOGIN ATTEMPT: ${em} with PIN: ${pw}`)
 
     if (!em || !pw) {
+      console.log('❌ Missing credentials')
       return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
     }
 
@@ -158,8 +163,20 @@ export async function POST(req: NextRequest) {
       is_founding_member: false
     })
 
-  } catch (error) {
-    console.error('💥 LOGIN ERROR:', error)
-    return NextResponse.json({ error: 'Login failed' }, { status: 500 })
+  } catch (error: any) {
+    console.error('💥 CRITICAL LOGIN ERROR:', error)
+    console.error('💥 Error name:', error?.name)
+    console.error('💥 Error message:', error?.message)
+    console.error('💥 Error stack:', error?.stack)
+
+    // Return detailed error for debugging
+    return NextResponse.json({
+      error: 'Login failed',
+      debug: {
+        name: error?.name || 'Unknown',
+        message: error?.message || 'No message',
+        stack: error?.stack?.split('\n').slice(0, 5) || ['No stack trace']
+      }
+    }, { status: 500 })
   }
 }
