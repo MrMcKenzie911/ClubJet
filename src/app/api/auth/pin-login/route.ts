@@ -74,67 +74,13 @@ export async function POST(req: NextRequest) {
 
     console.log(`✅ PIN MATCHES! Creating session...`)
 
-    // STEP 3: Ensure auth user exists with correct password
-    console.log('🔍 STEP 3: Ensuring auth user exists...')
+    // STEP 3: SIMPLIFIED APPROACH - Skip complex auth user management
+    console.log('🔍 STEP 3: Using simplified authentication approach...')
     const authPassword = pw.length === 4 ? pw + '00' : pw
     console.log(`🔑 Auth password will be: "${authPassword}" (${authPassword.length} digits)`)
 
-    console.log(`🔐 ENSURING AUTH USER EXISTS...`)
-
-    const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-    if (listError) {
-      console.error('❌ Failed to list auth users:', listError)
-      return NextResponse.json({ error: 'Auth system error' }, { status: 500 })
-    }
-
-    const existingAuthUser = authUsers?.users?.find(u => u.email === em)
-
-    // NUCLEAR OPTION: Delete and recreate auth user to ensure clean state
-    if (existingAuthUser) {
-      console.log(`🗑️ DELETING existing auth user to start fresh... (ID: ${existingAuthUser.id})`)
-      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(existingAuthUser.id)
-      if (deleteError) {
-        console.error('❌ Failed to delete existing auth user:', deleteError)
-        // Continue anyway - maybe user doesn't exist
-      } else {
-        console.log('✅ Existing auth user deleted successfully')
-      }
-    }
-
-    // Always create fresh auth user
-    console.log(`🆕 CREATING fresh auth user...`)
-    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: em,
-      password: authPassword,
-      user_metadata: {
-        profile_id: profile.id,
-        role: profile.role
-      }
-    })
-
-    if (createError) {
-      console.error('❌ Failed to create fresh auth user:', createError)
-      return NextResponse.json({ error: 'Auth creation failed' }, { status: 500 })
-    }
-
-    console.log('✅ Fresh auth user created successfully:', newUser.user?.id)
-
-    // EXPLICITLY CONFIRM EMAIL using correct parameter
-    console.log('📧 EXPLICITLY CONFIRMING EMAIL...')
-    const { error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(newUser.user!.id, {
-      email_confirm: true
-    })
-
-    if (confirmError) {
-      console.error('❌ Failed to confirm email:', confirmError)
-      return NextResponse.json({ error: 'Email confirmation failed' }, { status: 500 })
-    }
-
-    console.log('✅ Email explicitly confirmed with timestamp')
-
-    // Wait longer for the user to be fully ready
-    console.log('⏱️ Waiting 5 seconds for user to be fully ready...')
-    await new Promise(resolve => setTimeout(resolve, 5000))
+    // Skip the complex auth user creation/deletion and go straight to sign-in
+    console.log('🚀 SKIPPING complex auth user management - attempting direct sign-in...')
 
     // STEP 4: Sign in with Supabase (this creates the session)
     console.log('🔍 STEP 4: Signing in to create session...')
