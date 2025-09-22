@@ -27,7 +27,14 @@ async function getAdminData() {
   const { data: me } = await supabase.from('profiles').select('role, is_founding_member').eq('id', user.id).single()
   if (me?.role !== 'admin' && me?.is_founding_member !== true) return { redirect: true as const }
 
-  const { data: pendingUsers } = await supabase.from('profiles').select('*').eq('role', 'pending').order('created_at', { ascending: true })
+  const { data: pendingUsers } = await supabase
+    .from('profiles')
+    .select(`
+      *,
+      referrer:referrer_id(id, email, first_name, last_name, referral_code)
+    `)
+    .eq('role', 'pending')
+    .order('created_at', { ascending: true })
   const { data: pendingDeposits } = await supabase
     .from('transactions')
     .select('*, account:accounts(id, user:profiles(id, email, first_name, last_name, phone))')
@@ -111,39 +118,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
 
                 {!tab && (
                   <>
-                    <SectionCards
-                      totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)}
-                      newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{
-                        const d=p.created_at? new Date(p.created_at):null;
-                        const now=new Date();
-                        return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
-                      }).length}
-                      monthlyProfits={(function(){
-                        // NEW: Monthly Profits = Total $ value of NEW SIGNUP FEES this month
-                        const newSignupsThisMonth = (profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{
-                          const d=p.created_at? new Date(p.created_at):null;
-                          const now=new Date();
-                          return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
-                        });
-                        // Each signup = $25 fee
-                        const signupFeesTotal = newSignupsThisMonth.length * 25;
-                        return signupFeesTotal;
-                      })()}
-                      referralPayoutPct={(function(){
-                        const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0);
-                        const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0);
-                        const denom=int+comm;
-                        return denom>0? (comm/denom)*100:0
-                      })()}
-                      rateAppliedPct={Number((rates?.[0] as any)?.fixed_rate_monthly ?? 0)}
-                      monthlyCommission={(function(){
-                        // NEW: Commission = $ amount of balance increase when admin sets earnings rate
-                        const interestThisMonth=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0);
-                        // This represents the earnings rate increase applied to accounts
-                        return interestThisMonth;
-                      })()}
-                      routes={{ aum: '/admin?tab=account-balances', signups: '/admin?tab=verified-users', monthly: '/admin?tab=commission-reports', commission: '/admin?tab=commission' }}
-                    />
+                    <SectionCards totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)} newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{ const d=p.created_at? new Date(p.created_at):null; const now=new Date(); return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(function(){ const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); return int; })()} referralPayoutPct={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100:0 })()} rateAppliedPct={Number((rates?.[0] as any)?.fixed_rate_monthly ?? 0)} monthlyCommission={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); return comm; })()} routes={{ aum: '/admin?tab=account-balances', signups: '/admin?tab=verified-users', monthly: '/admin?tab=commission-reports', commission: '/admin?tab=commission' }} />
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2 space-y-6">
@@ -180,7 +155,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                         • Investment: ${Number(u.investment_amount || 0).toLocaleString()}
                       </div>
                       <div className="text-xs text-gray-500">
-                        PIN: {u.pin_code || 'Not set'} • Referrer: {u.referrer_code || u.referrer_email || 'None'}
+                        PIN: {u.pin_code || 'Not set'} • Referrer: {u.referrer ? `${u.referrer.first_name} ${u.referrer.last_name} (${u.referrer.email})` : 'None'}
                       </div>
                       <div className="text-xs text-gray-500">Requested: {u.created_at ? new Date(u.created_at).toLocaleString() : '—'}</div>
                     </div>

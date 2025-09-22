@@ -41,10 +41,14 @@ export async function processInitialDeposit(userId: string) {
   const net = amount - fees.fee
 
   // credit net to member account and record deposit txn
-  await supabaseAdmin.from('accounts').update({ balance: (Number(acct?.balance || 0) + net) }).eq('id', acct!.id)
+  const newBalance = Number(acct?.balance || 0) + net
+  await supabaseAdmin.from('accounts').update({
+    balance: newBalance,
+    verified_at: new Date().toISOString() // ✅ VERIFY ACCOUNT ON INITIAL DEPOSIT
+  }).eq('id', acct!.id)
   await supabaseAdmin.from('transactions').insert({ account_id: acct!.id, type: 'DEPOSIT', amount, status: 'completed', metadata: { fee: fees.fee, net } })
   // Set initial_balance if not set
-  await supabaseAdmin.from('accounts').update({ initial_balance: (Number(acct?.balance || 0) + net) }).eq('id', acct!.id).is('initial_balance', null)
+  await supabaseAdmin.from('accounts').update({ initial_balance: newBalance }).eq('id', acct!.id).is('initial_balance', null)
 
   // credit referrers and founding-member signup bonuses
   const founderBonusPerLevel = 16.67
