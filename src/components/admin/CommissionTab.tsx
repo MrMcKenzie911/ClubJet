@@ -11,7 +11,7 @@ function currency(n: number) {
 
 // Types for admin user listing and referrals
 type UserAccount = { id: string; type: 'LENDER' | 'NETWORK'; balance?: number | null; reserved_amount?: number | null }
-type AdminListUser = { id: string; email: string; first_name?: string | null; last_name?: string | null; is_founding_member?: boolean | null; role?: string | null; approval_status?: string | null; accounts?: UserAccount[] }
+type AdminListUser = { id: string; email: string; first_name?: string | null; last_name?: string | null; is_founding_member?: boolean | null; accounts?: UserAccount[] }
 type LevelsResp = { levels?: Array<{ level: number; users: Array<{ id: string }> }> }
 
 export default function CommissionTab() {
@@ -264,13 +264,12 @@ type SelectionProps = {
 
 function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals }: SelectionProps) {
   const [users, setUsers] = useState<AdminListUser[]>([])
-  const [filteredUsers, setFilteredUsers] = useState<AdminListUser[]>([])
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState<{ userId: string; firstName: string; accountId: string|null } | null>(null)
   const [completed, setCompleted] = useState<Set<string>>(new Set())
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterType, setFilterType] = useState<'all' | 'LENDER' | 'NETWORK'>('all')
-  const [filterStatus, setFilterStatus] = useState<'all' | 'completed' | 'pending'>('all')
+  const [typeFilter, setTypeFilter] = useState('All Types')
+  const [statusFilter, setStatusFilter] = useState('All Status')
 
   useEffect(() => {
     let cancelled = false
@@ -280,18 +279,13 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
         const r = await fetch('/api/admin/users/list', { cache: 'no-store' })
         if (!cancelled && r.ok) {
           const j = await r.json()
-          const userList = j.users || []
-          setUsers(userList)
-
-          // Load persisted commission states from localStorage
-          const savedCompleted = localStorage.getItem('commission-completed')
-          if (savedCompleted) {
-            try {
-              const completedSet = new Set(JSON.parse(savedCompleted) as string[])
-              setCompleted(completedSet)
-            } catch {}
-          }
+          console.log('Fetched users for commission tab:', j.users?.length || 0)
+          setUsers(j.users || [])
+        } else {
+          console.error('Failed to fetch users:', r.status, r.statusText)
         }
+      } catch (error) {
+        console.error('Error fetching users:', error)
       } finally {
         setLoading(false)
       }
@@ -300,44 +294,30 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
   }, [])
 
   // Filter users based on search and filters
-  useEffect(() => {
-    const filtered = users.filter(u => {
-      // Search filter
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase()
-        const matchesName = (u.first_name || '').toLowerCase().includes(term) ||
-                           (u.last_name || '').toLowerCase().includes(term)
-        const matchesEmail = (u.email || '').toLowerCase().includes(term)
-        if (!matchesName && !matchesEmail) return false
-      }
+  const filteredUsers = users.filter(user => {
+    // Search filter
+    const searchLower = searchTerm.toLowerCase()
+    const name = `${user.first_name || ''} ${user.last_name || ''}`.trim().toLowerCase()
+    const email = user.email.toLowerCase()
+    const matchesSearch = !searchTerm || name.includes(searchLower) || email.includes(searchLower)
 
-      // Type filter
-      if (filterType !== 'all') {
-        const hasType = (u.accounts || []).some((a: UserAccount) => a.type === filterType)
-        if (!hasType) return false
-      }
+    // Type filter
+    const userTypes = (user.accounts || []).map(a => a.type === 'LENDER' ? 'Fixed Memberships' : 'Variable Memberships')
+    const matchesType = typeFilter === 'All Types' || userTypes.some(type =>
+      (typeFilter === 'Fixed Memberships' && type === 'Fixed Memberships') ||
+      (typeFilter === 'Variable Memberships' && type === 'Variable Memberships')
+    )
 
-      // Status filter
-      if (filterStatus !== 'all') {
-        const primary = pickPrimaryAccount((u.accounts||[]) as {id:string; type:string; balance:number}[])
-        const acctId = primary?.id || ''
-        const hasReserved = (u.accounts || []).some((a: UserAccount)=> Number(a.reserved_amount ?? 0) > 0)
-        const isCompleted = completed.has(acctId) || hasReserved
+    // Status filter (based on reserved_amount > 0 or completed set)
+    const primary = pickPrimaryAccount((user.accounts||[]) as {id:string; type:string; balance:number}[])
+    const hasReserved = (user.accounts || []).some((a: UserAccount) => Number(a.reserved_amount ?? 0) > 0)
+    const isCompleted = completed.has(primary?.id || '') || hasReserved
+    const matchesStatus = statusFilter === 'All Status' ||
+      (statusFilter === 'Completed' && isCompleted) ||
+      (statusFilter === 'Pending' && !isCompleted)
 
-        if (filterStatus === 'completed' && !isCompleted) return false
-        if (filterStatus === 'pending' && isCompleted) return false
-      }
-
-      return true
-    })
-
-    setFilteredUsers(filtered)
-  }, [users, searchTerm, filterType, filterStatus, completed])
-
-  // Persist completed state to localStorage
-  useEffect(() => {
-    localStorage.setItem('commission-completed', JSON.stringify([...completed]))
-  }, [completed])
+    return matchesSearch && matchesType && matchesStatus
+  })
 
   async function onSelect(u: AdminListUser) {
     const primary = pickPrimaryAccount((u.accounts||[]) as {id:string; type:string; balance:number}[])
@@ -380,12 +360,6 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
     }
   }
 
-  function clearAllCompleted() {
-    setCompleted(new Set())
-    localStorage.removeItem('commission-completed')
-    toast.success('Cleared all commission checkmarks')
-  }
-
   async function finalizeNow() {
     if (!selected?.accountId) { toast.error('Select a user with an account'); return }
     try {
@@ -415,48 +389,53 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
   }
 
 
+  async function clearCheckmarks() {
+    setCompleted(new Set())
+    toast.success('Checkmarks cleared')
+  }
+
   return (
     <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-4">
-      <div className="mb-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-white font-semibold">Verified Users</h3>
-          <div className="flex items-center gap-3">
-            <div className="text-xs text-gray-400">Select a user to populate commission inputs</div>
-            <Button variant="secondary" className="bg-red-700 hover:bg-red-600 text-xs px-2 py-1" onClick={clearAllCompleted}>Clear Checkmarks</Button>
-            <Button variant="secondary" className="bg-emerald-700 hover:bg-emerald-600" onClick={finalizeAll}>Finalize All</Button>
-          </div>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-white font-semibold">Verified Users</h3>
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-gray-400">Select a user to populate commission inputs</div>
+          <Button variant="secondary" className="bg-red-700 hover:bg-red-600" onClick={clearCheckmarks}>Clear Checkmarks</Button>
+          <Button variant="secondary" className="bg-emerald-700 hover:bg-emerald-600" onClick={finalizeAll}>Finalize All</Button>
         </div>
+      </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 items-center">
+      {/* Search and Filter Controls */}
+      <div className="mb-4 flex items-center gap-4">
+        <div className="flex-1">
           <input
             type="text"
             placeholder="Search by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-3 py-1 rounded bg-black/40 border border-gray-700 text-white text-sm w-64"
+            className="w-full rounded bg-black/40 border border-gray-700 px-3 py-2 text-white placeholder-gray-400"
           />
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as 'all' | 'LENDER' | 'NETWORK')}
-            className="px-3 py-1 rounded bg-black/40 border border-gray-700 text-white text-sm"
-          >
-            <option value="all">All Types</option>
-            <option value="LENDER">Fixed Memberships</option>
-            <option value="NETWORK">Variable Memberships</option>
-          </select>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as 'all' | 'completed' | 'pending')}
-            className="px-3 py-1 rounded bg-black/40 border border-gray-700 text-white text-sm"
-          >
-            <option value="all">All Status</option>
-            <option value="completed">Completed ✓</option>
-            <option value="pending">Pending</option>
-          </select>
-          <div className="text-xs text-gray-400">
-            Showing {filteredUsers.length} of {users.length} users
-          </div>
+        </div>
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className="rounded bg-black/40 border border-gray-700 px-3 py-2 text-white"
+        >
+          <option value="All Types">All Types</option>
+          <option value="Fixed Memberships">Fixed Memberships</option>
+          <option value="Variable Memberships">Variable Memberships</option>
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded bg-black/40 border border-gray-700 px-3 py-2 text-white"
+        >
+          <option value="All Status">All Status</option>
+          <option value="Completed">Completed</option>
+          <option value="Pending">Pending</option>
+        </select>
+        <div className="text-xs text-gray-400">
+          Showing {filteredUsers.length} of {users.length} users
         </div>
       </div>
       <div className="overflow-x-auto rounded-lg border border-gray-800">
@@ -473,9 +452,12 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
           </thead>
           <tbody className="divide-y divide-gray-800">
             {loading && (
-              <tr><td className="px-3 py-3 text-gray-400" colSpan={5}>Loading...</td></tr>
+              <tr><td className="px-3 py-3 text-gray-400" colSpan={6}>Loading verified users...</td></tr>
             )}
-            {!loading && filteredUsers.filter(u => u.approval_status === 'approved').map((u: AdminListUser) => {
+            {!loading && filteredUsers.length === 0 && (
+              <tr><td className="px-3 py-3 text-gray-400" colSpan={6}>No verified users found</td></tr>
+            )}
+            {!loading && filteredUsers.map((u: AdminListUser) => {
               const accounts = (u.accounts || []).map(a => ({ id: a.id, type: a.type, balance: Number(a.balance || 0) }))
               const primary = pickPrimaryAccount(accounts)
               const types = (u.accounts || []).map((a: UserAccount) => a.type === 'LENDER' ? 'Fixed Memberships' : 'Variable Memberships').join(', ')
