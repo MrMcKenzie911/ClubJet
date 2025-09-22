@@ -79,7 +79,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
   if (tab === 'transactions') redirect('/dashboard/activity')
 
-  async function UserPortfolioPayoutChart({ startDateISO, currentBalance, txs }: { startDateISO: string; currentBalance: number; txs: { type: string; amount: number; created_at: string; status?: string|null }[] }) {
+  async function UserPortfolioPayoutChart({ startDateISO, initialBalance, txs }: { startDateISO: string; initialBalance: number; txs: { type: string; amount: number; created_at: string; status?: string|null }[] }) {
     const now = new Date()
     const months: string[] = Array.from({ length: 6 }).map((_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
@@ -131,11 +131,8 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
           if (t.type === 'WITHDRAWAL') return sum - amt
           return sum + amt
         }, 0)
-      // Use current balance for the latest month, calculate backwards for historical months
-      const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-      const isCurrentMonth = ym === currentMonthStr
-      const base = isCurrentMonth ? Number(currentBalance || 0) - cumulative : (monthEnd < startMonth ? 0 : Number(currentBalance || 0))
-      const portfolio = isCurrentMonth ? Number(currentBalance || 0) : base + cumulative
+      const base = monthEnd < startMonth ? 0 : Number(initialBalance || 0)
+      const portfolio = base + cumulative
 
       // Your referrals' deposits this month
       const referralDeposits = l1Tx
@@ -170,47 +167,10 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
 
                 {(!tab || tab === 'dashboard') && (
                   <>
-                    <SectionCards
-                      totalAUM={(accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)}
-                      newSignups={(l1 ?? []).filter(s=>{ const d=s.created_at? new Date(s.created_at):null; const now=new Date(); return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length}
-                      monthlyProfits={(function(){
-                        // NEW: Monthly Profits = Total $ value of NEW SIGNUP FEES this month
-                        const now=new Date();
-                        const newSignupsThisMonth = (l1 ?? []).filter(s=>{
-                          const d=s.created_at? new Date(s.created_at):null;
-                          return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
-                        });
-                        // Each signup = $25 fee
-                        const signupFeesTotal = newSignupsThisMonth.length * 25;
-                        return signupFeesTotal;
-                      })()}
-                      referralPayoutPct={(function(){
-                        const monthTx=(txs||[]).filter(t=>{
-                          const d=new Date(t.created_at);
-                          const now=new Date();
-                          return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
-                        });
-                        const comm=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=> s+Number(t.amount||0),0);
-                        const int=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=> s+Number(t.amount||0),0);
-                        const denom=int+comm;
-                        return denom>0? (comm/denom)*100 : 0;
-                      })()}
-                      rateAppliedPct={rateAppliedPct}
-                      monthlyCommission={(function(){
-                        // NEW: Commission = $ amount of balance increase when admin sets earnings rate
-                        const now=new Date();
-                        const interestThisMonth=(txs||[]).filter(t=>{
-                          const d=new Date(t.created_at);
-                          return t.type==='INTEREST' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
-                        }).reduce((s,t)=> s+Number(t.amount||0),0);
-                        // This represents the earnings rate increase applied to accounts
-                        return interestThisMonth;
-                      })()}
-                      routes={{ aum: '/dashboard?tab=account-balance', signups: '/dashboard?tab=my-network', monthly: '/dashboard?tab=investment-history', commission: '/dashboard?tab=my-network' }}
-                    />
+                    <SectionCards totalAUM={(accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)} newSignups={(l1 ?? []).filter(s=>{ const d=s.created_at? new Date(s.created_at):null; const now=new Date(); return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(function(){ const now=new Date(); const int=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return t.type==='INTEREST' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0); return int; })()} referralPayoutPct={(function(){ const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }); const comm=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=> s+Number(t.amount||0),0); const int=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100 : 0; })()} rateAppliedPct={rateAppliedPct} monthlyCommission={(function(){ const now=new Date(); const comm=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return t.type==='COMMISSION' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0); return comm; })()} routes={{ aum: '/dashboard?tab=account-balance', signups: '/dashboard?tab=my-network', monthly: '/dashboard?tab=investment-history', commission: '/dashboard?tab=my-network' }} />
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2">
-                        <UserPortfolioPayoutChart startDateISO={startDateISO} currentBalance={(accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)} txs={txs} />
+                        <UserPortfolioPayoutChart startDateISO={startDateISO} initialBalance={initialBalance} txs={txs} />
                       </div>
                       <div className="space-y-3">
                         <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} />
@@ -296,21 +256,161 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
                 )}
 
                 {tab === 'earnings-summary' && (
-                  <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
-                    <h2 className="text-white font-semibold mb-3">Earnings Summary (This Month)</h2>
-                    {(() => {
-                      const now=new Date(); const y=now.getFullYear(); const m=now.getMonth();
-                      const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return d.getFullYear()===y && d.getMonth()===m })
-                      const interest=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=>s+Number(t.amount||0),0)
-                      const commissions=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=>s+Number(t.amount||0),0)
-                      return (
-                        <ul className="text-sm text-gray-300 space-y-1">
-                          <li>Interest: ${interest.toLocaleString()}</li>
-                          <li>Referral Bonuses: ${commissions.toLocaleString()}</li>
-                          <li>Total Earnings: ${(interest+commissions).toLocaleString()}</li>
-                        </ul>
-                      )
-                    })()}
+                  <div className="space-y-6">
+                    {/* Enhanced Earnings Summary Header */}
+                    <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
+                      <h2 className="text-white font-semibold mb-6 text-xl">Comprehensive Earnings Summary</h2>
+
+                      {/* Account Overview Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div className="rounded-lg border border-emerald-500/30 bg-[#0c1f19] p-4">
+                          <div className="text-xs text-emerald-300/80 uppercase tracking-wide">Initial Investment</div>
+                          <div className="mt-1 text-2xl font-bold text-emerald-200">${initialBalance.toLocaleString()}</div>
+                          <div className="text-xs text-emerald-400/70 mt-1">Your starting balance</div>
+                        </div>
+                        {(() => {
+                          const currentBalance = (accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)
+                          return (
+                            <>
+                              <div className="rounded-lg border border-amber-500/30 bg-[#221a0a] p-4">
+                                <div className="text-xs text-amber-300/80 uppercase tracking-wide">Current Balance</div>
+                                <div className="mt-1 text-2xl font-bold text-amber-200">${currentBalance.toLocaleString()}</div>
+                                <div className="text-xs text-amber-400/70 mt-1">Your total portfolio value</div>
+                              </div>
+                              <div className="rounded-lg border border-purple-500/30 bg-[#1a1024] p-4">
+                                <div className="text-xs text-purple-300/80 uppercase tracking-wide">Total Growth</div>
+                                <div className="mt-1 text-2xl font-bold text-purple-200">
+                                  ${(currentBalance - initialBalance).toLocaleString()}
+                                </div>
+                                <div className="text-xs text-purple-400/70 mt-1">
+                                  {initialBalance > 0 ? `+${(((currentBalance - initialBalance) / initialBalance) * 100).toFixed(2)}%` : '0%'} total return
+                                </div>
+                              </div>
+                            </>
+                          )
+                        })()}
+                      </div>
+
+                      {/* Monthly Performance */}
+                      {(() => {
+                        const now=new Date(); const y=now.getFullYear(); const m=now.getMonth();
+                        const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return d.getFullYear()===y && d.getMonth()===m })
+                        const interest=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=>s+Number(t.amount||0),0)
+                        const commissions=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=>s+Number(t.amount||0),0)
+                        const totalEarnings = interest + commissions
+                        const monthlyReturn = initialBalance > 0 ? (totalEarnings / initialBalance) * 100 : 0
+
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                            <div className="rounded-lg border border-blue-500/30 bg-[#0a1a24] p-4">
+                              <div className="text-xs text-blue-300/80 uppercase tracking-wide">Interest Earned</div>
+                              <div className="mt-1 text-xl font-bold text-blue-200">${interest.toLocaleString()}</div>
+                              <div className="text-xs text-blue-400/70 mt-1">This month</div>
+                            </div>
+                            <div className="rounded-lg border border-cyan-500/30 bg-[#0a1f22] p-4">
+                              <div className="text-xs text-cyan-300/80 uppercase tracking-wide">Referral Bonuses</div>
+                              <div className="mt-1 text-xl font-bold text-cyan-200">${commissions.toLocaleString()}</div>
+                              <div className="text-xs text-cyan-400/70 mt-1">This month</div>
+                            </div>
+                            <div className="rounded-lg border border-green-500/30 bg-[#0c1f14] p-4">
+                              <div className="text-xs text-green-300/80 uppercase tracking-wide">Total Monthly</div>
+                              <div className="mt-1 text-xl font-bold text-green-200">${totalEarnings.toLocaleString()}</div>
+                              <div className="text-xs text-green-400/70 mt-1">Combined earnings</div>
+                            </div>
+                            <div className="rounded-lg border border-yellow-500/30 bg-[#1f1a0a] p-4">
+                              <div className="text-xs text-yellow-300/80 uppercase tracking-wide">Monthly Return</div>
+                              <div className="mt-1 text-xl font-bold text-yellow-200">{monthlyReturn.toFixed(2)}%</div>
+                              <div className="text-xs text-yellow-400/70 mt-1">Performance rate</div>
+                            </div>
+                          </div>
+                        )
+                      })()}
+
+                      {/* Market Comparison */}
+                      <div className="rounded-lg border border-gray-700 bg-[#0F141B] p-4">
+                        <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+                          <span className="text-lg">📈</span>
+                          Market Performance Comparison
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {(() => {
+                            const now=new Date(); const y=now.getFullYear(); const m=now.getMonth();
+                            const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return d.getFullYear()===y && d.getMonth()===m })
+                            const totalEarnings=monthTx.filter(t=>t.type==='INTEREST'||t.type==='COMMISSION').reduce((s,t)=>s+Number(t.amount||0),0)
+                            const monthlyReturn = initialBalance > 0 ? (totalEarnings / initialBalance) * 100 : 0
+                            const annualizedReturn = monthlyReturn * 12
+                            const sp500Monthly = 0.83 // ~10% annually / 12
+                            const sp500Annual = 10.0
+                            const marketBondMonthly = 0.33 // ~4% annually / 12
+                            const marketBondAnnual = 4.0
+
+                            return (
+                              <>
+                                <div className="text-center p-3 rounded border border-emerald-500/30 bg-emerald-500/5">
+                                  <div className="text-emerald-300 font-semibold">Club Aureus</div>
+                                  <div className="text-2xl font-bold text-emerald-200 mt-1">{monthlyReturn.toFixed(2)}%</div>
+                                  <div className="text-xs text-emerald-400/70">Monthly</div>
+                                  <div className="text-lg font-semibold text-emerald-200 mt-2">{annualizedReturn.toFixed(1)}%</div>
+                                  <div className="text-xs text-emerald-400/70">Annualized</div>
+                                </div>
+                                <div className="text-center p-3 rounded border border-gray-600 bg-gray-600/5">
+                                  <div className="text-gray-300 font-semibold">S&P 500</div>
+                                  <div className="text-2xl font-bold text-gray-200 mt-1">{sp500Monthly.toFixed(2)}%</div>
+                                  <div className="text-xs text-gray-400/70">Monthly Avg</div>
+                                  <div className="text-lg font-semibold text-gray-200 mt-2">{sp500Annual.toFixed(1)}%</div>
+                                  <div className="text-xs text-gray-400/70">Historical Avg</div>
+                                </div>
+                                <div className="text-center p-3 rounded border border-gray-600 bg-gray-600/5">
+                                  <div className="text-gray-300 font-semibold">Market Bonds</div>
+                                  <div className="text-2xl font-bold text-gray-200 mt-1">{marketBondMonthly.toFixed(2)}%</div>
+                                  <div className="text-xs text-gray-400/70">Monthly Avg</div>
+                                  <div className="text-lg font-semibold text-gray-200 mt-2">{marketBondAnnual.toFixed(1)}%</div>
+                                  <div className="text-xs text-gray-400/70">Historical Avg</div>
+                                </div>
+                              </>
+                            )
+                          })()}
+                        </div>
+
+                        {/* Performance Indicators */}
+                        {(() => {
+                          const now=new Date(); const y=now.getFullYear(); const m=now.getMonth();
+                          const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return d.getFullYear()===y && d.getMonth()===m })
+                          const totalEarnings=monthTx.filter(t=>t.type==='INTEREST'||t.type==='COMMISSION').reduce((s,t)=>s+Number(t.amount||0),0)
+                          const monthlyReturn = initialBalance > 0 ? (totalEarnings / initialBalance) * 100 : 0
+                          const sp500Monthly = 0.83
+                          const outperformingSP500 = monthlyReturn > sp500Monthly
+                          const outperformanceVsSP500 = monthlyReturn - sp500Monthly
+
+                          return (
+                            <div className="mt-4 p-3 rounded border border-amber-500/30 bg-amber-500/5">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-2xl">{outperformingSP500 ? '🚀' : '📊'}</span>
+                                  <div>
+                                    <div className="text-amber-300 font-semibold">
+                                      {outperformingSP500 ? 'Outperforming Market!' : 'Market Comparison'}
+                                    </div>
+                                    <div className="text-xs text-amber-400/70">
+                                      {outperformingSP500
+                                        ? `+${outperformanceVsSP500.toFixed(2)}% above S&P 500 this month`
+                                        : `${Math.abs(outperformanceVsSP500).toFixed(2)}% below S&P 500 this month`
+                                      }
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className={`text-lg font-bold ${outperformingSP500 ? 'text-emerald-300' : 'text-amber-300'}`}>
+                                    {outperformingSP500 ? '+' : ''}{outperformanceVsSP500.toFixed(2)}%
+                                  </div>
+                                  <div className="text-xs text-gray-400">vs S&P 500</div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    </div>
                   </div>
                 )}
 
