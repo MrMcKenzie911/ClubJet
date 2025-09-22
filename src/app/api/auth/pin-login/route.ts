@@ -84,30 +84,40 @@ export async function POST(req: NextRequest) {
 
     const existingAuthUser = authUsers?.users?.find(u => u.email === em)
 
+    // NUCLEAR OPTION: Delete and recreate auth user to ensure clean state
     if (existingAuthUser) {
-      console.log(`🔄 UPDATING existing auth user... (ID: ${existingAuthUser.id})`)
-      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(existingAuthUser.id, {
-        password: authPassword,
-        email_confirm: true
-      })
-      if (updateError) {
-        console.error('❌ Failed to update auth user:', updateError)
-        return NextResponse.json({ error: 'Auth update failed' }, { status: 500 })
+      console.log(`🗑️ DELETING existing auth user to start fresh... (ID: ${existingAuthUser.id})`)
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(existingAuthUser.id)
+      if (deleteError) {
+        console.error('❌ Failed to delete existing auth user:', deleteError)
+        // Continue anyway - maybe user doesn't exist
+      } else {
+        console.log('✅ Existing auth user deleted successfully')
       }
-      console.log('✅ Auth user updated successfully (password + email confirmed)')
-    } else {
-      console.log(`🆕 CREATING new auth user...`)
-      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email: em,
-        password: authPassword,
-        email_confirm: true
-      })
-      if (createError) {
-        console.error('❌ Failed to create auth user:', createError)
-        return NextResponse.json({ error: 'Auth creation failed' }, { status: 500 })
-      }
-      console.log('✅ New auth user created successfully:', newUser.user?.id)
     }
+
+    // Always create fresh auth user with confirmed email
+    console.log(`🆕 CREATING fresh auth user with confirmed email...`)
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email: em,
+      password: authPassword,
+      email_confirm: true,
+      user_metadata: {
+        profile_id: profile.id,
+        role: profile.role
+      }
+    })
+
+    if (createError) {
+      console.error('❌ Failed to create fresh auth user:', createError)
+      return NextResponse.json({ error: 'Auth creation failed' }, { status: 500 })
+    }
+
+    console.log('✅ Fresh auth user created successfully:', newUser.user?.id)
+    console.log('   Email confirmed:', newUser.user?.email_confirmed_at ? 'YES' : 'NO')
+
+    // Wait a moment for the user to be fully created
+    await new Promise(resolve => setTimeout(resolve, 2000))
 
     // STEP 4: Sign in with Supabase (this creates the session)
     console.log('🔍 STEP 4: Signing in to create session...')
