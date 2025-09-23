@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
@@ -71,26 +72,33 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, id: authUser.id });
 }
 
-// Edit user profile (admin) and optionally set a new PIN/password
+// Edit user profile (admin)
 export async function PATCH(req: Request) {
   const { error } = await ensureAdminJSON();
   if (error) return error;
-  const body = await req.json().catch(()=>({}));
-  const { id, first_name, last_name, email, role, new_pin } = body || {} as { id?: string; first_name?: string; last_name?: string; email?: string; role?: string; new_pin?: string };
+  const body = await req.json().catch(()=>({})) as { id?: string; first_name?: string; last_name?: string; email?: string; role?: string; new_pin?: string };
+  const { id, first_name, last_name, email, role, new_pin } = body || {};
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-  // Update profile fields
+  // Update profile fields; include pin_code if provided
+  const updatePatch: Record<string, unknown> = { first_name, last_name, email, role, updated_at: new Date().toISOString() };
+  if (new_pin) updatePatch["pin_code"] = String(new_pin);
   const { error: upErr } = await supabaseAdmin.from('profiles')
-    .update({ first_name, last_name, email, role, ...(new_pin ? { pin_code: String(new_pin) } : {}), updated_at: new Date().toISOString() })
+    .update(updatePatch)
     .eq('id', id);
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
 
-  // If admin provided a new PIN, also update the Supabase Auth password to keep auth in sync
+  // Keep Supabase Auth in sync
   if (new_pin) {
     const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(id, { password: String(new_pin) });
     if (authErr) return NextResponse.json({ error: authErr.message }, { status: 500 });
   }
+  if (email) {
+    const { error: authEmailErr } = await supabaseAdmin.auth.admin.updateUserById(id, { email });
+    if (authEmailErr) return NextResponse.json({ error: authEmailErr.message }, { status: 500 });
+  }
 
+  try { revalidatePath('/admin'); revalidatePath('/dashboard'); } catch {}
   return NextResponse.json({ ok: true });
 }
 

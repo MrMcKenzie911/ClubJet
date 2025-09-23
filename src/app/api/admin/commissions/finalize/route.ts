@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { finalizeCommissionAtomic } from '@/lib/dataIntegrity'
 import { cookies } from 'next/headers'
@@ -80,6 +81,8 @@ export async function POST(req: Request) {
         .order('created_at', { ascending: false })
         .limit(1)
     }
+
+    try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}
 
     return NextResponse.json({
       ok: true,

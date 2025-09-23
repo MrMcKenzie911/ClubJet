@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { buildReferralChain, findReferrerIdByCodeOrEmail } from '@/lib/referral'
 
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
     await supabaseAdmin.from('referral_relationships').delete().eq('user_id', userId)
     await buildReferralChain(userId, directReferrerId)
 
+    try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}
     return NextResponse.json({ ok: true, referrerId: directReferrerId })
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'failed'
