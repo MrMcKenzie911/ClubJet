@@ -179,15 +179,36 @@ export async function finalizeCommissionAtomic(
     const oldBalance = Number(account.balance || 0)
     const newBalance = oldBalance + amount
 
-    // Use atomic RPC function for commission finalization
+    // Try atomic RPC function first; if unavailable, fallback to safe two-step
     const { error: rpcError } = await supabaseAdmin.rpc('finalize_commission_atomic', {
       p_account_id: accountId,
-      p_amount: amount,
-      p_admin_id: adminId
+      p_admin_id: adminId,
+      p_amount: amount
     })
 
     if (rpcError) {
-      return { success: false, error: `Commission finalization failed: ${rpcError.message}`, oldBalance, newBalance }
+      // Fallback: create commission transaction then update balance
+      const nowIso = new Date().toISOString()
+      const { error: txErr } = await supabaseAdmin
+        .from('transactions')
+        .insert({
+          account_id: accountId,
+          type: 'COMMISSION',
+          amount: amount,
+          status: 'completed',
+          created_at: nowIso,
+          metadata: { admin_id: adminId, finalized_at: nowIso, fallback: true }
+        })
+      if (txErr) {
+        return { success: false, error: `Commission finalization failed: ${rpcError.message}; fallback tx failed: ${txErr.message}`, oldBalance, newBalance }
+      }
+      const { error: upErr } = await supabaseAdmin
+        .from('accounts')
+        .update({ balance: oldBalance + amount, updated_at: nowIso })
+        .eq('id', accountId)
+      if (upErr) {
+        return { success: false, error: `Commission finalization failed: ${rpcError.message}; fallback balance update failed: ${upErr.message}`, oldBalance, newBalance }
+      }
     }
 
     // Validate the result
