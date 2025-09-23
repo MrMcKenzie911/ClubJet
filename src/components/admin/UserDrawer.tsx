@@ -76,7 +76,7 @@ export default function UserDrawer({ userId, onClose }: { userId: string; onClos
                 {profile?.role === 'user' && <span className="px-2 py-0.5 rounded-full border border-emerald-500 text-emerald-400">Verified</span>}
               </div>
               <div className="mt-3 flex gap-2">
-                <button onClick={async ()=>{ await supabase.from('profiles').update({ role: 'user' }).eq('id', profile.id); const { data: p2 } = await supabase.from('profiles').select('*').eq('id', userId).single(); setProfile(p2); }} className="rounded bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1 text-sm">Verify</button>
+                <button onClick={async ()=>{ await supabase.from('profiles').update({ role: 'user' }).eq('id', profile.id); const { data: p2 } = await supabase.from('profiles').select('*').eq('id', userId).single(); setProfile(p2); window.dispatchEvent(new Event('admin-user-updated')); }} className="rounded bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1 text-sm">Verify</button>
                 <button
                   className="rounded bg-amber-500 hover:bg-amber-400 text-black px-2 py-1 text-sm"
                   onClick={() => {
@@ -104,6 +104,7 @@ export default function UserDrawer({ userId, onClose }: { userId: string; onClos
                     const { data: p2 } = await supabase.from('profiles').select('*').eq('id', userId).single();
                     setProfile(p2);
                     (f.elements.namedItem('new_pin') as HTMLInputElement).value = '';
+                    window.dispatchEvent(new Event('admin-user-updated'));
                   } catch(err:any) {
                     toast.error(err?.message || 'Failed to set PIN');
                   }
@@ -148,7 +149,8 @@ export default function UserDrawer({ userId, onClose }: { userId: string; onClos
                           toast.success('Account updated')
                           // reload accounts
                           const { data: a2 } = await supabase.from('accounts').select('*').eq('user_id', userId)
-                          setAccounts(a2 ?? [])
+                          setAccounts(a2 ?? []);
+                              window.dispatchEvent(new Event('admin-user-updated'))
                         } catch (err: unknown) {
                           const msg = err instanceof Error ? err.message : 'Update failed'
                           toast.error(msg)
@@ -189,6 +191,7 @@ export default function UserDrawer({ userId, onClose }: { userId: string; onClos
                       // Reload profile
                       const { data: p2 } = await supabase.from('profiles').select('*').eq('id', userId).single();
                       setProfile(p2);
+                      window.dispatchEvent(new Event('admin-user-updated'));
                     }
                   } catch (err: unknown) {
                     const msg = err instanceof Error ? err.message : 'Request failed'

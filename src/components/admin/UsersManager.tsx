@@ -44,6 +44,13 @@ export default function UsersManager() {
     }
   };
 
+  // Listen for any admin actions from the drawer to refresh the list instantly
+  useEffect(() => {
+    const handler = () => { fetchRows(); };
+    window.addEventListener('admin-user-updated', handler);
+    return () => { window.removeEventListener('admin-user-updated', handler); };
+  }, []);
+
 
   useEffect(() => { fetchRows(); }, []);
 
@@ -74,7 +81,7 @@ export default function UsersManager() {
   return (
     <div id="users" className="rounded-xl border border-gray-800 bg-gray-900 p-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-white font-semibold">Verified Users</h2>
+        <h2 className="text-white font-semibold">User Management</h2>
         <div className="flex gap-2">
           <button onClick={addUser} className="rounded-md border border-amber-500/40 hover:bg-amber-500/10 text-amber-300 px-3 py-1 text-sm">Add User</button>
         </div>
@@ -89,6 +96,7 @@ export default function UsersManager() {
           <option value="all">Role: All</option>
           <option value="pending">Pending</option>
           <option value="user">Verified</option>
+          <option value="rejected">Rejected</option>
           <option value="admin">Admin</option>
         </select>
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="rounded bg-black/40 border border-gray-700 px-2 py-2 text-white">
@@ -124,7 +132,14 @@ export default function UsersManager() {
           .filter(u => {
             const q = query.trim().toLowerCase();
             const matchesQ = !q || `${u.first_name} ${u.last_name}`.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-            const matchesRole = roleFilter === 'all' || u.role === (roleFilter === 'user' ? 'user' : roleFilter)
+            const matchesRole = (() => {
+              if (roleFilter === 'all') return true;
+              if (roleFilter === 'user') return u.role === 'user';
+              if (roleFilter === 'admin') return u.role === 'admin';
+              if (roleFilter === 'pending') return u.role === 'pending' || u.approval_status === 'pending';
+              if (roleFilter === 'rejected') return u.role === 'rejected' || u.approval_status === 'rejected';
+              return true;
+            })()
             const totalBalance = (u.accounts ?? []).reduce((s:number,a:any)=>s+Number(a.balance??0),0)
             const matchesBalMin = !minBal || totalBalance >= Number(minBal)
             const matchesBalMax = !maxBal || totalBalance <= Number(maxBal)
@@ -147,10 +162,24 @@ export default function UsersManager() {
             const totalBalance = (u.accounts ?? []).reduce((s:number,a:any)=> s + Number(a.balance ?? 0), 0)
             return (
               <div key={u.id} className="grid grid-cols-6 items-center px-4 py-4 hover:bg-[#0F141B] gap-2 cursor-pointer" onClick={() => setDrawerUser(u.id)}>
-                <div className="text-gray-200">{u.first_name || '—'}</div>
+                <div className="text-gray-200 flex items-center gap-2">
+                  {u.first_name || '—'}
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full border ${((u.approval_status||'')==='approved'||u.role==='user') ? 'border-emerald-600 text-emerald-400' : (u.approval_status==='rejected'||u.role==='rejected') ? 'border-red-600 text-red-400' : 'border-amber-600 text-amber-300'}`}>
+                    {((u.approval_status||'')==='approved'||u.role==='user') ? 'Approved' : (u.approval_status==='rejected'||u.role==='rejected') ? 'Rejected' : 'Pending'}
+                  </span>
+                </div>
                 <div className="text-gray-200">{u.last_name || '—'}</div>
                 <div className="text-gray-400">{u.email}</div>
-                <div className="text-gray-300">{(u.accounts?.map((a:any)=> a.type === 'LENDER' ? 'Fixed Memberships' : 'Variable Memberships').join(', ')) || '—'}</div>
+                <div className="text-gray-300 flex flex-wrap gap-1">
+                  {(u.accounts?.map((a:any)=> (
+                    <span key={a.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-700 text-xs">
+                      {a.type === 'LENDER' ? 'Fixed' : 'Variable'}
+                      <span className={`ml-1 px-1 rounded ${a.verified_at ? 'bg-emerald-600/20 text-emerald-300' : 'bg-gray-600/20 text-gray-300'}`}>
+                        {a.verified_at ? 'Verified' : 'Pending'}
+                      </span>
+                    </span>
+                  )) ) || '—'}
+                </div>
                 <div className="text-right text-amber-300 font-medium">{`$${Number(totalBalance).toLocaleString()}`}</div>
                 <div className="flex justify-end gap-2">
                   <span onClick={(e)=> e.stopPropagation()}>
