@@ -134,8 +134,8 @@ FOR EACH ROW EXECUTE FUNCTION sync_referral_code_with_username();
         sql: `
 CREATE OR REPLACE FUNCTION public.finalize_commission_atomic(
   p_account_id uuid,
-  p_amount numeric,
-  p_admin_id uuid
+  p_admin_id uuid,
+  p_amount numeric
 ) RETURNS void
 LANGUAGE plpgsql
 AS $$
