@@ -55,20 +55,69 @@ export async function POST() {
       await supabaseAdmin.from('accounts').select('reserved_amount').limit(1).maybeSingle()
     } catch {
       migrations.push('Adding reserved_amount column to accounts')
-      const { error } = await supabaseAdmin.rpc('exec_sql', { 
+      const { error } = await supabaseAdmin.rpc('exec_sql', {
         sql: 'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS reserved_amount NUMERIC(14,2) NOT NULL DEFAULT 0;'
       })
       if (error) throw new Error(`Failed to add reserved_amount: ${error.message}`)
     }
 
-    // Migration 3: Add constraints and indexes
+    // Migration 3: Username column + unique index + sync trigger (009)
+    try {
+      migrations.push('Adding username column + unique index + sync trigger (009)')
+      const { error } = await supabaseAdmin.rpc('exec_sql', {
+        sql: `
+-- 009_add_username.sql
+-- Adds a platform-wide username for profiles and keeps referral_code aligned
+
+-- 1) Add username column
+ALTER TABLE profiles
+  ADD COLUMN IF NOT EXISTS username TEXT;
+
+-- 2) Enforce uniqueness (case-insensitive) via unique index on lower(username)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'idx_profiles_username_unique'
+  ) THEN
+    EXECUTE 'CREATE UNIQUE INDEX idx_profiles_username_unique ON profiles (LOWER(username))';
+  END IF;
+END$$;
+
+-- 3) Backfill: if username is null and referral_code not null, set username = referral_code
+UPDATE profiles
+SET username = referral_code
+WHERE username IS NULL AND referral_code IS NOT NULL;
+
+-- 4) For new/updated rows, keep referral_code in sync with username.
+CREATE OR REPLACE FUNCTION sync_referral_code_with_username()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.username IS NOT NULL AND (OLD.username IS DISTINCT FROM NEW.username) THEN
+    NEW.referral_code := NEW.username;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_refcode_username ON profiles;
+CREATE TRIGGER trg_sync_refcode_username
+BEFORE INSERT OR UPDATE OF username ON profiles
+FOR EACH ROW EXECUTE FUNCTION sync_referral_code_with_username();
+        `
+      })
+      if (error) throw new Error(`Failed to apply username migration: ${error.message}`)
+    } catch (e) {
+      console.log('Username migration warning:', e)
+    }
+
+    // Migration 4: Add constraints and indexes
     try {
       migrations.push('Adding constraints and indexes')
-      const { error } = await supabaseAdmin.rpc('exec_sql', { 
+      const { error } = await supabaseAdmin.rpc('exec_sql', {
         sql: `
-          ALTER TABLE profiles ADD CONSTRAINT IF NOT EXISTS profiles_account_type_check 
+          ALTER TABLE profiles ADD CONSTRAINT IF NOT EXISTS profiles_account_type_check
           CHECK (account_type IS NULL OR account_type IN ('LENDER', 'NETWORK'));
-          
+
           CREATE INDEX IF NOT EXISTS idx_profiles_account_type ON profiles(account_type);
           CREATE INDEX IF NOT EXISTS idx_profiles_pin_code ON profiles(pin_code);
         `
