@@ -13,22 +13,23 @@ export async function GET() {
     const { data: me } = await supa.from('profiles').select('role').eq('id', user.id).single()
     if (me?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    // Only get profiles that have verified accounts (for commission tab)
+    // Get approved user profiles (role=user implies approved in our flow; also include explicit approval_status when present)
     const { data: profiles, error: pErr } = await supabaseAdmin
       .from('profiles')
-      .select('id, first_name, last_name, email, role, created_at, is_founding_member')
-      .eq('role', 'user') // Only approved users
+      .select('id, first_name, last_name, email, role, created_at, is_founding_member, approval_status')
+      .eq('role', 'user')
       .order('created_at', { ascending: false })
     if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 })
 
-    // Only get verified accounts (accounts with verified_at not null)
+    // Get accounts for these users (include both verified and pending so newly approved users appear)
+    const ids = (profiles ?? []).map((p:any)=>p.id)
     const { data: accounts, error: aErr } = await supabaseAdmin
       .from('accounts')
       .select('id, user_id, type, balance, reserved_amount, verified_at')
-      .not('verified_at', 'is', null) // Only verified accounts
+      .in('user_id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000'])
     if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 })
 
-    type AccountRow = { id: string; user_id: string; type: string; balance: number; reserved_amount?: number; verified_at: string }
+    type AccountRow = { id: string; user_id: string; type: string; balance: number; reserved_amount?: number; verified_at: string | null }
     const byUser: Record<string, AccountRow[]> = {}
     for (const a of (accounts ?? []) as AccountRow[]) {
       const uid = a.user_id
@@ -36,12 +37,10 @@ export async function GET() {
       byUser[uid].push(a)
     }
 
-    // Only return users that have at least one verified account
-    const result = (profiles ?? [])
-      .filter((p) => byUser[p.id] && byUser[p.id].length > 0)
-      .map((p) => ({ ...p, accounts: byUser[p.id] ?? [] }))
+    // Return all approved users; attach accounts (may be empty if none yet)
+    const result = (profiles ?? []).map((p:any) => ({ ...p, accounts: byUser[p.id] ?? [] }))
 
-    console.log(`Returning ${result.length} verified users for commission tab`)
+    console.log(`Returning ${result.length} users (approved role=user) for user management list`)
     return NextResponse.json({ users: result })
   } catch (e) {
     console.error('GET /api/admin/users/list failed', e)

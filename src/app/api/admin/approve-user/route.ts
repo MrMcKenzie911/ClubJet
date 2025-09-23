@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { cookies } from 'next/headers'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
@@ -195,6 +196,7 @@ export async function POST(req: Request) {
     }
 
     console.log('🎉 User approval completed successfully!')
+    try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}
     return NextResponse.redirect(new URL('/admin?toast=user_approved', req.url))
   } catch (e) {
     console.error('💥 approve-user error:', e)
