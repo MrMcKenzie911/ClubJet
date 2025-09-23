@@ -257,24 +257,55 @@ export async function setRate(formData: FormData) {
       .from('earnings_rates')
       .insert({ account_type, fixed_rate_monthly, effective_from: new Date().toISOString().slice(0, 10) })
 
-    // 2) Apply interest atomically to all verified accounts of this type
+    // 2) Apply interest to all verified accounts of this type
     const { data: accts } = await supabaseAdmin
       .from('accounts')
-      .select('id')
+      .select('id, balance')
       .eq('type', account_type)
       .not('verified_at','is', null)
 
-    // Use atomic earnings application for each account
-    for (const a of (accts || []) as { id: string }[]) {
-      try {
-        await supabaseAdmin.rpc('apply_earnings_atomic', {
+    for (const a of (accts || []) as { id: string; balance?: number|null }[]) {
+      const applyViaRpc = async () => {
+        return supabaseAdmin.rpc('apply_earnings_atomic', {
           p_account_id: a.id,
           p_rate_pct: fixed_rate_monthly,
           p_admin_id: 'system' // TODO: Get actual admin ID from session
         })
-      } catch (e) {
-        console.error(`Failed to apply earnings to account ${a.id}:`, e)
-        // Continue with other accounts but log the error
+      }
+
+      try {
+        const { error: rpcErr } = await applyViaRpc()
+        if (rpcErr) throw rpcErr
+      } catch (rpcError) {
+        // Fallback: Apply earnings directly (transaction + balance update)
+        try {
+          const currentBal = Number(a.balance ?? 0)
+          if (!isFinite(currentBal)) continue
+          const rawAmt = (currentBal * (fixed_rate_monthly / 100))
+          const amt = Math.round(rawAmt * 100) / 100 // round to cents
+          if (amt <= 0) continue
+
+          // Insert INTEREST transaction
+          await supabaseAdmin
+            .from('transactions')
+            .insert({
+              account_id: a.id,
+              type: 'INTEREST',
+              amount: amt,
+              status: 'posted',
+              created_at: new Date().toISOString(),
+              metadata: { applied_rate_pct: fixed_rate_monthly }
+            })
+
+          // Update balance
+          await supabaseAdmin
+            .from('accounts')
+            .update({ balance: currentBal + amt })
+            .eq('id', a.id)
+        } catch (fallbackError) {
+          console.error(`Earnings fallback failed for account ${a.id}:`, fallbackError)
+          // Continue with other accounts but log the error
+        }
       }
     }
 
