@@ -86,33 +86,15 @@ export default function LoginPage() {
     const em = email.trim();
     const pw = password.trim();
 
-    type PinLoginResp = { error?: string; ok?: boolean; role?: string; is_founding_member?: boolean; forced_login?: boolean; message?: string }
+    type PinLoginResp = { error?: string; ok?: boolean; role?: string; is_founding_member?: boolean }
 
     // Always call server route to enforce PIN->Auth sync, but also ensure client session is set
     try {
       const resp = await fetch('/api/auth/pin-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: em, pin: pw })
+        body: JSON.stringify({ identifier: em, pin: pw })
       })
-
-      if (resp.ok) {
-        const j = await resp.json().catch(() => ({} as PinLoginResp))
-
-        // Check if this was a forced login (bypassed Supabase Auth)
-        if (j.forced_login) {
-          console.log('🎯 FORCED LOGIN SUCCESS:', j.message)
-
-          // Redirect directly based on role since auth was bypassed
-          if (j.role === 'admin') {
-            router.push('/admin')
-          } else {
-            router.push('/dashboard')
-          }
-          return
-        }
-      }
-
       if (resp.status === 401) {
         const j = await resp.json().catch(() => ({} as PinLoginResp))
         setError(j.error || 'Invalid credentials')
@@ -124,19 +106,7 @@ export default function LoginPage() {
       // if server temporarily unavailable, still proceed to client sign-in below
     }
 
-    // Ensure browser session exists: try PIN, then seeded fallback
-    {
-      const res1 = await supabase.auth.signInWithPassword({ email: em, password: pw })
-      if (res1.error) {
-        const fallback = `Cj${pw}!${pw}`
-        const res2 = await supabase.auth.signInWithPassword({ email: em, password: fallback })
-        if (res2.error) {
-          setLoading(false)
-          setError(res2.error.message || res1.error.message || 'Invalid credentials')
-          return
-        }
-      }
-    }
+    // Session is created by the server route; continue to fetch profile and redirect
 
     setLoading(false)
     const userId = (await supabase.auth.getUser()).data.user?.id || null;
@@ -188,14 +158,14 @@ export default function LoginPage() {
           {error && <div className="rounded-md border border-red-500/30 bg-red-500/10 text-red-300 px-3 py-2 text-sm">{error}</div>}
           {resetSent && <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 px-3 py-2 text-sm">{resetSent}</div>}
           <input
-            type="email"
-            inputMode="email"
+            type="text"
+            inputMode="text"
             autoCapitalize="none"
             autoCorrect="off"
             autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
+            placeholder="Email or Username"
             className="w-full rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
             required
           />
@@ -208,7 +178,7 @@ export default function LoginPage() {
               onKeyUp={(e) => setCapsOn((e as unknown as KeyboardEvent).getModifierState?.('CapsLock') ?? false)}
               onFocus={(e) => setCapsOn((e as unknown as KeyboardEvent).getModifierState?.('CapsLock') ?? false)}
               onBlur={() => setCapsOn(false)}
-              placeholder="Password"
+              placeholder="6-digit PIN"
               className="w-full rounded-md bg-black/60 border border-white/10 pr-10 px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
               required
             />

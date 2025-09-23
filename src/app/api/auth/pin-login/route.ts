@@ -11,32 +11,48 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     console.log('📥 Request body parsed:', body)
 
-    const { email, pin } = body
-    const em = (email || '').trim().toLowerCase()
+    const { identifier, email, pin } = body
+    const rawId = (identifier ?? email ?? '').toString().trim()
     const pw = (pin || '').trim()
 
-    console.log(`📧 LOGIN ATTEMPT: ${em} with PIN: ${pw}`)
+    console.log(`📧 LOGIN ATTEMPT: identifier="${rawId}" with PIN: ${pw}`)
 
-    if (!em || !pw) {
+    if (!rawId || !pw) {
       console.log('❌ Missing credentials')
       return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
     }
 
-    // STEP 1: Check if user exists and is approved
-    console.log('🔍 STEP 1: Checking if user exists and is approved...')
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email, pin_code, role, approval_status')
-      .eq('email', em)
-      .single()
+    // STEP 1: Resolve profile by email OR username (case-insensitive for username)
+    console.log('🔍 STEP 1: Resolving user by identifier...')
+    type ProfileRec = { id: string; email: string | null; pin_code: string | null; role: string | null; approval_status: string | null }
+    let profile: ProfileRec | null = null
+    let profileError: string | null = null
 
-    if (profileError) {
+    if (rawId.includes('@')) {
+      const resp = await supabaseAdmin
+        .from('profiles')
+        .select('id, email, pin_code, role, approval_status')
+        .eq('email', rawId.toLowerCase())
+        .maybeSingle()
+      profile = resp.data as ProfileRec | null
+      profileError = resp.error ? String(resp.error.message || 'Query failed') : null
+    } else {
+      const resp = await supabaseAdmin
+        .from('profiles')
+        .select('id, email, pin_code, role, approval_status')
+        .ilike('username', rawId)
+        .maybeSingle()
+      profile = resp.data as ProfileRec | null
+      profileError = resp.error ? String(resp.error.message || 'Query failed') : null
+    }
+
+    if (profileError && !profile) {
       console.error('❌ Profile query error:', profileError)
       return NextResponse.json({ error: 'Database error' }, { status: 500 })
     }
 
     if (!profile) {
-      console.log('❌ No profile found for email:', em)
+      console.log('❌ No profile found for identifier:', rawId)
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
@@ -84,6 +100,7 @@ export async function POST(req: NextRequest) {
 
     // STEP 4: Sign in with Supabase (this creates the session)
     console.log('🔍 STEP 4: Signing in to create session...')
+    const em = (profile.email || '').toLowerCase()
     console.log(`🔐 SIGNING IN with email: ${em}, password: ${authPassword}`)
     const supabase = createRouteHandlerClient({ cookies })
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
