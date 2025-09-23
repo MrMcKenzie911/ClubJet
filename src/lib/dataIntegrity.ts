@@ -202,9 +202,19 @@ export async function finalizeCommissionAtomic(
       if (txErr) {
         return { success: false, error: `Commission finalization failed: ${rpcError.message}; fallback tx failed: ${txErr.message}`, oldBalance, newBalance }
       }
+      // Some environments may not have updated_at on accounts; detect and update safely
+      let canUpdateTimestamp = false
+      try {
+        const { data: hasUpdatedAt } = await supabaseAdmin.rpc('check_column_exists', { p_table: 'accounts', p_column: 'updated_at' })
+        canUpdateTimestamp = Boolean(hasUpdatedAt)
+      } catch {}
+
+      const updatePayload: Record<string, unknown> = { balance: oldBalance + amount }
+      if (canUpdateTimestamp) updatePayload.updated_at = nowIso
+
       const { error: upErr } = await supabaseAdmin
         .from('accounts')
-        .update({ balance: oldBalance + amount, updated_at: nowIso })
+        .update(updatePayload)
         .eq('id', accountId)
       if (upErr) {
         return { success: false, error: `Commission finalization failed: ${rpcError.message}; fallback balance update failed: ${upErr.message}`, oldBalance, newBalance }
