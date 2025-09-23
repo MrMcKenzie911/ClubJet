@@ -69,13 +69,10 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
       .select('type, amount, created_at, account_id, status')
       .in('account_id', accountIds)
     txs = txData ?? []
+  // Only posted/completed transactions are considered for KPIs/charts
+  txs = (txs || []).filter(t => (t.status ?? 'posted') === 'posted' || t.status === 'completed')
+
   }
-
-  const postedTxs = (txs || []).filter(t => !('status' in t) || t.status === 'posted' || t.status === 'completed')
-  // Use only posted/completed transactions for KPIs and charts
-  txs = postedTxs as any
-
-
   const userAccounts = (accounts ?? []) as { initial_balance?: number; verified_at?: string|null; start_date?: string|null }[]
   const initialBalance = userAccounts.reduce((s, a) => s + Number(a.initial_balance ?? 0), 0)
   const startDateISO = (userAccounts[0]?.verified_at as string) || (userAccounts[0]?.start_date as string) || new Date().toISOString().slice(0,10)
@@ -115,17 +112,14 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
       l1AcctIds = (l1Accts || []).map(a => a.id)
     } catch {}
 
-    let l1Tx: { type: string; amount: number; created_at: string; account_id: string }[] = []
+    let l1Tx: { type: string; amount: number; created_at: string; account_id: string; status?: string | null }[] = []
     if (l1AcctIds.length) {
       const { data: txL1 } = await supabase
         .from('transactions')
         .select('type, amount, created_at, account_id, status')
         .in('account_id', l1AcctIds)
         .gte('created_at', firstMonthStart.toISOString())
-      l1Tx = txL1 || []
-      // Only include posted/completed referral transactions
-      l1Tx = (l1Tx || []).filter(t => (t as any).status === 'posted' || (t as any).status === 'completed')
-
+      l1Tx = (txL1 || []).filter(t => (t.status ?? 'posted') === 'posted' || t.status === 'completed')
     }
 
     const data: MultiLineDatum[] = months.map((ym) => {
