@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../../lib/supabaseAdmin'
+import { cookies } from 'next/headers'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 
 export const runtime = 'nodejs'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const userId = searchParams.get('userId') || ''
+  const requestedUserId = searchParams.get('userId') || ''
+
+  // Auth guard: users can only export their own; admins can export any
+  const supa = createRouteHandlerClient({ cookies })
+  const { data: { user } } = await supa.auth.getUser()
+  if (!user) return new NextResponse('Unauthorized', { status: 401 })
+  const { data: me } = await supa.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  const isAdmin = (me?.role === 'admin')
+
+  const userId = isAdmin ? (requestedUserId || user.id) : user.id
   if (!userId) return new NextResponse('userId required', { status: 400 })
 
   const { data: level1 } = await supabaseAdmin

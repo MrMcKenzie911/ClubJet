@@ -1,12 +1,23 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabaseAdmin'
+import { cookies } from 'next/headers'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 
 export const runtime = 'nodejs'
 
 // GET /api/referrals/table?userId=...  -> returns flat rows + analytics
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const userId = searchParams.get('userId') || ''
+  const requestedUserId = searchParams.get('userId') || ''
+
+  // Auth guard: users can only see their own; admins can view any
+  const supa = createRouteHandlerClient({ cookies })
+  const { data: { user } } = await supa.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { data: me } = await supa.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  const isAdmin = (me?.role === 'admin')
+
+  const userId = isAdmin ? (requestedUserId || user.id) : user.id
   if (!userId) return NextResponse.json({ rows: [], analytics: { l1: 0, l2: 0, totalBonus: 0, avgInvestment: 0 } })
 
   // Level 1 referrals
