@@ -25,13 +25,15 @@ export async function GET(req: Request) {
     .from('profiles')
     .select('id, first_name, last_name, created_at, role')
     .eq('referrer_id', userId)
+    .eq('approval_status', 'approved')
 
   const l1Ids = (level1 || []).map(u => u.id)
   type ProfileBasic = { id: string; first_name: string|null; last_name: string|null; created_at: string|null; role?: string|null; referrer_id?: string|null }
   const { data: level2 } = l1Ids.length ? await supabaseAdmin
     .from('profiles')
     .select('id, first_name, last_name, created_at, role, referrer_id')
-    .in('referrer_id', l1Ids) : { data: [] as ProfileBasic[] }
+    .in('referrer_id', l1Ids)
+    .eq('approval_status', 'approved') : { data: [] as ProfileBasic[] }
 
   const all = [
     ...(level1 || []).map(u => ({ ...u, level: 1, parent: userId })),

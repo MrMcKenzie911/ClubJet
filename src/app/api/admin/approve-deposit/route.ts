@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { cookies } from 'next/headers'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { revalidatePath } from 'next/cache'
 
 export const runtime = 'nodejs'
 
@@ -30,9 +31,11 @@ export async function POST(req: Request) {
           await supabaseAdmin.from('accounts').update({ balance: newBal }).eq('id', acct.id)
         }
       }
+      try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}
       return NextResponse.redirect(new URL('/admin?toast=deposit_approved', req.url))
     } else if (decision === 'deny') {
       await supabaseAdmin.from('transactions').update({ status: 'denied' }).eq('id', txId)
+      try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}
       return NextResponse.redirect(new URL('/admin?toast=deposit_denied', req.url))
     }
 
