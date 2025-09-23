@@ -18,19 +18,8 @@ export async function POST(req: Request) {
   if (error) return error;
 
   const body = await req.json();
-  const { email, password = 'Temp1234!', first_name, last_name, phone, username, role = 'user', account_type, investment_amount, referrerCode, referrerEmail } = body || {};
+  const { email, password = 'Temp1234!', first_name, last_name, phone, role = 'user', account_type, investment_amount, referrerCode, referrerEmail } = body || {};
   if (!email) return NextResponse.json({ error: 'Missing email' }, { status: 400 });
-
-  // Username uniqueness (optional field)
-  const desiredUsername: string | null = (username ?? '').toString().trim() || null;
-  if (desiredUsername) {
-    const { data: existing } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .ilike('username', desiredUsername)
-      .maybeSingle();
-    if (existing?.id) return NextResponse.json({ error: 'Username is already taken' }, { status: 400 });
-  }
 
   // 1) Create auth user if not exists
   const created = await supabaseAdmin.auth.admin.createUser({ email, password, email_confirm: true });
@@ -55,8 +44,6 @@ export async function POST(req: Request) {
     first_name,
     last_name,
     phone,
-    username: desiredUsername,
-    referral_code: desiredUsername || null,
     role,
     referrer_id,
     updated_at: new Date().toISOString(),
@@ -89,24 +76,33 @@ export async function PATCH(req: Request) {
   const { error } = await ensureAdminJSON();
   if (error) return error;
   const body = await req.json().catch(()=>({}));
-  const { id, first_name, last_name, email, username, role } = body || {};
+  const { id, first_name, last_name, email, role, new_pin, username } = body || {};
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-  // Username uniqueness on edit
-  const desiredUsername: string | null = (username ?? '').toString().trim() || null;
-  if (desiredUsername) {
-    const { data: existsOther } = await supabaseAdmin
+  // Optional: uniqueness check for username
+  if (username) {
+    const { data: existing } = await supabaseAdmin
       .from('profiles')
       .select('id')
-      .ilike('username', desiredUsername)
+      .ilike('username', String(username))
       .maybeSingle();
-    if (existsOther?.id && existsOther.id !== id) {
+    if (existing?.id && existing.id !== id) {
       return NextResponse.json({ error: 'Username is already taken' }, { status: 400 });
     }
   }
 
-  const patch: Record<string, unknown> = { first_name, last_name, email, role, updated_at: new Date().toISOString() };
-  if (desiredUsername !== null) { patch.username = desiredUsername; patch.referral_code = desiredUsername; }
+  type ProfilePatch = {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    role?: string;
+    updated_at: string;
+    pin_code?: string;
+    username?: string;
+  };
+  const patch: ProfilePatch = { first_name, last_name, email, role, updated_at: new Date().toISOString() };
+  if (new_pin) patch.pin_code = String(new_pin);
+  if (username) patch.username = String(username);
 
   const { error: upErr } = await supabaseAdmin.from('profiles')
     .update(patch)

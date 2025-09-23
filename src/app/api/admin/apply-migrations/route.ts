@@ -127,10 +127,47 @@ FOR EACH ROW EXECUTE FUNCTION sync_referral_code_with_username();
       console.log('Non-critical constraint/index error:', e)
     }
 
+    // Migration 5: Create/replace finalize_commission_atomic function
+    try {
+      migrations.push('Adding finalize_commission_atomic function')
+      const { error } = await supabaseAdmin.rpc('exec_sql', {
+        sql: `
+CREATE OR REPLACE FUNCTION public.finalize_commission_atomic(
+  p_account_id uuid,
+  p_amount numeric,
+  p_admin_id uuid
+) RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_now timestamptz := now();
+BEGIN
+  -- Lock the account row to ensure atomicity
+  PERFORM 1 FROM public.accounts WHERE id = p_account_id FOR UPDATE;
+
+  -- Record commission transaction first
+  INSERT INTO public.transactions (account_id, type, amount, status, created_at, metadata)
+  VALUES (p_account_id, 'COMMISSION', p_amount, 'completed', v_now,
+          jsonb_build_object('admin_id', p_admin_id, 'finalized_at', v_now));
+
+  -- Update account balance
+  UPDATE public.accounts
+     SET balance = COALESCE(balance, 0) + p_amount,
+         updated_at = v_now
+   WHERE id = p_account_id;
+END;
+$$;
+        `
+      })
+      if (error) throw new Error(`Failed to create finalize_commission_atomic: ${error.message}`)
+    } catch (e) {
+      console.log('Commission finalize function warning:', e)
+    }
+
     return NextResponse.json({
       success: true,
       migrations,
-      message: migrations.length > 0 
+      message: migrations.length > 0
         ? `Applied ${migrations.length} migrations successfully`
         : 'All migrations already applied'
     })
