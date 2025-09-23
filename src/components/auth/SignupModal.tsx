@@ -3,14 +3,14 @@
 
 
 import { useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 
 type Props = { open: boolean; onClose: () => void };
 
 export default function SignupModal({ open, onClose }: Props) {
-  const supabase = createClientComponentClient();
+
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     first_name: "",
@@ -35,65 +35,36 @@ export default function SignupModal({ open, onClose }: Props) {
       const code = (form.referral_code || '').trim().replace(/[^A-Za-z0-9]/g, '').toUpperCase();
       const refEmail = (form.referrer_email || '').trim().toLowerCase();
 
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: { data: { first_name: form.first_name, last_name: form.last_name, phone: form.phone, referral_code: code || undefined } },
+      // 🚀 BULLETPROOF SIGNUP - Server-side auth user creation
+      const res = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          first_name: form.first_name,
+          last_name: form.last_name,
+          phone: form.phone,
+          referral_code: code || undefined,
+          referrer_email: refEmail || undefined,
+          account_type: form.account_type,
+          investment_amount: Number(form.investment_amount || 0),
+        }),
       });
-      if (signUpError) throw signUpError;
 
-      const userId = signUpData.user?.id;
-      if (userId) {
-        // 🛡️ Small delay to ensure auth user is fully created before profile creation
-        await new Promise(resolve => setTimeout(resolve, 500))
-
-        // create profile with role=pending using service key on server
-        const res = await fetch("/api/profiles", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: userId,
-            email: form.email,
-            first_name: form.first_name,
-            last_name: form.last_name,
-            phone: form.phone,
-            pin_code: form.password, // Store the password as PIN for login
-            referral_code: code || undefined,
-            referrer_email: refEmail || undefined,
-            account_type: form.account_type,
-            investment_amount: Number(form.investment_amount || 0),
-          }),
-        });
-        if (!res.ok) {
-          const msg = await res.text();
-          throw new Error(`Profile create failed: ${msg}`);
-        }
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Signup failed' }));
+        throw new Error(errorData.error || 'Signup failed');
       }
 
-      // forward to n8n webhook for Vapi follow-up
-      try {
-        const res = await fetch("/api/send-to-n8n", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event: "signup",
-            payload: { ...form, referral_code: code, referrer_email: refEmail },
-            user_id: userId,
-          }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(()=>({}));
-          console.warn('Webhook forwarding failed', body);
-        }
-      } catch (werr) {
-        console.warn('Webhook forwarding error', werr);
-      }
+      const result = await res.json();
+      console.log('✅ Signup successful:', result);
 
       toast.success("Signup submitted. Look out for approval call.");
       onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Signup failed';
-      console.error(err);
+      console.error('❌ Signup error:', err);
       toast.error(msg);
     } finally {
       setLoading(false);
