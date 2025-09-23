@@ -170,29 +170,45 @@ export async function POST(req: Request) {
       console.warn('⚠️ Referrer notification failed:', notifyError)
     }
 
-    // 🛡️ STEP 8: Forward to n8n webhook
+    // 🛡️ STEP 8: Send to n8n webhook - DIRECT & BULLETPROOF
     try {
-      await fetch('/api/send-to-n8n', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event: 'signup',
-          payload: { 
-            email, 
-            first_name, 
-            last_name, 
-            phone, 
-            referral_code, 
-            referrer_email, 
-            account_type, 
-            investment_amount 
-          },
-          user_id: userId,
-        }),
+      console.log('📤 Sending signup data to n8n webhook...')
+
+      const n8nWebhookUrl = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
+
+      // Build query parameters with all signup data
+      const params = new URLSearchParams({
+        event: 'signup',
+        email: email || '',
+        first_name: first_name || '',
+        last_name: last_name || '',
+        phone: phone || '',
+        referral_code: referral_code || '',
+        referrer_email: referrer_email || '',
+        account_type: account_type || '',
+        investment_amount: String(investment_amount || 0),
+        user_id: userId,
+        timestamp: new Date().toISOString()
       })
-      console.log('✅ n8n webhook sent')
+
+      console.log('📋 Sending to n8n:', `${n8nWebhookUrl}?${params.toString()}`)
+
+      const response = await fetch(`${n8nWebhookUrl}?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'ClubAureus-Signup/1.0'
+        }
+      })
+
+      if (response.ok) {
+        const responseText = await response.text().catch(() => 'No response body')
+        console.log('✅ n8n webhook sent successfully:', response.status, responseText)
+      } else {
+        console.error('❌ n8n webhook failed:', response.status, await response.text().catch(() => 'No error body'))
+      }
     } catch (webhookError) {
-      console.warn('⚠️ n8n webhook failed:', webhookError)
+      console.error('💥 n8n webhook error:', webhookError)
+      // Don't fail signup for webhook issues, but log prominently
     }
 
     console.log('🎉 SIGNUP COMPLETED SUCCESSFULLY:', { userId, email })
