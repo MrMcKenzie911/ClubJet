@@ -21,7 +21,7 @@ export async function GET() {
     }
     
     return NextResponse.json(envCheck)
-  } catch (error) {
+  } catch (_e) {
     return NextResponse.json({ error: 'Failed to check environment' }, { status: 500 })
   }
 }

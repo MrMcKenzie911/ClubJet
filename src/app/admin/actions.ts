@@ -276,7 +276,7 @@ export async function setRate(formData: FormData) {
       try {
         const { error: rpcErr } = await applyViaRpc()
         if (rpcErr) throw rpcErr
-      } catch (rpcError) {
+      } catch (_e) {
         // Fallback: Apply earnings directly (transaction + balance update)
         try {
           const currentBal = Number(a.balance ?? 0)

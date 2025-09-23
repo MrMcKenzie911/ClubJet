@@ -13,16 +13,27 @@ export async function GET() {
     const { data: me } = await supa.from('profiles').select('role').eq('id', user.id).single()
     if (me?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    // Get approved user profiles (role=user implies approved in our flow; also include explicit approval_status when present)
+    // Get all users (admins, approved users, pending, rejected) and include approval_status
     const { data: profiles, error: pErr } = await supabaseAdmin
       .from('profiles')
       .select('id, first_name, last_name, email, role, created_at, is_founding_member, approval_status')
-      .eq('role', 'user')
       .order('created_at', { ascending: false })
     if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 })
 
-    // Get accounts for these users (include both verified and pending so newly approved users appear)
-    const ids = (profiles ?? []).map((p:any)=>p.id)
+    type ProfileRow = {
+      id: string
+      first_name: string | null
+      last_name: string | null
+      email: string | null
+      role: string | null
+      created_at: string
+      is_founding_member: boolean | null
+      approval_status: string | null
+    }
+
+    // Get accounts for these users (include both verified and pending)
+    const profs = (profiles ?? []) as ProfileRow[]
+    const ids: string[] = profs.map((p) => p.id)
     const { data: accounts, error: aErr } = await supabaseAdmin
       .from('accounts')
       .select('id, user_id, type, balance, reserved_amount, verified_at')
@@ -37,10 +48,10 @@ export async function GET() {
       byUser[uid].push(a)
     }
 
-    // Return all approved users; attach accounts (may be empty if none yet)
-    const result = (profiles ?? []).map((p:any) => ({ ...p, accounts: byUser[p.id] ?? [] }))
+    // Return all users; attach accounts (may be empty if none yet)
+    const result = profs.map((p) => ({ ...p, accounts: byUser[p.id] ?? [] }))
 
-    console.log(`Returning ${result.length} users (approved role=user) for user management list`)
+    console.log(`Returning ${result.length} users (all roles) for user management list`)
     return NextResponse.json({ users: result })
   } catch (e) {
     console.error('GET /api/admin/users/list failed', e)
