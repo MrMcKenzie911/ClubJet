@@ -48,11 +48,24 @@ export async function POST(req: Request) {
 
     if (action === 'reject') {
       console.log('🚫 Rejecting user')
-      await supabaseAdmin.from('profiles').update({
-        role: 'rejected',
-        approval_status: 'rejected'
-      }).eq('id', userId)
-      return NextResponse.redirect(new URL('/admin?toast=user_rejected', req.url))
+      try {
+        const { error: rejectError } = await supabaseAdmin.from('profiles').update({
+          role: 'rejected',
+          approval_status: 'rejected',
+          updated_at: new Date().toISOString()
+        }).eq('id', userId)
+
+        if (rejectError) {
+          console.error('❌ Reject error:', rejectError)
+          return NextResponse.redirect(new URL('/admin?toast=error', req.url))
+        }
+
+        console.log('✅ User rejected successfully')
+        return NextResponse.redirect(new URL('/admin?toast=user_rejected', req.url))
+      } catch (error) {
+        console.error('❌ Reject operation failed:', error)
+        return NextResponse.redirect(new URL('/admin?toast=error', req.url))
+      }
     }
 
     // Get profile to get email and PIN for auth user creation

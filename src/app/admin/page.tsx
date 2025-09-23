@@ -27,14 +27,7 @@ async function getAdminData() {
   const { data: me } = await supabase.from('profiles').select('role, is_founding_member').eq('id', user.id).single()
   if (me?.role !== 'admin' && me?.is_founding_member !== true) return { redirect: true as const }
 
-  const { data: pendingUsers } = await supabase
-    .from('profiles')
-    .select(`
-      *,
-      referrer:referrer_id(id, email, first_name, last_name, referral_code)
-    `)
-    .eq('role', 'pending')
-    .order('created_at', { ascending: true })
+  const { data: pendingUsers } = await supabase.from('profiles').select('*').eq('role', 'pending').order('created_at', { ascending: true })
   const { data: pendingDeposits } = await supabase
     .from('transactions')
     .select('*, account:accounts(id, user:profiles(id, email, first_name, last_name, phone))')

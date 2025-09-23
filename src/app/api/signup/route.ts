@@ -22,22 +22,48 @@ export async function POST(req: Request) {
 
     console.log('🚀 BULLETPROOF SIGNUP for:', { email, account_type })
 
-    // 🛡️ STEP 1: Create CONFIRMED auth user (same as admin creation)
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // ✅ CONFIRMED immediately - no email verification needed
-    })
+    // 🛡️ STEP 1: Get or create CONFIRMED auth user
+    let userId: string
 
-    if (authError || !authData.user) {
-      console.error('❌ Auth user creation failed:', authError)
-      return NextResponse.json({ 
-        error: authError?.message || 'Failed to create auth user' 
-      }, { status: 500 })
+    // First, check if auth user already exists
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+    const existingUser = existingUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+
+    if (existingUser) {
+      console.log('✅ Auth user already exists:', { userId: existingUser.id, email })
+      userId = existingUser.id
+
+      // Check if they already have a profile
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('id, role, approval_status')
+        .eq('id', existingUser.id)
+        .single()
+
+      if (existingProfile) {
+        console.log('❌ User already has profile:', existingProfile)
+        return NextResponse.json({
+          error: 'Email already registered. Please contact support if you need assistance.'
+        }, { status: 400 })
+      }
+    } else {
+      // Create new auth user
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true, // ✅ CONFIRMED immediately - no email verification needed
+      })
+
+      if (authError || !authData.user) {
+        console.error('❌ Auth user creation failed:', authError)
+        return NextResponse.json({
+          error: authError?.message || 'Failed to create auth user'
+        }, { status: 500 })
+      }
+
+      userId = authData.user.id
+      console.log('✅ New auth user created:', { userId, email })
     }
-
-    const userId = authData.user.id
-    console.log('✅ Auth user created:', { userId, email })
 
     // 🛡️ STEP 2: Determine referrer (by code or email)
     let referrer_id: string | null = null
@@ -58,6 +84,8 @@ export async function POST(req: Request) {
       phone,
       pin_code: password, // Store password as PIN for login
       referrer_id: referrer_id ?? null,
+      account_type: account_type || 'LENDER', // Store the account type
+      investment_amount: Number(investment_amount || 0), // Store the investment amount
       role: 'pending',
       approval_status: 'pending',
       updated_at: new Date().toISOString(),
