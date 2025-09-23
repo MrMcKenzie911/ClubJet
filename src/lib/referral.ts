@@ -8,8 +8,12 @@ export function generateReferralCode(): string {
 }
 
 export async function ensureUserReferralCode(userId: string): Promise<string> {
-  const { data } = await supabaseAdmin.from('profiles').select('referral_code').eq('id', userId).maybeSingle()
+  const { data } = await supabaseAdmin.from('profiles').select('username, referral_code').eq('id', userId).maybeSingle()
   if (data?.referral_code) return data.referral_code
+  if (data?.username) {
+    await supabaseAdmin.from('profiles').update({ referral_code: data.username }).eq('id', userId)
+    return data.username
+  }
   let tries = 0
   while (tries++ < 5) {
     const code = generateReferralCode()
@@ -32,12 +36,20 @@ export async function findReferrerIdByCodeOrEmail(args: { code?: string|null, em
   // Normalize code: uppercase and strip spaces/hyphens
   const code = rawCode ? rawCode.replace(/[^A-Za-z0-9]/g, '').toUpperCase() : ''
   if (code) {
-    const { data } = await supabaseAdmin
+    // Try referral_code first
+    const { data: byCode } = await supabaseAdmin
       .from('profiles')
       .select('id')
       .ilike('referral_code', code)
       .maybeSingle()
-    if (data?.id) return data.id
+    if (byCode?.id) return byCode.id
+    // Also allow matching by username
+    const { data: byUsername } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .ilike('username', code)
+      .maybeSingle()
+    if (byUsername?.id) return byUsername.id
   }
 
   // Normalize email: lowercase

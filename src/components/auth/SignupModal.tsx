@@ -17,6 +17,7 @@ export default function SignupModal({ open, onClose }: Props) {
     last_name: "",
     email: "",
     phone: "",
+    username: "",
     password: "",
     referral_code: "",
     referrer_email: "",
@@ -45,6 +46,7 @@ export default function SignupModal({ open, onClose }: Props) {
           first_name: form.first_name,
           last_name: form.last_name,
           phone: form.phone,
+          username: form.username?.trim() || undefined,
           referral_code: code || undefined,
           referrer_email: refEmail || undefined,
           account_type: form.account_type,
@@ -86,8 +88,9 @@ export default function SignupModal({ open, onClose }: Props) {
                 <input name="last_name" placeholder="Last name" value={form.last_name} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" required />
               </div>
               <input type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" required />
-              <input name="phone" placeholder="Phone" value={form.phone} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" required />
-              <input type="password" name="password" placeholder="Password" value={form.password} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" required />
+              <input name="phone" placeholder="Phone (+15551234567 format)" value={form.phone} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" required />
+              <input name="username" placeholder="Username (becomes your referral code)" value={form.username} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
+              <input type="password" name="password" placeholder="6-digit PIN" value={form.password} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" required />
               <input name="referral_code" placeholder="Referrer code (or leave blank)" value={form.referral_code} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
               <input name="referrer_email" placeholder="Referrer email (if no code)" type="email" value={form.referrer_email} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
               <p className="text-xs text-gray-400">Provide either a referral code or a referrer email. If both provided, code takes precedence.</p>

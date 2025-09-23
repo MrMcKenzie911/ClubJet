@@ -2,6 +2,16 @@
 
 All notable changes for Club Aureus app in this session.
 
+## 2025-09-23
+
+- MAJOR CHECKPOINT: Admin → User approvals, deposits, and withdrawals now update user KPIs/AUM immediately; downlines, charts, and verified users list are accurate and live-updating. Netlify build is green.
+- Admin User Management:
+  - Shows ALL users (admins, verified, pending, rejected)
+  - Role filter (All/Admin/User/Rejected/Pending), approval badges, per-account Verified/Pending badges
+  - Drawer actions (verify, set PIN, account update, referrer reassign) trigger instant list refresh and KPI revalidations
+- Build: fixed lint/types in actions.ts, debug-env, and users/list; added strong types and removed any usage
+- Prep for username feature (next): plan to add profiles.username (unique) with referral_code = username across flows, webhook payload, and admin UI
+
 ## 2025-09-21
 
 - fix(build): Remove explicit `any` usages in PIN login route to satisfy ESLint and unblock Netlify build

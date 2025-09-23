@@ -23,6 +23,14 @@ create table if not exists profiles (
 );
 create index if not exists idx_profiles_referrer on profiles(referrer_id);
 
+-- Username support (idempotent)
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS username text;
+DO $$ BEGIN IF NOT EXISTS (
+  SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='idx_profiles_username_unique'
+) THEN EXECUTE 'CREATE UNIQUE INDEX idx_profiles_username_unique ON profiles (LOWER(username))'; END IF; END $$;
+UPDATE profiles SET username = referral_code WHERE username IS NULL AND referral_code IS NOT NULL;
+
+
 -- 2) accounts
 create table if not exists accounts (
   id uuid primary key default gen_random_uuid(),

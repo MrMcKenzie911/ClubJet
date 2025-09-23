@@ -112,6 +112,29 @@ export default function UserDrawer({ userId, onClose }: { userId: string; onClos
                   <input name="new_pin" placeholder="New PIN" className="w-28 rounded bg-black/40 border border-gray-700 px-2 py-1 text-white text-sm" />
                   <button className="rounded bg-amber-500 hover:bg-amber-400 text-black px-2 py-1 text-sm">Set PIN</button>
                 </form>
+
+                {/* Edit Username (also updates referral_code) */}
+                <form className="mt-2 flex items-center gap-2" onSubmit={async (e)=>{
+                  e.preventDefault();
+                  const f = e.currentTarget as HTMLFormElement;
+                  const nv = (f.elements.namedItem('username') as HTMLInputElement)?.value?.trim() || '';
+                  if (!nv) return;
+                  try {
+                    const res = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: userId, username: nv }) });
+                    const j = await res.json().catch(()=>({}));
+                    if (!res.ok) throw new Error(j.error || 'Failed to update username');
+                    toast.success('Username updated');
+                    const { data: p2 } = await supabase.from('profiles').select('*').eq('id', userId).single();
+                    setProfile(p2);
+                    window.dispatchEvent(new Event('admin-user-updated'));
+                  } catch(err:any) {
+                    toast.error(err?.message || 'Failed to update username');
+                  }
+                }}>
+                  <input name="username" defaultValue={profile?.username || ''} placeholder="Username (referral code)" className="w-56 rounded bg-black/40 border border-gray-700 px-2 py-1 text-white text-sm" />
+                  <button className="rounded bg-amber-500 hover:bg-amber-400 text-black px-2 py-1 text-sm">Save</button>
+                </form>
+
               </div>
             </div>
             <div className="rounded border border-gray-800 p-3">

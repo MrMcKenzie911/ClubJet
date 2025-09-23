@@ -59,15 +59,15 @@ export default function UsersManager() {
 
 
   async function addUser() {
-    setEditing({ id: "", first_name: "", last_name: "", email: "", phone: "", role: "user", account_type: 'LENDER', investment_amount: 0, referrer_code: '', referrer_email: '' });
+    setEditing({ id: "", first_name: "", last_name: "", email: "", phone: "", username: "", role: "user", account_type: 'LENDER', investment_amount: 0, referrer_code: '', referrer_email: '' });
   }
 
   async function createUser() {
     if (!editing) return;
-    const { first_name, last_name, email, phone, role, account_type, investment_amount, referrer_code, referrer_email } = editing;
+    const { first_name, last_name, email, phone, username, role, account_type, investment_amount, referrer_code, referrer_email } = editing;
     const res = await fetch('/api/admin/users', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ first_name, last_name, email, phone, role, account_type, investment_amount: Number(investment_amount||0), referrerCode: referrer_code || null, referrerEmail: referrer_email || null })
+      body: JSON.stringify({ first_name, last_name, email, phone, username, role, account_type, investment_amount: Number(investment_amount||0), referrerCode: referrer_code || null, referrerEmail: referrer_email || null })
     })
     if (!res.ok) {
       const j = await res.json().catch(()=>({}));
@@ -91,7 +91,7 @@ export default function UsersManager() {
 
       {/* Filters/Search */}
       <div className="mt-4 flex flex-wrap gap-2 items-center text-sm">
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name/email" className="rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name/email/username" className="rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" />
         <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="rounded bg-black/40 border border-gray-700 px-2 py-2 text-white">
           <option value="all">Role: All</option>
           <option value="pending">Pending</option>
@@ -131,7 +131,7 @@ export default function UsersManager() {
           {!loading && rows
           .filter(u => {
             const q = query.trim().toLowerCase();
-            const matchesQ = !q || `${u.first_name} ${u.last_name}`.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+            const matchesQ = !q || `${u.first_name} ${u.last_name}`.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || String(u.username||'').toLowerCase().includes(q)
             const matchesRole = (() => {
               if (roleFilter === 'all') return true;
               if (roleFilter === 'user') return u.role === 'user';
@@ -169,7 +169,10 @@ export default function UsersManager() {
                   </span>
                 </div>
                 <div className="text-gray-200">{u.last_name || '—'}</div>
-                <div className="text-gray-400">{u.email}</div>
+                <div className="text-gray-400">
+                  {u.email}
+                  <div className="text-[11px] text-gray-500">@{u.username || u.referral_code || '—'}</div>
+                </div>
                 <div className="text-gray-300 flex flex-wrap gap-1">
                   {(u.accounts?.map((a:any)=> (
                     <span key={a.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-700 text-xs">
@@ -222,6 +225,9 @@ export default function UsersManager() {
               onChange={(e) => setEditing({ ...editing, email: e.target.value })} />
             <input className="w-full rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" placeholder="Phone" value={editing.phone || ''}
               onChange={(e) => setEditing({ ...editing, phone: e.target.value })} />
+            <input className="w-full rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" placeholder="Username (referral code)" value={editing.username || ''}
+              onChange={(e) => setEditing({ ...editing, username: e.target.value })} />
+
             <div className="grid grid-cols-2 gap-2">
               <select className="rounded bg-black/40 border border-gray-700 px-3 py-2 text-white" value={editing.role}
                 onChange={(e) => setEditing({ ...editing, role: e.target.value })}>

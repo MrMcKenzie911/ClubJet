@@ -16,7 +16,7 @@ export async function GET() {
     // Get all users (admins, approved users, pending, rejected) and include approval_status
     const { data: profiles, error: pErr } = await supabaseAdmin
       .from('profiles')
-      .select('id, first_name, last_name, email, role, created_at, is_founding_member, approval_status')
+      .select('id, first_name, last_name, email, username, referral_code, role, created_at, is_founding_member, approval_status')
       .order('created_at', { ascending: false })
     if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 })
 
@@ -25,6 +25,8 @@ export async function GET() {
       first_name: string | null
       last_name: string | null
       email: string | null
+      username: string | null
+      referral_code: string | null
       role: string | null
       created_at: string
       is_founding_member: boolean | null

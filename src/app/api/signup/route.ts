@@ -4,23 +4,24 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { 
-      email, 
-      password, 
-      first_name, 
-      last_name, 
-      phone, 
-      referral_code, 
-      referrer_email, 
-      account_type, 
-      investment_amount 
+    const {
+      email,
+      password,
+      first_name,
+      last_name,
+      phone,
+      username,
+      referral_code,
+      referrer_email,
+      account_type,
+      investment_amount
     } = body || {}
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Missing email or password' }, { status: 400 })
     }
 
-    console.log('🚀 BULLETPROOF SIGNUP for:', { email, account_type })
+    console.log('🚀 BULLETPROOF SIGNUP for:', { email, account_type, username })
 
     // 🛡️ STEP 1: Get or create CONFIRMED auth user
     let userId: string
@@ -69,10 +70,23 @@ export async function POST(req: Request) {
     let referrer_id: string | null = null
     if (referral_code || referrer_email) {
       const { findReferrerIdByCodeOrEmail } = await import('@/lib/referral')
-      referrer_id = await findReferrerIdByCodeOrEmail({ 
-        code: referral_code, 
-        email: referrer_email 
+      referrer_id = await findReferrerIdByCodeOrEmail({
+        code: referral_code,
+        email: referrer_email
       })
+    }
+
+    // 🧩 Username validation + uniqueness check (case-insensitive)
+    const desiredUsername: string | null = (username ?? '').toString().trim() || null
+    if (desiredUsername) {
+      const { data: existingByUsername } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .ilike('username', desiredUsername)
+        .maybeSingle()
+      if (existingByUsername?.id) {
+        return NextResponse.json({ error: 'Username is already taken' }, { status: 400 })
+      }
     }
 
     // 🛡️ STEP 3: Create profile immediately (auth user guaranteed to exist)
@@ -82,6 +96,8 @@ export async function POST(req: Request) {
       first_name,
       last_name,
       phone,
+      username: desiredUsername,
+      referral_code: desiredUsername || null,
       pin_code: password, // Store password as PIN for login
       referrer_id: referrer_id ?? null,
       account_type: account_type || 'LENDER', // Store the account type
@@ -98,10 +114,12 @@ export async function POST(req: Request) {
 
     console.log('✅ Profile created successfully')
 
-    // 🛡️ STEP 4: Generate referral code and build referral chain
+    // 🛡️ STEP 4: Ensure referral code (username) and build referral chain
     try {
       const { ensureUserReferralCode, buildReferralChain } = await import('@/lib/referral')
-      await ensureUserReferralCode(userId)
+      if (!desiredUsername) {
+        await ensureUserReferralCode(userId) // fallback generator when no username provided
+      }
       await buildReferralChain(userId, referrer_id ?? null)
       console.log('✅ Referral chain built')
     } catch (referralError) {
@@ -183,7 +201,8 @@ export async function POST(req: Request) {
         first_name: first_name || '',
         last_name: last_name || '',
         phone: phone || '',
-        referral_code: referral_code || '',
+        username: desiredUsername || '',
+        referral_code: (desiredUsername || referral_code || '') + '',
         referrer_email: referrer_email || '',
         account_type: account_type || '',
         investment_amount: String(investment_amount || 0),
