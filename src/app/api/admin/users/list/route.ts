@@ -14,18 +14,40 @@ export async function GET() {
     if (me?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Get all users (admins, approved users, pending, rejected) and include approval_status
-    const { data: profiles, error: pErr } = await supabaseAdmin
-      .from('profiles')
-      .select('id, first_name, last_name, email, username, referral_code, role, created_at, is_founding_member, approval_status')
-      .order('created_at', { ascending: false })
-    if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 })
+    const selectWithUsername = 'id, first_name, last_name, email, username, referral_code, role, created_at, is_founding_member, approval_status'
+    const selectBaseline = 'id, first_name, last_name, email, referral_code, role, created_at, is_founding_member, approval_status'
+
+    let profiles: unknown[] | null = null
+    let pErr: string | null = null
+
+    // First try selecting with username (new schema)
+    {
+      const resp = await supabaseAdmin
+        .from('profiles')
+        .select(selectWithUsername)
+        .order('created_at', { ascending: false })
+      if (resp.error) {
+        console.warn('profiles select with username failed; retrying baseline:', resp.error.message)
+        // Retry without username (backward compatible on older schema)
+        const retry = await supabaseAdmin
+          .from('profiles')
+          .select(selectBaseline)
+          .order('created_at', { ascending: false })
+        profiles = retry.data as unknown[] | null
+        pErr = retry.error ? String(retry.error.message || 'Query failed') : null
+      } else {
+        profiles = resp.data as unknown[] | null
+      }
+    }
+
+    if (pErr) return NextResponse.json({ error: pErr }, { status: 500 })
 
     type ProfileRow = {
       id: string
       first_name: string | null
       last_name: string | null
       email: string | null
-      username: string | null
+      username?: string | null
       referral_code: string | null
       role: string | null
       created_at: string
