@@ -176,6 +176,24 @@ export async function POST(req: Request) {
       console.log('⚠️ Initial deposit processing failed (continuing):', depositError)
     }
 
+    // Mark user accounts as verified immediately upon approval
+    try {
+      const nowIso = new Date().toISOString()
+      const { error: verErr } = await supabaseAdmin
+        .from('accounts')
+        .update({ verified_at: nowIso })
+        .eq('user_id', userId)
+      if (verErr && String(verErr.message||'').includes('verified_at')) {
+        console.warn('accounts.verified_at column missing; skipping set verified_at')
+      } else if (verErr) {
+        console.error('❌ Failed to set verified_at on accounts:', verErr)
+      } else {
+        console.log('✅ Accounts marked verified_at for user:', userId)
+      }
+    } catch (e) {
+      console.warn('⚠️ Could not verify accounts for user (continuing):', e)
+    }
+
     console.log('🎉 User approval completed successfully!')
     return NextResponse.redirect(new URL('/admin?toast=user_approved', req.url))
   } catch (e) {

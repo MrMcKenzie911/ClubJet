@@ -79,7 +79,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
   if (tab === 'transactions') redirect('/dashboard/activity')
 
-  async function UserPortfolioPayoutChart({ startDateISO }: { startDateISO: string }) {
+  async function UserPortfolioPayoutChart({ startDateISO, initialBalance, txs }: { startDateISO: string; initialBalance: number; txs: { type: string; amount: number; created_at: string; status?: string|null }[] }) {
     const now = new Date()
     const months: string[] = Array.from({ length: 6 }).map((_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
@@ -90,7 +90,10 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
       return `${new Date(y, m - 1, 1).toLocaleString(undefined, { month: 'short' })}`
     }
 
-    const startDate = new Date(startDateISO)
+    const endOfMonth = (y: number, m: number) => new Date(y, m, 0)
+    const start = new Date(startDateISO)
+    const startMonth = new Date(start.getFullYear(), start.getMonth(), 1)
+    const postedTxs = (txs || [])
 
     // Prepare referral deposits by Level 1 network (your direct signups)
     const supabase = getSupabaseServer()
@@ -116,30 +119,20 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
       l1Tx = txL1 || []
     }
 
-    // Get current balance from accounts
-    const currentBalance = (accounts ?? []).reduce((s, a: { balance?: number | null }) => s + Number(a.balance || 0), 0)
-
-    const data: MultiLineDatum[] = months.map((ym, index) => {
+    const data: MultiLineDatum[] = months.map((ym) => {
       const [y, m] = ym.split('-').map(Number)
-      const monthEnd = new Date(y, m, 0) // Last day of month
+      const monthEnd = endOfMonth(y, m)
 
-      // Show growth from $0 to current balance over time
-      let portfolio = 0
-
-      if (monthEnd >= startDate) {
-        // Account was active during this month
-        if (index === months.length - 1) {
-          // Current month - show actual current balance
-          portfolio = currentBalance
-        } else {
-          // Previous months - show proportional growth from 0 to current
-          const monthsFromStart = Math.max(0, (y - startDate.getFullYear()) * 12 + (m - startDate.getMonth() - 1))
-          const totalMonthsToNow = Math.max(1, (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth()))
-
-          // Linear growth from 0 to current balance
-          portfolio = (currentBalance * monthsFromStart) / totalMonthsToNow
-        }
-      }
+      // Cumulative + baseline initial balance from account open (previous month shows $0)
+      const cumulative = postedTxs
+        .filter(t => new Date(t.created_at) <= monthEnd)
+        .reduce((sum, t) => {
+          const amt = Number(t.amount || 0)
+          if (t.type === 'WITHDRAWAL') return sum - amt
+          return sum + amt
+        }, 0)
+      const base = monthEnd < startMonth ? 0 : Number(initialBalance || 0)
+      const portfolio = base + cumulative
 
       // Your referrals' deposits this month
       const referralDeposits = l1Tx
@@ -177,10 +170,10 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
                     <SectionCards totalAUM={(accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)} newSignups={(l1 ?? []).filter(s=>{ const d=s.created_at? new Date(s.created_at):null; const now=new Date(); return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(function(){ const now=new Date(); const int=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return t.type==='INTEREST' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0); return int; })()} referralPayoutPct={(function(){ const monthTx=(txs||[]).filter(t=>{ const d=new Date(t.created_at); const now=new Date(); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }); const comm=monthTx.filter(t=>t.type==='COMMISSION').reduce((s,t)=> s+Number(t.amount||0),0); const int=monthTx.filter(t=>t.type==='INTEREST').reduce((s,t)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100 : 0; })()} rateAppliedPct={rateAppliedPct} monthlyCommission={(function(){ const now=new Date(); const comm=(txs||[]).filter(t=>{ const d=new Date(t.created_at); return t.type==='COMMISSION' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).reduce((s,t)=> s+Number(t.amount||0),0); return comm; })()} routes={{ aum: '/dashboard?tab=account-balance', signups: '/dashboard?tab=my-network', monthly: '/dashboard?tab=investment-history', commission: '/dashboard?tab=my-network' }} />
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2">
-                        <UserPortfolioPayoutChart startDateISO={startDateISO} />
+                        <UserPortfolioPayoutChart startDateISO={startDateISO} initialBalance={initialBalance} txs={txs} />
                       </div>
                       <div className="space-y-3">
-                        <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} currentBalance={(accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)} />
+                        <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} />
                         <CalculatorToggle />
                       </div>
                     </div>
@@ -192,7 +185,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
                 {tab === 'my-network' && (
                   <>
                     <InvitePanel userCode={referralCode} />
-                    <ReferralNetworkTable defaultTab="analytics" />
+                    <ReferralNetworkTable defaultTab="analytics" userId={user.id} />
                   </>
                 )}
 
@@ -228,7 +221,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
                       </table>
                     </div>
                     <div className="mt-4">
-                      <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} currentBalance={(accounts ?? []).reduce((s,a:{balance?: number|null})=>s+Number(a.balance||0),0)} />
+                      <ProgressTarget initialBalance={initialBalance} startDateISO={startDateISO} monthlyTargetPct={1.5} />
                     </div>
                   </div>
                 )}
