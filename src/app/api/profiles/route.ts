@@ -7,6 +7,40 @@ export async function POST(req: Request) {
     const { id, email, first_name, last_name, phone, pin_code, referral_code, account_type, investment_amount } = body || {}
     if (!id || !email) return NextResponse.json({ error: 'Missing id or email' }, { status: 400 })
 
+    console.log('🔐 Creating profile for user:', { id, email })
+
+    // 🛡️ VERIFY AUTH USER EXISTS FIRST (fix foreign key constraint issue)
+    let authUserExists = false
+    let retryCount = 0
+    const maxRetries = 3
+
+    while (!authUserExists && retryCount < maxRetries) {
+      try {
+        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(id)
+        if (authUser && !authError) {
+          authUserExists = true
+          console.log('✅ Auth user verified:', authUser.user?.email || 'no-email')
+        } else {
+          console.log(`⏳ Auth user not found, retry ${retryCount + 1}/${maxRetries}:`, authError?.message)
+          retryCount++
+          if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
+          }
+        }
+      } catch (verifyError) {
+        console.log(`⏳ Auth verification failed, retry ${retryCount + 1}/${maxRetries}:`, verifyError)
+        retryCount++
+        if (retryCount < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
+      }
+    }
+
+    if (!authUserExists) {
+      console.error('❌ Auth user does not exist after retries:', id)
+      return NextResponse.json({ error: 'Auth user not found - please try again' }, { status: 400 })
+    }
+
     // Determine referrer (by code or email passed via referral_code or referrer_email)
     let referrer_id: string | null = null
     const referrer_email = body?.referrer_email as string | undefined
@@ -15,18 +49,7 @@ export async function POST(req: Request) {
       referrer_id = await findReferrerIdByCodeOrEmail({ code: referral_code, email: referrer_email })
     }
 
-    // Ensure PIN is 6-digit format for consistency
-    let finalPin = pin_code
-    if (pin_code && pin_code.length === 4) {
-      finalPin = pin_code + '00'  // Convert 1234 -> 123400
-    }
-
-    console.log('Creating profile with signup data:', {
-      email,
-      account_type,
-      investment_amount: Number(investment_amount || 0),
-      pin_code: finalPin ? 'SET_6_DIGIT' : 'NOT_SET'
-    })
+    console.log('📝 Creating profile with data:', { email, referrer_id: referrer_id ? 'SET' : 'NONE' })
 
     const { error } = await supabaseAdmin.from('profiles').upsert({
       id,
@@ -34,9 +57,7 @@ export async function POST(req: Request) {
       first_name,
       last_name,
       phone,
-      pin_code: finalPin || null, // Store 6-digit PIN for login
-      account_type: (account_type === 'NETWORK' || account_type === 'LENDER') ? account_type : null, // Store signup choice
-      investment_amount: Number(investment_amount || 0), // Store investment amount
+      pin_code: pin_code || null, // Store the PIN for login
       // Do NOT set referral_code here; this value in the payload represents the REFERRER code.
       // We will generate a unique referral_code for the new user below.
       referrer_id: referrer_id ?? null,
@@ -44,7 +65,12 @@ export async function POST(req: Request) {
       approval_status: 'pending',
       updated_at: new Date().toISOString(),
     })
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      console.error('❌ Profile creation failed:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    console.log('✅ Profile created successfully')
 
     // Ensure the new user has their OWN unique referral_code (avoid duplicate key violations)
     try {

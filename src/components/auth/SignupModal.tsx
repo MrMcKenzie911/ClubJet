@@ -44,6 +44,9 @@ export default function SignupModal({ open, onClose }: Props) {
 
       const userId = signUpData.user?.id;
       if (userId) {
+        // 🛡️ Small delay to ensure auth user is fully created before profile creation
+        await new Promise(resolve => setTimeout(resolve, 500))
+
         // create profile with role=pending using service key on server
         const res = await fetch("/api/profiles", {
           method: "POST",
