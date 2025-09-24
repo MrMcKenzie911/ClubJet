@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { calculateSignupFee } from '@/lib/fees'
+import { cookies } from 'next/headers'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 
 
 export async function approveUser(formData: FormData) {
@@ -276,6 +278,10 @@ export async function setRate(formData: FormData) {
       .insert({ account_type, fixed_rate_monthly, effective_from: new Date().toISOString().slice(0, 10) })
 
     // 2) Apply interest to all verified accounts of this type
+    const supa = createRouteHandlerClient({ cookies })
+    const { data: { user: adminUser } } = await supa.auth.getUser()
+    const adminId = adminUser?.id || '00000000-0000-0000-0000-000000000000'
+
     const { data: accts } = await supabaseAdmin
       .from('accounts')
       .select('id, balance')
@@ -287,7 +293,7 @@ export async function setRate(formData: FormData) {
         return supabaseAdmin.rpc('apply_earnings_atomic', {
           p_account_id: a.id,
           p_rate_pct: fixed_rate_monthly,
-          p_admin_id: 'system' // TODO: Get actual admin ID from session
+          p_admin_id: adminId
         })
       }
 
