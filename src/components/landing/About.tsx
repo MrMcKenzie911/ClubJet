@@ -5,20 +5,28 @@ export default function About() {
         <div>
           <h2 className="text-3xl font-bold text-white">About Club Aureus</h2>
           <p className="mt-3 text-gray-300">
-            Club Jet is a private investment platform focused on premium aviation assets. We combine professional
-            management, transparent workflows, and institutional‑grade security to deliver a refined investor experience.
+            Club Aureus is a private, member‑referred investment platform. We focus on disciplined process,
+            clear approvals, and capital stewardship—delivering a refined experience with transparency at every step.
           </p>
           <p className="mt-3 text-gray-300">
-            Led by CEO Richard Nuffer, our approach emphasizes clear terms, bank‑level security, and an approval workflow that
-            keeps investors informed. Users select either a fixed “Lender” account or a performance‑based “Network” account.
+            Our approach emphasizes predictable operations, bank‑level security, and simple choices: a fixed‑rate
+            membership for steady monthly payouts, or a performance‑based variable membership that participates in monthly results.
           </p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
           <h3 className="text-white font-semibold">Key Highlights</h3>
           <ul className="mt-3 list-disc pl-5 text-gray-300 space-y-2">
-            <li>Two membership types: Fixed Memberships (1.00% / 1.125% / 1.25%) and Variable Memberships (50% of gross monthly return).</li>
-            <li>Structured withdrawal schedule: notice by the 1st, fund release by the 10th.</li>
-            <li>Secure data with RLS and detailed audit trails; transparent admin approvals.</li>
+            <li>
+              Fixed Memberships (monthly payout):
+              1.00% (standard access), 1.125% (enhanced access), 1.25% (preferred access).
+              Higher tiers generally carry longer notice/holding parameters.
+            </li>
+            <li>
+              Variable Memberships: performance‑based, calculated monthly; payout is a share of gross monthly results
+              after finalized admin actions. No fixed rate.
+            </li>
+            <li>Structured timing: requests by the 1st, typical release window by the 10th (subject to approval and status).</li>
+            <li>Secure data with RLS, audit trails, and transparent admin approvals.</li>
           </ul>
           <p className="mt-4 text-xs text-gray-400">Investment products are not FDIC insured and involve risk of loss.</p>
         </div>

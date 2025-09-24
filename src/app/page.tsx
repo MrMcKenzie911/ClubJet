@@ -6,6 +6,7 @@ import Navbar from "@/components/landing/Navbar";
 import Hero from "@/components/landing/Hero";
 // import InvestmentOptions from "@/components/landing/InvestmentOptions";
 import FeaturesRow from "@/components/landing/FeaturesRow";
+import Services from "@/components/landing/Services";
 import NoticeRelease from "@/components/landing/NoticeRelease";
 import About from "@/components/landing/About";
 import ContactAlt from "@/components/landing/ContactAlt";
@@ -19,6 +20,7 @@ export default function HomePage() {
       <Navbar onOpenSignup={() => setOpen(true)} />
       <Hero onOpenSignup={() => setOpen(true)} />
       <FeaturesRow />
+      <Services />
       {/* Removed Strategy section per requirements */}
       {/* <InvestmentOptions onOpenSignup={() => setOpen(true)} /> */}
       <NoticeRelease />

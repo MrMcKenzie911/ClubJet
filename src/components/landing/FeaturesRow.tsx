@@ -5,7 +5,7 @@ import { ShieldCheck, BarChart3, Users, TimerReset } from "lucide-react";
 const items = [
   { icon: BarChart3, title: "Premium Returns", body: "Competitive yields with transparent fees and performance tracking." },
   { icon: ShieldCheck, title: "Secure Platform", body: "Bank‑level security, encrypted transactions, and audit trails." },
-  { icon: Users, title: "Expert Management", body: "Experienced team in aviation and investment oversight." },
+  { icon: Users, title: "Expert Oversight", body: "Experienced operations, compliance, and risk oversight." },
   { icon: TimerReset, title: "Flexible Terms", body: "Structured schedules and clear release timelines." },
 ];
 
