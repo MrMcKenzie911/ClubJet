@@ -31,6 +31,24 @@ export async function approveUser(formData: FormData) {
           .eq('id', acct.id)
         if (vErr) throw vErr
       }
+      // Ensure initial deposit and balances are applied on approval (idempotent)
+      try {
+        const { data: prof2 } = await supabaseAdmin
+          .from('profiles')
+          .select('investment_amount, account_type')
+          .eq('id', userId)
+          .maybeSingle()
+        const inv = Number(prof2?.investment_amount || 0)
+        const acctType = (prof2?.account_type === 'NETWORK' || prof2?.account_type === 'LENDER') ? prof2?.account_type : 'LENDER'
+        if (inv > 0) {
+          await supabaseAdmin.from('pending_deposits').insert({ user_id: userId, amount: inv, account_type: acctType }).onConflict('user_id').ignore()
+          const { processInitialDeposit } = await import('@/lib/initialDeposit')
+          await processInitialDeposit(userId)
+        }
+      } catch (e) {
+        console.warn('initial deposit processing skipped or failed', e)
+      }
+
       // Credit referrer $25 commission upon approval
       const { data: prof } = await supabaseAdmin
         .from('profiles')

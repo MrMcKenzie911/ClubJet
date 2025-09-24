@@ -21,6 +21,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing email or password' }, { status: 400 })
     }
 
+    const emailLower = String(email).toLowerCase()
+    if (!/^\d{6}$/.test(String(password || ''))) {
+      return NextResponse.json({ error: 'Password must be exactly 6 digits.' }, { status: 400 })
+    }
+
     console.log('🚀 BULLETPROOF SIGNUP for:', { email, account_type, username })
 
     // 🛡️ STEP 1: Get or create CONFIRMED auth user
@@ -28,7 +33,7 @@ export async function POST(req: Request) {
 
     // First, check if auth user already exists
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
-    const existingUser = existingUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+    const existingUser = existingUsers.users.find(u => u.email?.toLowerCase() === emailLower)
 
     if (existingUser) {
       console.log('✅ Auth user already exists:', { userId: existingUser.id, email })
@@ -50,7 +55,7 @@ export async function POST(req: Request) {
     } else {
       // Create new auth user
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email,
+        email: emailLower,
         password,
         email_confirm: true, // ✅ CONFIRMED immediately - no email verification needed
       })
@@ -92,7 +97,7 @@ export async function POST(req: Request) {
     // 🛡️ STEP 3: Create profile immediately (auth user guaranteed to exist)
     const { error: profileError } = await supabaseAdmin.from('profiles').upsert({
       id: userId,
-      email,
+      email: emailLower,
       first_name,
       last_name,
       phone,
@@ -158,8 +163,8 @@ export async function POST(req: Request) {
     // 🛡️ STEP 6: Set initial balance and create pending deposit
     const inv = Number(investment_amount || 0)
     if (accountId && inv > 0) {
-      await supabaseAdmin.from('accounts').update({ 
-        initial_balance: inv 
+      await supabaseAdmin.from('accounts').update({
+        initial_balance: inv
       }).eq('id', accountId)
 
       try {
@@ -176,8 +181,8 @@ export async function POST(req: Request) {
 
     // 🛡️ STEP 7: Notify referrers
     try {
-      await fetch(process.env.NEXT_PUBLIC_SITE_URL ? 
-        `${process.env.NEXT_PUBLIC_SITE_URL}/api/notify-referrers` : 
+      await fetch(process.env.NEXT_PUBLIC_SITE_URL ?
+        `${process.env.NEXT_PUBLIC_SITE_URL}/api/notify-referrers` :
         '/api/notify-referrers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -232,10 +237,10 @@ export async function POST(req: Request) {
 
     console.log('🎉 SIGNUP COMPLETED SUCCESSFULLY:', { userId, email })
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: 'Signup completed successfully',
-      userId 
+      userId
     })
 
   } catch (error: unknown) {

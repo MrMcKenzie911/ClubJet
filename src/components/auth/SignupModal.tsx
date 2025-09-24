@@ -32,6 +32,7 @@ export default function SignupModal({ open, onClose }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    if (!/^\d{6}$/.test(form.password)) { toast.error('Password must be exactly 6 digits.'); setLoading(false); return; }
     try {
       const code = (form.referral_code || '').trim().replace(/[^A-Za-z0-9]/g, '').toUpperCase();
       const refEmail = (form.referrer_email || '').trim().toLowerCase();
@@ -90,7 +91,7 @@ export default function SignupModal({ open, onClose }: Props) {
               <input type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" required />
               <input name="phone" placeholder="Phone (+15551234567 format)" value={form.phone} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" required />
               <input name="username" placeholder="Username (becomes your referral code)" value={form.username} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
-              <input type="password" name="password" placeholder="6-digit PIN" value={form.password} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" required />
+              <input type="password" name="password" placeholder="6-digit password" inputMode="numeric" pattern="\\d{6}" maxLength={6} value={form.password} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" required />
               <input name="referral_code" placeholder="Referrer code (or leave blank)" value={form.referral_code} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
               <input name="referrer_email" placeholder="Referrer email (if no code)" type="email" value={form.referrer_email} onChange={handleChange} className="rounded-md bg-black/60 border border-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60" />
               <p className="text-xs text-gray-400">Provide either a referral code or a referrer email. If both provided, code takes precedence.</p>

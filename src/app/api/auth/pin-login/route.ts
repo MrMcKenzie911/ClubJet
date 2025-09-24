@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       const resp = await supabaseAdmin
         .from('profiles')
         .select('id, email, pin_code, role, approval_status')
-        .eq('email', rawId.toLowerCase())
+        .ilike('email', rawId)
         .maybeSingle()
       profile = resp.data as ProfileRec | null
       profileError = resp.error ? String(resp.error.message || 'Query failed') : null
@@ -112,7 +112,22 @@ export async function POST(req: NextRequest) {
       console.error('❌ STEP 4 FAILED - Sign in error:', signInError)
       console.error('   Error message:', signInError.message)
       console.error('   Error code:', signInError.status)
-      return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
+      // Fallback: attempt to repair/create auth user and retry once
+      try {
+        const { guaranteeAuthUser } = await import('@/lib/guaranteedAuthUser')
+        const fix = await guaranteeAuthUser(em, authPassword, profile.id)
+        if (fix?.success) {
+          const retry = await supabase.auth.signInWithPassword({ email: em, password: authPassword })
+          if (retry.error) {
+            return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
+          }
+        } else {
+          return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
+        }
+      } catch (e) {
+        console.error('❌ Auth repair failed:', e)
+        return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
+      }
     }
 
     console.log('✅ STEP 4 SUCCESS - SESSION CREATED!')
