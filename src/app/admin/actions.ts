@@ -41,7 +41,7 @@ export async function approveUser(formData: FormData) {
         const inv = Number(prof2?.investment_amount || 0)
         const acctType = (prof2?.account_type === 'NETWORK' || prof2?.account_type === 'LENDER') ? prof2?.account_type : 'LENDER'
         if (inv > 0) {
-          await supabaseAdmin.from('pending_deposits').insert({ user_id: userId, amount: inv, account_type: acctType }).onConflict('user_id').ignore()
+          await supabaseAdmin.from('pending_deposits').upsert({ user_id: userId, amount: inv, account_type: acctType }, { onConflict: 'user_id' })
           const { processInitialDeposit } = await import('@/lib/initialDeposit')
           await processInitialDeposit(userId)
         }
