@@ -61,6 +61,20 @@ export async function POST() {
       if (error) throw new Error(`Failed to add reserved_amount: ${error.message}`)
     }
 
+    // Migration 2b: Ensure verified_at exists on accounts
+    try {
+      await supabaseAdmin.from('accounts').select('verified_at').limit(1).maybeSingle()
+    } catch {
+      migrations.push('Adding verified_at column + index to accounts')
+      const { error } = await supabaseAdmin.rpc('exec_sql', {
+        sql: `
+          ALTER TABLE accounts ADD COLUMN IF NOT EXISTS verified_at timestamptz;
+          CREATE INDEX IF NOT EXISTS idx_accounts_verified_at ON accounts(verified_at);
+        `
+      })
+      if (error) throw new Error(`Failed to add verified_at: ${error.message}`)
+    }
+
     // Migration 3: Username column + unique index + sync trigger (009)
     try {
       migrations.push('Adding username column + unique index + sync trigger (009)')

@@ -30,11 +30,20 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
       <div className="p-6 text-white">Please log in.</div>
     )
   }
+  // Self-heal: ensure user account exists, pending deposit processed, and verified_at set when approved
+  {
+    const { ensureUserAccount } = await import('@/lib/ensureAccount')
+    await ensureUserAccount(user.id)
+  }
+
+  // Recreate server client to avoid any caching issues post self-heal
+  const supabase2 = getSupabaseServer()
+
   // If admin, route to admin dashboard
-  const { data: me } = await supabase.from('profiles').select('role, is_founding_member').eq('id', user.id).maybeSingle()
+  const { data: me } = await supabase2.from('profiles').select('role, is_founding_member').eq('id', user.id).maybeSingle()
   if (me?.role === 'admin' || me?.is_founding_member === true) redirect('/admin')
   // Load all accounts for the user
-  const { data: accounts } = await supabase
+  const { data: accounts } = await supabase2
     .from('accounts')
     .select('id, balance, start_date, verified_at, initial_balance, type, reserved_amount')
     .eq('user_id', user.id)
