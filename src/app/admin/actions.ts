@@ -288,7 +288,17 @@ export async function setRate(formData: FormData) {
       .eq('type', account_type)
       .not('verified_at','is', null)
 
+    const affected: { account_id: string; amount: number }[] = []
+    let countApplied = 0
+    let totalApplied = 0
+
     for (const a of (accts || []) as { id: string; balance?: number|null }[]) {
+      const currentBal = Number(a.balance ?? 0)
+      if (!isFinite(currentBal)) continue
+      const rawAmt = currentBal * (fixed_rate_monthly / 100)
+      const amt = Math.round(rawAmt * 100) / 100 // round to cents
+      if (amt <= 0) continue
+
       const applyViaRpc = async () => {
         return supabaseAdmin.rpc('apply_earnings_atomic', {
           p_account_id: a.id,
@@ -297,19 +307,14 @@ export async function setRate(formData: FormData) {
         })
       }
 
+      let applied = false
       try {
         const { error: rpcErr } = await applyViaRpc()
         if (rpcErr) throw rpcErr
+        applied = true
       } catch (_e) {
         // Fallback: Apply earnings directly (transaction + balance update)
         try {
-          const currentBal = Number(a.balance ?? 0)
-          if (!isFinite(currentBal)) continue
-          const rawAmt = (currentBal * (fixed_rate_monthly / 100))
-          const amt = Math.round(rawAmt * 100) / 100 // round to cents
-          if (amt <= 0) continue
-
-          // Insert INTEREST transaction
           await supabaseAdmin
             .from('transactions')
             .insert({
@@ -321,20 +326,44 @@ export async function setRate(formData: FormData) {
               metadata: { applied_rate_pct: fixed_rate_monthly }
             })
 
-          // Update balance
           await supabaseAdmin
             .from('accounts')
             .update({ balance: currentBal + amt })
             .eq('id', a.id)
+          applied = true
         } catch (fallbackError) {
           console.error(`Earnings fallback failed for account ${a.id}:`, fallbackError)
           // Continue with other accounts but log the error
         }
       }
+
+      if (applied) {
+        affected.push({ account_id: a.id, amount: amt })
+        countApplied += 1
+        totalApplied += amt
+      }
+    }
+
+    // Audit log for traceability
+    try {
+      await supabaseAdmin.from('audit_log').insert({
+        actor: adminId,
+        event: 'set_earnings_applied',
+        details: {
+          account_type,
+          applied_rate_pct: fixed_rate_monthly,
+          affected_count: countApplied,
+          total_amount: Math.round(totalApplied * 100) / 100,
+          affected_accounts: affected
+        }
+      })
+    } catch (auditErr) {
+      console.error('audit_log insert failed:', auditErr)
     }
 
     try { revalidatePath('/admin'); revalidatePath('/dashboard') } catch {}
-    redirect('/admin?toast=rate_set')
+    const totalStr = (Math.round(totalApplied * 100) / 100).toFixed(2)
+    redirect(`/admin?toast=rate_set&applied=${encodeURIComponent(String(fixed_rate_monthly))}&count=${countApplied}&total=${encodeURIComponent(totalStr)}`)
   } catch (e) {
     console.error('setRate failed', e)
     redirect('/admin?toast=error')

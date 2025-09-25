@@ -22,10 +22,18 @@ export default function ToastFromQuery() {
   const sp = useSearchParams();
   useEffect(() => {
     const t = sp.get("toast");
-    if (t) {
-      const msg = labels[t] || t;
-      toast.success(msg);
+    if (!t) return;
+    if (t === 'rate_set') {
+      const applied = sp.get('applied');
+      const count = sp.get('count');
+      const total = sp.get('total');
+      if (applied && count && total) {
+        toast.success(`Applied ${applied}% to ${count} accounts, total $${total}`);
+        return;
+      }
     }
+    const msg = labels[t] || t;
+    toast.success(msg);
   }, [sp]);
   return null;
 }
