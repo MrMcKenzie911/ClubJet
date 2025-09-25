@@ -14,6 +14,9 @@ const labels: Record<string, string> = {
   account_updated: "Account updated",
   account_deleted: "Account deleted",
   rate_set: "Earnings rate set",
+  rate_undone: "Earnings apply undone",
+  undo_none: "Nothing to undo",
+  error: "An error occurred",
   withdraw_submitted: "Withdrawal request submitted",
   deposit_submitted: "Deposit submitted",
 };
