@@ -40,6 +40,28 @@ export async function POST(req: Request) {
 
     if (!account_id || !amount || amount <= 0) return NextResponse.redirect(new URL('/dashboard?toast=error', req.url))
 
+    // Enforce lockups and pilot restrictions
+    const { data: acct } = await supabaseAdmin
+      .from('accounts')
+      .select('id, type, balance, minimum_balance, start_date, lockup_end_date')
+      .eq('id', account_id)
+      .maybeSingle()
+
+    const now = new Date()
+    if (acct) {
+      // Pilot mode: Lender with balance < $5,000 cannot withdraw
+      if (acct.type === 'LENDER' && Number(acct.balance ?? 0) < 5000) {
+        return NextResponse.redirect(new URL('/dashboard?toast=pilot_lock', req.url))
+      }
+      // Lockup enforcement using lockup_end_date when present
+      if (acct.lockup_end_date) {
+        const end = new Date(acct.lockup_end_date as unknown as string)
+        if (now < end) {
+          return NextResponse.redirect(new URL('/dashboard?toast=locked', req.url))
+        }
+      }
+    }
+
     const { error: insErr } = await supabaseAdmin
       .from('withdrawal_requests')
       .insert({ account_id, amount, method, status: 'pending' })

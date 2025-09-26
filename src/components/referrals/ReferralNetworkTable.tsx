@@ -76,7 +76,7 @@ function ReferralTableContent({ userId }: { userId?: string }) {
           <TableRow>
             <TableHead>Member Name</TableHead>
             <TableHead>Level</TableHead>
-            <TableHead>Stream Type</TableHead>
+            <TableHead>Account Type</TableHead>
             <TableHead>Investment</TableHead>
             <TableHead>Join Date</TableHead>
             <TableHead>Status</TableHead>

@@ -294,7 +294,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
                         <input name="amount" type="number" min="1" step="0.01" required className="mt-1 w-40 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white" />
                       </label>
                       <label className="text-xs text-gray-400">Account Type
-                        <select name="account_type" className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
+                        <select name="account_type" defaultValue={primaryType ?? 'LENDER'} className="mt-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-white">
                           <option value="LENDER">Fixed Memberships</option>
                           <option value="NETWORK">Variable Memberships</option>
                         </select>
@@ -349,6 +349,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
                           <option value="ACH">ACH</option>
                           <option value="WIRE">Wire</option>
                           <option value="CRYPTO">Crypto</option>
+                          <option value="PAYPAL">PayPal</option>
                         </select>
                       </label>
                       <label className="text-xs text-gray-400">Details

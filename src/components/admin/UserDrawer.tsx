@@ -186,6 +186,12 @@ export default function UserDrawer({ userId, onClose }: { userId: string; onClos
                       <label className="text-xs text-gray-400">Monthly Commission Payout
                         <input name="monthly_payout" defaultValue={Number(a.reserved_amount ?? 0)} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white" type="number" step="0.01" />
                       </label>
+                      <label className="text-xs text-gray-400">Account Type
+                        <select name="type" defaultValue={a.type} className="mt-1 w-full rounded bg-black/40 border border-gray-700 px-2 py-1 text-white">
+                          <option value="LENDER">Fixed Membership</option>
+                          <option value="NETWORK">Variable Membership</option>
+                        </select>
+                      </label>
                       <div className="col-span-2 flex justify-end">
                         <button className="rounded bg-amber-500 hover:bg-amber-400 text-black px-3 py-1 text-sm">Save</button>
                       </div>

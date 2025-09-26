@@ -19,6 +19,8 @@ const labels: Record<string, string> = {
   error: "An error occurred",
   withdraw_submitted: "Withdrawal request submitted",
   deposit_submitted: "Deposit submitted",
+  locked: "Withdrawal blocked: funds are in lock-up period",
+  pilot_lock: "Pilot mode: Fixed Membership balance must reach $5,000 before withdrawals",
 };
 
 export default function ToastFromQuery() {

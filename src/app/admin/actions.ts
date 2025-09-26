@@ -6,6 +6,8 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { calculateSignupFee } from '@/lib/fees'
 import { cookies } from 'next/headers'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { calculateVariableCommission, calculateFixedCommission } from '@/lib/commissions'
+import { creditSlushFund } from '@/lib/system'
 
 
 export async function approveUser(formData: FormData) {
@@ -284,7 +286,7 @@ export async function setRate(formData: FormData) {
 
     const { data: accts } = await supabaseAdmin
       .from('accounts')
-      .select('id, balance')
+      .select('id, balance, user_id, initial_balance')
       .eq('type', account_type)
       .not('verified_at','is', null)
 
@@ -292,7 +294,7 @@ export async function setRate(formData: FormData) {
     let countApplied = 0
     let totalApplied = 0
 
-    for (const a of (accts || []) as { id: string; balance?: number|null }[]) {
+    for (const a of (accts || []) as { id: string; balance?: number|null; user_id?: string; initial_balance?: number|null }[]) {
       const currentBal = Number(a.balance ?? 0)
       if (!isFinite(currentBal)) continue
       const rawAmt = currentBal * (fixed_rate_monthly / 100)
@@ -341,6 +343,36 @@ export async function setRate(formData: FormData) {
         affected.push({ account_id: a.id, amount: amt })
         countApplied += 1
         totalApplied += amt
+
+        // Mirror monthly distribution: credit proportional Slush
+        try {
+          const userId = a.user_id as string | undefined
+          let hasLevel2 = false
+          if (userId) {
+            const { data: chain } = await supabaseAdmin
+              .from('referral_relationships')
+              .select('level_2_referrer_id')
+              .eq('user_id', userId)
+              .maybeSingle()
+            hasLevel2 = !!chain?.level_2_referrer_id
+          }
+
+          let slush = 0
+          if (account_type === 'NETWORK') {
+            const dist = calculateVariableCommission(currentBal, fixed_rate_monthly, hasLevel2)
+            slush = dist.slush
+          } else {
+            const initial = Number((a.initial_balance ?? currentBal))
+            const dist = calculateFixedCommission(currentBal, initial, fixed_rate_monthly, hasLevel2)
+            slush = dist.slush
+          }
+          slush = Math.round(slush * 100) / 100
+          if (slush > 0) {
+            await creditSlushFund(slush, 'set_rate_distribution', a.id)
+          }
+        } catch (slushErr) {
+          console.error(`Slush credit failed for account ${a.id}`, slushErr)
+        }
       }
     }
 

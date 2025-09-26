@@ -47,7 +47,7 @@ export async function GET(req: Request) {
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
-    const streamType = acct?.type === 'NETWORK' ? 'Network Stream' : 'Lender Stream'
+    const streamType = acct?.type === 'NETWORK' ? 'Variable Member' : 'Fixed Member'
     const investment = Number(acct?.initial_balance ?? acct?.balance ?? 0)
     const status = (u.role === 'pending' ? 'Pending' : (acct?.verified_at ? 'Active' : 'Active'))
     const bonus = u.level === 1 || u.level === 2 ? 25 : 16.67
@@ -62,7 +62,7 @@ export async function GET(req: Request) {
     })
   }
 
-  const header = ['Member Name','Level','Stream Type','Investment','Join Date','Status','Bonuses Earned']
+  const header = ['Member Name','Level','Account Type','Investment','Join Date','Status','Bonuses Earned']
   const lines = [header.join(','), ...rows.map(r => [
     escapeCsv(r.name),
     String(r.level),

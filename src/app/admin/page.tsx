@@ -80,7 +80,17 @@ async function getAdminData() {
   const { data: sft } = await supabase.from('slush_fund_transactions').select('transaction_type, amount')
   const slushFundBalance = (sft ?? []).reduce((s:number,t:{transaction_type:string, amount:number})=> s + (t.transaction_type==='deposit' ? Number(t.amount||0) : -Number(t.amount||0)), 0)
 
-  return { user, pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [], profilesAll: profilesAll ?? [], verifiedAccounts: verifiedAccounts ?? [], monthTx: monthTx ?? [], signupFees: signupFees ?? [], adminPersonalBalance, slushFundBalance }
+  // System account balances (Jared, Ross, BNE) by env owner IDs
+  async function sumOwner(ownerId?: string|null) {
+    if (!ownerId) return 0
+    const { data } = await supabase.from('accounts').select('balance').eq('user_id', ownerId)
+    return (data ?? []).reduce((s:number,a:{balance?:number})=> s + Number(a.balance||0), 0)
+  }
+  const jaredBalance = await sumOwner(process.env.SYSTEM_ACCOUNT_JARED)
+  const rossBalance = await sumOwner(process.env.SYSTEM_ACCOUNT_ROSS)
+  const bneBalance = await sumOwner(process.env.SYSTEM_ACCOUNT_BNE)
+
+  return { user, pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [], profilesAll: profilesAll ?? [], verifiedAccounts: verifiedAccounts ?? [], monthTx: monthTx ?? [], signupFees: signupFees ?? [], adminPersonalBalance, slushFundBalance, jaredBalance, rossBalance, bneBalance }
 }
 export default async function AdminPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const res = await getAdminData()
@@ -89,9 +99,21 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
   const tabParam = sp?.tab
   const tab = Array.isArray(tabParam) ? tabParam[0] : tabParam
 
-  const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts, monthTx } = res
+  const { pendingUsers, pendingDeposits, pendingWithdrawals, rates, pendingAccounts, profilesAll, verifiedAccounts, monthTx, signupFees } = res
 
   const referralCode = await ensureUserReferralCode(res.user.id)
+
+  // Load all transactions for admin Transactions tab
+  let allTx: any[] = []
+  if (tab === 'transactions') {
+    const supabase = getSupabaseServer()
+    const { data } = await supabase
+      .from('transactions')
+      .select('id, type, amount, status, created_at, account:accounts(id, user:profiles(id, email, first_name, last_name))')
+      .order('created_at', { ascending: false })
+      .limit(500)
+    allTx = data ?? []
+  }
 
   return (
     <SidebarProvider
@@ -111,7 +133,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
 
                 {!tab && (
                   <>
-                    <SectionCards totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)} newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{ const d=p.created_at? new Date(p.created_at):null; const now=new Date(); return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(function(){ const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); return int; })()} referralPayoutPct={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100:0 })()} rateAppliedPct={Number((rates?.[0] as any)?.fixed_rate_monthly ?? 0)} monthlyCommission={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); return comm; })()} routes={{ aum: '/admin?tab=account-balances', signups: '/admin?tab=verified-users', monthly: '/admin?tab=commission-reports', commission: '/admin?tab=commission' }} />
+                    <SectionCards totalAUM={(verifiedAccounts??[]).reduce((s:number,a:{balance?:number})=> s+Number(a.balance||0),0)} newSignups={(profilesAll??[]).filter((p:{created_at:string, role?:string|null})=>{ const d=p.created_at? new Date(p.created_at):null; const now=new Date(); return d && (p.role??'user')!=='admin' && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).length} monthlyProfits={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const signupFeesTotal=(signupFees||[]).reduce((s:number,f:any)=> s+Number(f.fee_amount||0),0); return comm + signupFeesTotal; })()} referralPayoutPct={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const int=(monthTx||[]).filter((t:any)=>t.type==='INTEREST').reduce((s:number,t:any)=> s+Number(t.amount||0),0); const denom=int+comm; return denom>0? (comm/denom)*100:0 })()} rateAppliedPct={Number((rates?.[0] as any)?.fixed_rate_monthly ?? 0)} monthlyCommission={(function(){ const comm=(monthTx||[]).filter((t:any)=>t.type==='COMMISSION').reduce((s:number,t:any)=> s+Number(t.amount||0),0); return comm; })()} routes={{ aum: '/admin?tab=account-balances', signups: '/admin?tab=verified-users', monthly: '/admin?tab=commission-reports', commission: '/admin?tab=commission' }} />
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2 space-y-6">
@@ -129,6 +151,67 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                   </>
                 )}
 
+
+
+      {tab === 'pending' && (
+        <section className="mt-6 space-y-6">
+          {/* Pending Users */}
+          <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
+            <h2 className="mb-3 text-white font-semibold">Pending Users</h2>
+            <div className="space-y-2">
+              {pendingUsers.map((u: any) => (
+                <form key={u.id} action="/api/admin/approve-user" method="post" className="rounded border border-gray-800 bg-[#0E141C] p-3">
+                  <input type="hidden" name="user_id" defaultValue={u.id} />
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="text-white font-medium">{u.first_name} {u.last_name}</div>
+                      <div className="text-xs text-gray-400">{u.email} • {u.phone ?? 'n/a'}</div>
+                      <div className="mt-2 text-sm text-gray-300">
+                        Account: <span className="text-amber-400">{u.account_type === 'LENDER' ? 'Fixed Memberships' : u.account_type === 'NETWORK' ? 'Variable Memberships' : u.account_type || 'Not specified'}</span>
+                        • Investment: ${Number(u.investment_amount || 0).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        PIN: {u.pin_code || 'Not set'} • Referrer: {u.referrer ? `${u.referrer.first_name} ${u.referrer.last_name} (${u.referrer.email})` : 'None'}
+                      </div>
+                      <div className="text-xs text-gray-500">Requested: {u.created_at ? new Date(u.created_at).toLocaleString() : '—'}</div>
+                    </div>
+                    <div className="flex gap-2 items-start">
+                      <button type="submit" name="action" value="approve" className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Approve</button>
+                      <button type="submit" name="action" value="reject" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1 text-white">Reject</button>
+                    </div>
+                  </div>
+                </form>
+              ))}
+              {pendingUsers.length === 0 && <div className="text-sm text-gray-400">No pending users.</div>}
+            </div>
+          </div>
+
+          {/* Pending Accounts */}
+          <div className="rounded-xl border border-gray-700 bg-[#1e1e1e] p-6 shadow">
+            <h2 className="mb-3 text-white font-semibold">Pending Accounts</h2>
+            <div className="space-y-2">
+              {pendingAccounts.map((a: any) => (
+                <form key={a.id} action="/api/admin/verify-account" method="post" className="rounded border border-gray-800 bg-[#0E141C] p-3">
+                  <input type="hidden" name="account_id" defaultValue={a.id} />
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="text-white font-medium">{a.user?.first_name} {a.user?.last_name}</div>
+                      <div className="text-xs text-gray-400">{a.user?.email} • {a.user?.phone ?? 'n/a'}</div>
+                      <div className="mt-2 text-sm text-gray-300">Type: <span className="text-amber-400">{a.type === 'LENDER' ? 'Fixed Memberships' : a.type === 'NETWORK' ? 'Variable Memberships' : a.type}</span> • Balance: ${Number(a.balance).toLocaleString()} • Min: ${Number(a.minimum_balance).toLocaleString()}</div>
+                      <div className="text-xs text-gray-500">Start: {a.start_date ?? '—'}</div>
+                    </div>
+                    <div className="flex gap-2 items-start">
+                      <button type="submit" name="decision" value="approve" className="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-white">Verify</button>
+                      <button type="submit" name="decision" value="deny" className="rounded bg-red-600 hover:bg-red-500 px-3 py-1 text-white">Reject</button>
+                    </div>
+                  </div>
+                </form>
+              ))}
+              {pendingAccounts.length === 0 && <div className="text-sm text-gray-400">No pending accounts.</div>}
+            </div>
+          </div>
+        </section>
+      )}
 
 
       {tab === 'pending-users' && (
@@ -328,7 +411,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
         <section className="mt-6">
           <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
             <h2 className="text-white font-semibold mb-4">Account Balances</h2>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
               <div className="rounded-xl border border-amber-500/30 bg-[#221a0a] p-4">
                 <div className="text-xs text-amber-300/80">Admin Personal Balance</div>
                 <div className="mt-1 text-3xl font-semibold text-amber-100">${(res as any).adminPersonalBalance?.toLocaleString?.() ?? Number((res as any).adminPersonalBalance||0).toLocaleString()}</div>
@@ -336,6 +419,18 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
               <div className="rounded-xl border border-emerald-500/30 bg-[#0c1f19] p-4">
                 <div className="text-xs text-emerald-300/80">Slush Fund Balance</div>
                 <div className="mt-1 text-3xl font-semibold text-emerald-100">${(res as any).slushFundBalance?.toLocaleString?.() ?? Number((res as any).slushFundBalance||0).toLocaleString()}</div>
+              </div>
+              <div className="rounded-xl border border-teal-500/30 bg-[#0a1f22] p-4">
+                <div className="text-xs text-teal-300/80">Jared Balance</div>
+                <div className="mt-1 text-3xl font-semibold text-teal-100">${(res as any).jaredBalance?.toLocaleString?.() ?? Number((res as any).jaredBalance||0).toLocaleString()}</div>
+              </div>
+              <div className="rounded-xl border border-sky-500/30 bg-[#0a1a24] p-4">
+                <div className="text-xs text-sky-300/80">Ross Balance</div>
+                <div className="mt-1 text-3xl font-semibold text-sky-100">${(res as any).rossBalance?.toLocaleString?.() ?? Number((res as any).rossBalance||0).toLocaleString()}</div>
+              </div>
+              <div className="rounded-xl border border-blue-500/30 bg-[#0a1524] p-4">
+                <div className="text-xs text-blue-300/80">BNE Inc Balance</div>
+                <div className="mt-1 text-3xl font-semibold text-blue-100">${(res as any).bneBalance?.toLocaleString?.() ?? Number((res as any).bneBalance||0).toLocaleString()}</div>
               </div>
             </div>
           </div>
@@ -360,8 +455,34 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
       {tab === 'transactions' && (
         <section className="mt-6">
           <div className="rounded-xl border border-gray-800 bg-[#0B0F14] p-6">
-            <h2 className="text-white font-semibold mb-2">Transaction Management</h2>
-            <p className="text-sm text-gray-400">All platform transactions. (Coming soon)</p>
+            <h2 className="text-white font-semibold mb-2">All Users Transactions</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-400">
+                    <th className="py-2 pr-4">Date</th>
+                    <th className="py-2 pr-4">User</th>
+                    <th className="py-2 pr-4">Type</th>
+                    <th className="py-2 pr-4">Amount</th>
+                    <th className="py-2 pr-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allTx.map((t:any)=> (
+                    <tr key={t.id} className="border-t border-gray-800">
+                      <td className="py-1 pr-4">{new Date(t.created_at).toLocaleString()}</td>
+                      <td className="py-1 pr-4">{t.account?.user ? `${t.account.user.first_name} ${t.account.user.last_name}` : '—'}</td>
+                      <td className="py-1 pr-4">{t.type}</td>
+                      <td className="py-1 pr-4">${Number(t.amount||0).toLocaleString()}</td>
+                      <td className="py-1 pr-4">{t.status ?? 'posted'}</td>
+                    </tr>
+                  ))}
+                  {allTx.length===0 && (
+                    <tr><td colSpan={5} className="py-2 text-gray-400">No transactions found.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       )}

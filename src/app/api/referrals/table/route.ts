@@ -51,7 +51,7 @@ export async function GET(req: Request) {
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
-    const streamType = acct?.type === 'NETWORK' ? 'Network Stream' : 'Lender Stream'
+    const streamType = acct?.type === 'NETWORK' ? 'Variable Member' : 'Fixed Member'
     const investment = Number(acct?.initial_balance ?? acct?.balance ?? 0)
     const status = (u.role === 'pending' ? 'Pending' : (acct?.verified_at ? 'Active' : 'Active'))
 

@@ -51,11 +51,10 @@ function getNavItems(role: SidebarRole): NavItem[] {
       { title: "Account Balances", url: "/admin?tab=account-balances", icon: IconFileDollar },
       { title: "Referral Networks", url: "/admin?tab=referral-networks", icon: IconChartBar },
 
-      // Pending Approvals
-      { title: "Pending Users", url: "/admin?tab=pending-users", icon: IconUserPlus },
+      // Pending Approvals (merged queue)
+      { title: "Pending Queue", url: "/admin?tab=pending", icon: IconUserPlus },
       { title: "Pending Deposits", url: "/admin?tab=pending-deposits", icon: IconCurrencyDollar },
       { title: "Pending Withdrawals", url: "/admin?tab=pending-withdrawals", icon: IconCurrencyDollar },
-      { title: "Pending Accounts", url: "/admin?tab=pending-accounts", icon: IconFolder },
 
       // Financial Operations
       { title: "Set Earnings Rate", url: "/admin?tab=earnings-rate", icon: IconSettings },
@@ -90,8 +89,8 @@ function getNavItems(role: SidebarRole): NavItem[] {
 
     // Financial Actions
     { title: "Make Contribution", url: "/dashboard?tab=contribute", icon: IconCurrencyDollar },
+    { title: "Smart Contribution", url: "/dashboard?tab=smart", icon: IconReport },
     { title: "Request Withdrawal", url: "/dashboard?tab=withdrawal", icon: IconCurrencyDollar },
-    { title: "SmartContributions", url: "/dashboard?tab=smart", icon: IconReport },
     { title: "Payment Methods", url: "/dashboard?tab=payment-methods", icon: IconCreditCard },
 
     // Referral Network
@@ -208,9 +207,9 @@ export function AppSidebar({ role = "user", ...props }: { role?: SidebarRole } &
               </div>
             )}
 
-            {/* 🎯 Stream Management */}
+            {/* 💹 Earnings Management */}
             <button onClick={() => toggle('streams')} className="flex items-center justify-between w-full rounded-lg px-3 py-2 hover:bg-sidebar-accent mt-1">
-              <div className="flex items-center gap-3"><span>🎯</span><span>Stream Management</span></div>
+              <div className="flex items-center gap-3"><span>💹</span><span>Earnings Management</span></div>
               {openSections.streams ? <IconChevronDown className="h-4 w-4" /> : <IconChevronRight className="h-4 w-4" />}
             </button>
             {openSections.streams && (

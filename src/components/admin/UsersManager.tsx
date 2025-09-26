@@ -161,7 +161,7 @@ export default function UsersManager() {
           .map((u) => {
             const totalBalance = (u.accounts ?? []).reduce((s:number,a:any)=> s + Number(a.balance ?? 0), 0)
             return (
-              <div key={u.id} className="grid grid-cols-6 items-center px-4 py-4 hover:bg-[#0F141B] gap-2 cursor-pointer" onClick={() => setDrawerUser(u.id)}>
+              <div key={u.id} className="grid grid-cols-6 items-start px-4 py-4 hover:bg-[#0F141B] gap-2 gap-y-1 cursor-pointer" onClick={() => setDrawerUser(u.id)}>
                 <div className="text-gray-200 flex items-center gap-2">
                   {u.first_name || '—'}
                   <span className={`text-[11px] px-2 py-0.5 rounded-full border ${((u.approval_status||'')==='approved'||u.role==='user') ? 'border-emerald-600 text-emerald-400' : (u.approval_status==='rejected'||u.role==='rejected') ? 'border-red-600 text-red-400' : 'border-amber-600 text-amber-300'}`}>
@@ -169,14 +169,14 @@ export default function UsersManager() {
                   </span>
                 </div>
                 <div className="text-gray-200">{u.last_name || '—'}</div>
-                <div className="text-gray-400">
+                <div className="text-gray-400 break-words max-w-[260px]">
                   {u.email}
                   <div className="text-[11px] text-gray-500">@{u.username || u.referral_code || '—'}</div>
                 </div>
                 <div className="text-gray-300 flex flex-wrap gap-1">
                   {(u.accounts?.map((a:any)=> (
                     <span key={a.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-700 text-xs">
-                      {a.type === 'LENDER' ? 'Fixed' : 'Variable'}
+                      {a.type === 'LENDER' ? 'Fixed Member' : 'Variable Member'}
                       <span className={`ml-1 px-1 rounded ${a.verified_at ? 'bg-emerald-600/20 text-emerald-300' : 'bg-gray-600/20 text-gray-300'}`}>
                         {a.verified_at ? 'Verified' : 'Pending'}
                       </span>

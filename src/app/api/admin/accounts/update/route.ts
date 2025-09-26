@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 export const runtime = 'nodejs'
 
 // POST /api/admin/accounts/update
-// Body: { account_id: string, balance?: number, monthly_payout?: number }
+// Body: { account_id: string, balance?: number, monthly_payout?: number, type?: 'LENDER' | 'NETWORK' }
 export async function POST(req: Request) {
   try {
     const parsed = await req.json().catch(() => ({})) as unknown
@@ -13,9 +13,10 @@ export async function POST(req: Request) {
     const account_id = String(body.account_id ?? '')
     if (!account_id) return NextResponse.json({ error: 'account_id required' }, { status: 400 })
 
-    type Patch = { balance?: number; reserved_amount?: number }
+    type Patch = { balance?: number; reserved_amount?: number; type?: 'LENDER' | 'NETWORK' }
     const patch: Patch = {}
     if (body.balance !== undefined) patch.balance = Number(body.balance)
+    if (body.type === 'LENDER' || body.type === 'NETWORK') patch.type = body.type
 
     // Check if reserved_amount column exists in production; gracefully fallback if not
     let canSetReserved = false

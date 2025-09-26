@@ -50,6 +50,19 @@ export async function processInitialDeposit(userId: string) {
   // Set initial_balance if not set
   await supabaseAdmin.from('accounts').update({ initial_balance: newBalance }).eq('id', acct!.id).is('initial_balance', null)
 
+  // Set lockup_end_date based on account type if not already set
+  try {
+    const months = acctType === 'NETWORK' ? 6 : 12
+    const endDate = new Date()
+    endDate.setMonth(endDate.getMonth() + months)
+    await supabaseAdmin.from('accounts')
+      .update({ lockup_end_date: endDate.toISOString().slice(0,10) })
+      .eq('id', acct!.id)
+      .is('lockup_end_date', null)
+  } catch (e) {
+    console.warn('lockup_end_date set failed (non-blocking)', e)
+  }
+
   // credit referrers and founding-member signup bonuses
   const founderBonusPerLevel = 16.67
 
