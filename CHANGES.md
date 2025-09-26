@@ -1,5 +1,15 @@
 # Changelog
 
+## 2025-09-26
+
+- Admin Set Earnings Rate now mirrors monthly distribution by crediting proportional Slush for each affected account (no change to member interest credit).
+- Admin KPI Monthly Profits now equals Commissions + Signup Fees for the current month, per CEO definition.
+- Withdrawal protections enforced: lock-up window and LENDER pilot mode (< $5k) toasts and blocks.
+- Initial deposit auto-sets lockup_end_date (NETWORK +6m, LENDER +12m).
+- Admin Account Balances shows Admin, Slush, Jared, Ross, BNE (requires env IDs for those system owners).
+- UI terminology: Variable/Fixed Memberships; Account Type; Earnings Management; landing “Why Choose Club Aureus”.
+- Build verified: Next.js production build passes; lint warnings only.
+
 All notable changes for Club Aureus app in this session.
 
 ## 2025-09-23
