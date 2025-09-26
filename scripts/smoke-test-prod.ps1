@@ -40,10 +40,15 @@ Write-Host '=== 3) Approve user ==='
 try { Invoke-RestMethod -Uri "$base/api/admin/approve-user" -Method Post -WebSession $sessAdmin -ContentType 'application/json' -Body (@{ user_id = $stdId; action = 'approve' } | ConvertTo-Json) -MaximumRedirection 0 -ErrorAction Stop } catch { }
 Write-Host 'Approved (redirect expected)'
 
-Write-Host '=== 4) Resolve account id ==='
-$usersList = Invoke-RestMethod -Uri "$base/api/admin/users/list" -Method Get -WebSession $sessAdmin
-$stdUser = $usersList.users | Where-Object { $_.email -eq $testEmail } | Select-Object -First 1
-$acctId = $stdUser.accounts[0].id
+Write-Host '=== 4) Resolve account id (with polling) ==='
+$acctId = $null
+for ($i = 0; $i -lt 6 -and -not $acctId; $i++) {
+  Start-Sleep -Milliseconds 800
+  $usersList = Invoke-RestMethod -Uri "$base/api/admin/users/list" -Method Get -WebSession $sessAdmin
+  $stdUser = $usersList.users | Where-Object { $_.email -eq $testEmail } | Select-Object -First 1
+  if ($stdUser -and $stdUser.accounts -and $stdUser.accounts.Count -gt 0) { $acctId = $stdUser.accounts[0].id }
+}
+if (-not $acctId) { throw "Could not resolve account id for $testEmail" }
 Write-Host ("Account ID: $acctId")
 
 Write-Host '=== 5) Set monthly payout ==='
@@ -93,6 +98,36 @@ Write-Host ('Edit response: ' + ($editResp | ConvertTo-Json -Depth 5))
 Write-Host '=== 10) Delete rejected user ==='
 $delResp = Invoke-RestMethod -Uri ("$base/api/admin/users?id=$rejId") -Method Delete -WebSession $sessAdmin
 Write-Host ('Delete response: ' + ($delResp | ConvertTo-Json -Depth 5))
+
+Write-Host '=== 11) Variable member signup with referrer ==='
+$varEmail = "smoke.var+$ts@example.com"
+$varUser = "smoke_var_$ts"
+$varPin = '555666'
+$varSignup = Invoke-JsonPost "$base/api/signup" @{
+  email = $varEmail; password = $varPin; first_name = 'Var'; last_name = 'Member'; phone = '+15555556666';
+  username = $varUser; account_type = 'NETWORK'; investment_amount = 500; referrer_email = $testEmail
+} $null
+$varId = $varSignup.userId
+Write-Host ('Variable signup: ' + ($varSignup | ConvertTo-Json -Depth 5))
+
+Write-Host '=== 12) Approve variable user ==='
+try { Invoke-RestMethod -Uri "$base/api/admin/approve-user" -Method Post -WebSession $sessAdmin -ContentType 'application/json' -Body (@{ user_id = $varId; action = 'approve' } | ConvertTo-Json) -MaximumRedirection 0 -ErrorAction Stop } catch { }
+Write-Host 'Approved variable user'
+
+Write-Host '=== 13) Verify referral table for referrer (Level 1 Variable) ==='
+$refTable = Invoke-RestMethod -Uri ("$base/api/referrals/table?userId=$stdId") -Method Get -WebSession $sessAdmin
+$rows = $refTable.rows
+$hasVar = $false
+foreach ($r in $rows) { if ($r.id -eq $varId -and $r.level -eq 'Level 1' -and $r.stream -eq 'Variable Member') { $hasVar = $true } }
+if ($hasVar) { Write-Host 'Referral table includes Level 1 Variable member as expected.' }
+else { Write-Host ('Referral rows: ' + ($rows | ConvertTo-Json -Depth 5)); throw 'Referral table did not include expected Level 1 Variable member.' }
+
+Write-Host '=== 14) Variable user login and dashboard fetch ==='
+$sessVar = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+$varLogin = Invoke-JsonPost "$base/api/auth/pin-login" @{ identifier = $varUser; pin = $varPin } $sessVar
+Write-Host ('Var login: ' + ($varLogin | ConvertTo-Json -Depth 5))
+$varTx = Invoke-RestMethod -Uri "$base/api/user/transactions?limit=10" -Method Get -WebSession $sessVar
+Write-Host ('Var transactions: ' + ($varTx | ConvertTo-Json -Depth 5))
 
 Write-Host '=== Smoke sequence complete ==='
 

@@ -17,7 +17,18 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Club Aureus Portal",
   description: "Secure investor portal with admin CRM",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0b0f14" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+  ],
 };
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+} satisfies import('next').Viewport;
 
 export default function RootLayout({
   children,
