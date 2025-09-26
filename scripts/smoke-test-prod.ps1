@@ -10,7 +10,8 @@ function Invoke-JsonPost {
   $json = ($Body | ConvertTo-Json -Depth 6)
   if ($Session) {
     return Invoke-RestMethod -Uri $Url -Method Post -WebSession $Session -ContentType 'application/json' -Body $json
-  } else {
+  }
+  else {
     return Invoke-RestMethod -Uri $Url -Method Post -ContentType 'application/json' -Body $json
   }
 }
@@ -71,14 +72,22 @@ $rejSignup = Invoke-JsonPost "$base/api/signup" @{
 $rejId = $rejSignup.userId
 try { Invoke-RestMethod -Uri "$base/api/admin/approve-user" -Method Post -WebSession $sessAdmin -ContentType 'application/json' -Body (@{ user_id = $rejId; action = 'reject' } | ConvertTo-Json) -MaximumRedirection 0 -ErrorAction Stop } catch { }
 # Attempt login, expect failure
+$rejResp = $null
 $rejFailed = $false
 try {
-  $rejLogin = Invoke-JsonPost "$base/api/auth/pin-login" @{ identifier = $rejUser; pin = $rejPin } $null
-  Write-Host ('Rejected login (unexpected success): ' + ($rejLogin | ConvertTo-Json -Depth 5))
-} catch { $rejFailed = $true; Write-Host 'Rejected login failed as expected.' }
+  $rejResp = Invoke-JsonPost "$base/api/auth/pin-login" @{ identifier = $rejUser; pin = $rejPin } $null
+}
+catch { $rejFailed = $true }
+if ($rejFailed -or ($rejResp -and $rejResp.error)) {
+  Write-Host 'Rejected login failed as expected.'
+}
+else {
+  Write-Host ('Rejected login (unexpected success): ' + ($rejResp | ConvertTo-Json -Depth 5))
+}
 
 Write-Host '=== 9) Edit user first_name ==='
-$editResp = Invoke-JsonPost "$base/api/admin/users" @{ id = $stdId; first_name = 'SmokeEdited' } $sessAdmin
+$editBody = (@{ id = $stdId; first_name = 'SmokeEdited' } | ConvertTo-Json -Depth 6)
+$editResp = Invoke-RestMethod -Uri "$base/api/admin/users" -Method Patch -WebSession $sessAdmin -ContentType 'application/json' -Body $editBody
 Write-Host ('Edit response: ' + ($editResp | ConvertTo-Json -Depth 5))
 
 Write-Host '=== 10) Delete rejected user ==='
