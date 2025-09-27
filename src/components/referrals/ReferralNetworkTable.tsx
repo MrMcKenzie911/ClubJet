@@ -30,7 +30,7 @@ export default function ReferralNetworkTable({ defaultTab = "table", userId }: {
           <div className="flex items-center gap-2">
             <TabsList>
               <TabsTrigger value="table">Generate Referral Report</TabsTrigger>
-              <TabsTrigger value="analytics">Network Performance</TabsTrigger>
+              <TabsTrigger value="analytics">Referral Performance</TabsTrigger>
             </TabsList>
           </div>
           <div className="flex items-center gap-2">

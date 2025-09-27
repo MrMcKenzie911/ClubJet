@@ -139,5 +139,38 @@ Write-Host ('Var login: ' + ($varLogin | ConvertTo-Json -Depth 5))
 $varTx = Invoke-RestMethod -Uri "$base/api/user/transactions?limit=10" -Method Get -WebSession $sessVar
 Write-Host ('Var transactions: ' + ($varTx | ConvertTo-Json -Depth 5))
 
+Write-Host '=== 15) Toggle role user->admin->user and show profile ==='
+$rolePatchAdmin = (@{ id = $stdId; role = 'admin' } | ConvertTo-Json -Depth 6)
+$roleRespA = Invoke-RestMethod -Uri "$base/api/admin/users" -Method Patch -WebSession $sessAdmin -ContentType 'application/json' -Body $rolePatchAdmin
+Write-Host ('Role set to admin resp: ' + ($roleRespA | ConvertTo-Json -Depth 5))
+$usersAfterAdmin = Invoke-RestMethod -Uri "$base/api/admin/users/list" -Method Get -WebSession $sessAdmin
+$stdAfterAdmin = $usersAfterAdmin.users | Where-Object { $_.email -eq $testEmail } | Select-Object -First 1
+Write-Host ('Profile after admin (from list): ' + ($stdAfterAdmin | ConvertTo-Json -Depth 6))
+$rolePatchUser = (@{ id = $stdId; role = 'user' } | ConvertTo-Json -Depth 6)
+$roleRespU = Invoke-RestMethod -Uri "$base/api/admin/users" -Method Patch -WebSession $sessAdmin -ContentType 'application/json' -Body $rolePatchUser
+Write-Host ('Role set to user resp: ' + ($roleRespU | ConvertTo-Json -Depth 5))
+$usersAfterUser = Invoke-RestMethod -Uri "$base/api/admin/users/list" -Method Get -WebSession $sessAdmin
+$stdAfterUser = $usersAfterUser.users | Where-Object { $_.email -eq $testEmail } | Select-Object -First 1
+Write-Host ('Profile after user (from list): ' + ($stdAfterUser | ConvertTo-Json -Depth 6))
+
+Write-Host '=== 16) Toggle account type LENDER->NETWORK->LENDER and show account ==='
+# Resolve current account id again (in case of reorder)
+$acctId2 = $null
+$usersList2 = Invoke-RestMethod -Uri "$base/api/admin/users/list" -Method Get -WebSession $sessAdmin
+$stdUser2 = $usersList2.users | Where-Object { $_.email -eq $testEmail } | Select-Object -First 1
+if ($stdUser2 -and $stdUser2.accounts -and $stdUser2.accounts.Count -gt 0) { $acctId2 = $stdUser2.accounts[0].id }
+if (-not $acctId2) { throw 'Could not resolve account for toggle' }
+
+$toNetwork = Invoke-JsonPost "$base/api/admin/accounts/update" @{ account_id = $acctId2; type = 'NETWORK' } $sessAdmin
+Write-Host ('Type -> NETWORK resp: ' + ($toNetwork | ConvertTo-Json -Depth 5))
+$usersAfterNet = Invoke-RestMethod -Uri "$base/api/admin/users/list" -Method Get -WebSession $sessAdmin
+$stdAfterNet = $usersAfterNet.users | Where-Object { $_.email -eq $testEmail } | Select-Object -First 1
+Write-Host ('Account after NETWORK (from list): ' + (($stdAfterNet.accounts | Select-Object -First 1) | ConvertTo-Json -Depth 6))
+$toLender = Invoke-JsonPost "$base/api/admin/accounts/update" @{ account_id = $acctId2; type = 'LENDER' } $sessAdmin
+Write-Host ('Type -> LENDER resp: ' + ($toLender | ConvertTo-Json -Depth 5))
+$usersAfterLender = Invoke-RestMethod -Uri "$base/api/admin/users/list" -Method Get -WebSession $sessAdmin
+$stdAfterLender = $usersAfterLender.users | Where-Object { $_.email -eq $testEmail } | Select-Object -First 1
+Write-Host ('Account after LENDER (from list): ' + (($stdAfterLender.accounts | Select-Object -First 1) | ConvertTo-Json -Depth 6))
+
 Write-Host '=== Smoke sequence complete ==='
 
