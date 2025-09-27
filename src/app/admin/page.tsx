@@ -80,15 +80,32 @@ async function getAdminData() {
   const { data: sft } = await supabase.from('slush_fund_transactions').select('transaction_type, amount')
   const slushFundBalance = (sft ?? []).reduce((s:number,t:{transaction_type:string, amount:number})=> s + (t.transaction_type==='deposit' ? Number(t.amount||0) : -Number(t.amount||0)), 0)
 
-  // System account balances (Jared, Ross, BNE) by env owner IDs
+  // System account balances (Jared, Ross, BNE) resolved by owner ID or email
   async function sumOwner(ownerId?: string|null) {
     if (!ownerId) return 0
     const { data } = await supabase.from('accounts').select('balance').eq('user_id', ownerId)
     return (data ?? []).reduce((s:number,a:{balance?:number})=> s + Number(a.balance||0), 0)
   }
-  const jaredBalance = await sumOwner(process.env.SYSTEM_ACCOUNT_JARED)
-  const rossBalance = await sumOwner(process.env.SYSTEM_ACCOUNT_ROSS)
-  const bneBalance = await sumOwner(process.env.SYSTEM_ACCOUNT_BNE)
+  async function resolveOwnerId(kind: 'JARED'|'ROSS'|'BNE'): Promise<string|null> {
+    // Prefer explicit owner ID from env
+    const envId = kind === 'JARED' ? process.env.SYSTEM_ACCOUNT_JARED
+      : kind === 'ROSS' ? process.env.SYSTEM_ACCOUNT_ROSS
+      : process.env.SYSTEM_ACCOUNT_BNE
+    if (envId) return envId
+    // Fallback to email-based lookup (env or default emails provided by CEO)
+    const envEmail = kind === 'JARED' ? process.env.SYSTEM_EMAIL_JARED
+      : kind === 'ROSS' ? process.env.SYSTEM_EMAIL_ROSS
+      : process.env.SYSTEM_EMAIL_BNE
+    const fallbackEmail = kind === 'JARED' ? 'jaredadmin@clubaureus.com'
+      : kind === 'ROSS' ? 'rossadmin@clubaureus.com'
+      : 'bnefund@clubaureus.com'
+    const email = envEmail || fallbackEmail
+    const { data: prof } = await supabase.from('profiles').select('id').eq('email', email).maybeSingle()
+    return (prof as { id?: string } | null)?.id ?? null
+  }
+  const jaredBalance = await sumOwner(await resolveOwnerId('JARED'))
+  const rossBalance = await sumOwner(await resolveOwnerId('ROSS'))
+  const bneBalance = await sumOwner(await resolveOwnerId('BNE'))
 
   return { user, pendingUsers: pendingUsers ?? [], pendingDeposits: pendingDeposits ?? [], pendingWithdrawals: pendingWithdrawals ?? [], rates: rates ?? [], pendingAccounts: pendingAccounts ?? [], profilesAll: profilesAll ?? [], verifiedAccounts: verifiedAccounts ?? [], monthTx: monthTx ?? [], signupFees: signupFees ?? [], adminPersonalBalance, slushFundBalance, jaredBalance, rossBalance, bneBalance }
 }
