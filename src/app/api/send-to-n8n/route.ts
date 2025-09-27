@@ -30,8 +30,8 @@ export async function POST(req: Request) {
     } catch {}
     payload._ts = new Date().toISOString()
 
-    // Use the new webhook as the primary target (GET with query params)
-    const base = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
+    // Use the configured webhook as the primary target (GET with query params)
+    const base = process.env.VAPI_WEBHOOK_URL || 'https://fmecorp.app.n8n.cloud/webhook/58f93449-12a4-43d7-b684-741bc5e6273c'
     const u = new URL(base)
     // Flatten known keys and include JSON for anything else
     if (payload.event) u.searchParams.set('event', String(payload.event))

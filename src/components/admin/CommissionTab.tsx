@@ -241,7 +241,7 @@ export default function CommissionTab() {
       </div>
 
       {/* Enhanced Verified User List for Selection */}
-      <UserSelection balance={balance} setBalance={setBalance} setIsFounding={setIsFounding} setHasRef2={setHasRef2} totals={totals} />
+      <UserSelection balance={balance} setBalance={setBalance} setIsFounding={setIsFounding} setHasRef2={setHasRef2} totals={totals} grossRate={grossRate} fixedRate={fixedRate} bonusPct={bonusPct} isFoundingCurrent={isFounding} />
     </div>
   )
 }
@@ -259,14 +259,19 @@ type SelectionProps = {
   setBalance: (n: number)=>void
   setIsFounding: (b: boolean)=>void
   setHasRef2: (b: boolean)=>void
-  totals: { member: number; bonus?: number }
+  totals: { member: number; bonus?: number; jared?: number; ross?: number; bne?: number; bneAdj?: number; slush?: number; slushAdj?: number }
+  grossRate: number
+  fixedRate: number
+  bonusPct: number
+  isFoundingCurrent: boolean
 }
 
-function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals }: SelectionProps) {
+function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals, grossRate, fixedRate, bonusPct, isFoundingCurrent }: SelectionProps) {
   const [users, setUsers] = useState<AdminListUser[]>([])
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState<{ userId: string; firstName: string; accountId: string|null } | null>(null)
   const [completed, setCompleted] = useState<Set<string>>(new Set())
+  const [selectedBulk, setSelectedBulk] = useState<Set<string>>(new Set())
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('All Types')
   const [statusFilter, setStatusFilter] = useState('All Status')
@@ -389,6 +394,66 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
   }
 
 
+  function computePayoutFor(bal: number, founding: boolean): number {
+    const total = bal * (grossRate / 100)
+    const memberFixed = bal * (fixedRate / 100)
+    const remainder = Math.max(0, total - memberFixed)
+    if (!founding) return Number(memberFixed.toFixed(2))
+    const combined = remainder / 3 // 2 of 6 shares
+    const bonus = combined * (bonusPct / 100)
+    return Number((memberFixed + bonus).toFixed(2))
+  }
+
+  async function bulkSetPayoutNow() {
+    if (selectedBulk.size === 0) { toast.error('Nothing selected'); return }
+    try {
+      const targets: Array<{ accountId: string; bal: number; founding: boolean; name: string }> = []
+      for (const u of users) {
+        const primary = pickPrimaryAccount((u.accounts||[]).map(a=>({ id:a.id, type:a.type, balance:Number(a.balance||0) })))
+        if (primary?.id && selectedBulk.has(primary.id)) {
+          const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || 'User'
+          targets.push({ accountId: primary.id, bal: Number(primary.balance||0), founding: !!u.is_founding_member, name })
+        }
+      }
+      const results = await Promise.all(targets.map(async t => {
+        const payout = computePayoutFor(t.bal, t.founding)
+        const res = await fetch('/api/admin/accounts/update', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account_id: t.accountId, monthly_payout: payout })
+        })
+        return { ok: res.ok, accountId: t.accountId, payout, name: t.name }
+      }))
+      let okCount = 0
+      const nextCompleted = new Set(completed)
+      results.forEach(r => { if (r.ok) { okCount++; nextCompleted.add(r.accountId) } })
+      setCompleted(nextCompleted)
+      toast.success(`Set payout for ${okCount}/${results.length} selected`)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Bulk set payout failed'
+      toast.error(msg)
+    }
+  }
+
+  async function distributeSystemNow() {
+    if (!selected?.accountId) { toast.error('Select a user first'); return }
+    const jared = Number(totals.jared ?? 0)
+    const ross = Number(totals.ross ?? 0)
+    const bne = Number((isFoundingCurrent ? totals.bneAdj : totals.bne) ?? 0)
+    if (!(jared>0) && !(ross>0) && !(bne>0)) { toast.error('No system shares to distribute'); return }
+    try {
+      const res = await fetch('/api/admin/commissions/distribute-system', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_id: selected.accountId, jared, ross, bne })
+      })
+      const j = await res.json().catch(()=>({}))
+      if (!res.ok) throw new Error(j.error || 'Distribution failed')
+      toast.success(`Distributed system shares (J:${jared.toFixed(2)} R:${ross.toFixed(2)} BNE:${bne.toFixed(2)})`)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Distribution failed'
+      toast.error(msg)
+    }
+  }
+
   async function clearCheckmarks() {
     setCompleted(new Set())
     toast.success('Checkmarks cleared')
@@ -400,6 +465,15 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
         <h3 className="text-white font-semibold">Verified Users</h3>
         <div className="flex items-center gap-3">
           <div className="text-xs text-gray-400">Select a user to populate commission inputs</div>
+          <Button variant="secondary" className="bg-blue-700 hover:bg-blue-600" onClick={() => {
+            const ids = users.reduce<string[]>((arr,u)=>{
+              const p = pickPrimaryAccount((u.accounts||[]).map(a=>({ id:a.id, type:a.type, balance:Number(a.balance||0) })))
+              if (p?.id) arr.push(p.id)
+              return arr
+            }, [])
+            setSelectedBulk(new Set(ids))
+          }}>Select All</Button>
+          <Button variant="secondary" className="bg-indigo-700 hover:bg-indigo-600" onClick={bulkSetPayoutNow} disabled={selectedBulk.size===0}>Set Payout for Selected</Button>
           <Button variant="secondary" className="bg-red-700 hover:bg-red-600" onClick={clearCheckmarks}>Clear Checkmarks</Button>
           <Button variant="secondary" className="bg-emerald-700 hover:bg-emerald-600" onClick={finalizeAll}>Finalize All</Button>
         </div>
@@ -442,6 +516,18 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
         <table className="w-full text-sm">
           <thead className="bg-[#121821] text-gray-300">
             <tr>
+              <th className="px-3 py-2"><input type="checkbox" aria-label="Select all" onChange={(e)=>{
+                if (e.currentTarget.checked) {
+                  const ids = filteredUsers.reduce<string[]>((arr,u)=>{
+                    const p = pickPrimaryAccount((u.accounts||[]).map(a=>({ id:a.id, type:a.type, balance:Number(a.balance||0) })))
+                    if (p?.id) arr.push(p.id)
+                    return arr
+                  }, [])
+                  setSelectedBulk(new Set(ids))
+                } else {
+                  setSelectedBulk(new Set())
+                }
+              }} /></th>
               <th className="text-left px-3 py-2">Name</th>
               <th className="text-left px-3 py-2">Email</th>
               <th className="text-left px-3 py-2">Type(s)</th>
@@ -452,10 +538,10 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
           </thead>
           <tbody className="divide-y divide-gray-800">
             {loading && (
-              <tr><td className="px-3 py-3 text-gray-400" colSpan={6}>Loading verified users...</td></tr>
+              <tr><td className="px-3 py-3 text-gray-400" colSpan={7}>Loading verified users...</td></tr>
             )}
             {!loading && filteredUsers.length === 0 && (
-              <tr><td className="px-3 py-3 text-gray-400" colSpan={6}>No verified users found</td></tr>
+              <tr><td className="px-3 py-3 text-gray-400" colSpan={7}>No verified users found</td></tr>
             )}
             {!loading && filteredUsers.map((u: AdminListUser) => {
               const accounts = (u.accounts || []).map(a => ({ id: a.id, type: a.type, balance: Number(a.balance || 0) }))
@@ -464,6 +550,17 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
               const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || '—'
               return (
                 <tr key={u.id} className="hover:bg-[#0F141B]">
+                  <td className="px-3 py-2">
+                    <input type="checkbox" checked={!!(primary?.id && selectedBulk.has(primary.id))} onChange={(e)=>{
+                      const id = primary?.id
+                      if (!id) return
+                      setSelectedBulk(prev=>{
+                        const next = new Set(prev)
+                        if (e.currentTarget.checked) next.add(id); else next.delete(id)
+                        return next
+                      })
+                    }} />
+                  </td>
                   <td className="px-3 py-2 text-gray-200">{name}</td>
                   <td className="px-3 py-2 text-gray-400">{u.email}</td>
                   <td className="px-3 py-2 text-gray-300">{types || '—'}</td>
@@ -498,6 +595,9 @@ function UserSelection({ balance, setBalance, setIsFounding, setHasRef2, totals 
           </Button>
           <Button disabled={!selected?.accountId} onClick={finalizeNow} className="bg-emerald-600 hover:bg-emerald-500">
             {selected ? `Finalize ${selected.firstName}` : 'Finalize Commission'}
+          </Button>
+          <Button disabled={!selected?.accountId} onClick={distributeSystemNow} className="bg-sky-700 hover:bg-sky-600">
+            Distribute System Shares Now
           </Button>
         </div>
       </div>

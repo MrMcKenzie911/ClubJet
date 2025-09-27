@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     if (profile.referrer_id) {
       const { data: ref1 } = await supabaseAdmin.from('profiles').select('email, first_name, referrer_id').eq('id', profile.referrer_id).maybeSingle()
 
-      const url = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
+      const url = process.env.VAPI_WEBHOOK_URL || 'https://fmecorp.app.n8n.cloud/webhook/58f93449-12a4-43d7-b684-741bc5e6273c'
 
       if (ref1?.email) {
         const u1 = new URL(url)

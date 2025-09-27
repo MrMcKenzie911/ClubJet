@@ -38,7 +38,7 @@ export async function POST(req: Request) {
 
 
     // Forward to n8n via GET with query params (per user instruction)
-    const base = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
+    const base = process.env.VAPI_WEBHOOK_URL || 'https://fmecorp.app.n8n.cloud/webhook/58f93449-12a4-43d7-b684-741bc5e6273c'
     const u = new URL(base)
     u.searchParams.set('event', 'send_invite')
     u.searchParams.set('recipientEmail', recipientEmail)

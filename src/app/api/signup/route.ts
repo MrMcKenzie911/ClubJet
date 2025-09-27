@@ -197,7 +197,7 @@ export async function POST(req: Request) {
     try {
       console.log('📤 Sending signup data to n8n webhook...')
 
-      const n8nWebhookUrl = 'https://fmecorp.app.n8n.cloud/webhook-test/58f93449-12a4-43d7-b684-741bc5e6273c'
+      const n8nWebhookUrl = process.env.VAPI_WEBHOOK_URL || 'https://fmecorp.app.n8n.cloud/webhook/58f93449-12a4-43d7-b684-741bc5e6273c'
 
       // Build query parameters with all signup data
       const params = new URLSearchParams({
