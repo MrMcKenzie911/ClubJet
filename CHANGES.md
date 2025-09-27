@@ -10,6 +10,14 @@
 - UI terminology: Variable/Fixed Memberships; Account Type; Earnings Management; landing “Why Choose Club Aureus”.
 - Build verified: Next.js production build passes; lint warnings only.
 
+## 2025-09-27
+
+- fix(signup): remove HTML pattern from PIN to stop browser "Please match"; client enforces 6 digits; server validation unchanged
+- fix(admin): account type toggle now posts selected type to /api/admin/accounts/update (DB persists LENDER↔NETWORK)
+- fix(ui): rename user referral tab from "Network Performance" to "Referral Performance"
+- test(prod): smoke test extended to toggle role user↔admin and account type LENDER↔NETWORK with evidence via /api/admin/users/list
+- deploy: push to main to trigger Netlify redeploy and verify live
+
 All notable changes for Club Aureus app in this session.
 
 ## 2025-09-23
